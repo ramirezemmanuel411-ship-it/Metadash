@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
 import '../food_search/food_search_screen.dart';
+import '../food_search/models.dart';
 
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});
@@ -45,6 +46,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const rowHeight = 72.0;
+
     return Scaffold(
       backgroundColor: Palette.warmNeutral,
       appBar: AppBar(
@@ -53,27 +56,155 @@ class _DiaryScreenState extends State<DiaryScreen> {
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          _dateSelector(),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _dateSelector(),
+          ),
+
+          // Top dashboard placeholder (matches screenshot spacing)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: Palette.lightStone,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('Friday, January 23', style: TextStyle(fontWeight: FontWeight.w700)),
+                        SizedBox(height: 8),
+                        Text('Summary placeholder', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: Palette.forestGreen), child: const Text('RESULTS'))
+                ],
+              ),
+            ),
+          ),
+
           const SizedBox(height: 12),
-          for (final entry in _meals.entries) ...[
-            _MealCard(title: entry.key, items: entry.value),
-            const SizedBox(height: 8),
-          ],
+
+          // Timeline area
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Stack(
+                children: [
+                  // Hour rows
+                  SingleChildScrollView(
+                    child: Column(
+                      children: List.generate(24, (index) {
+                        final label = _hourLabel(index);
+                        return SizedBox(
+                          height: rowHeight,
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 64,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 4.0),
+                                  child: Text(label, style: const TextStyle(color: Colors.grey)),
+                                ),
+                              ),
+                              const VerticalDivider(width: 1, thickness: 0.5, color: Colors.grey),
+                              Expanded(
+                                child: Container(
+                                  alignment: Alignment.centerLeft,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: const BoxDecoration(),
+                                  child: Row(
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {},
+                                        child: const Icon(Icons.add, color: Palette.forestGreen),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  // Meal pill overlay (example: Breakfast at 7 AM)
+                  Positioned(
+                    top: rowHeight * 7 + 12,
+                    left: 84,
+                    child: _MealPill(label: 'Breakfast'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FoodSearchScreen()));
-        },
-        label: const Text('Add Food'),
-        icon: const Icon(Icons.add),
-        backgroundColor: Palette.forestGreen,
-        foregroundColor: Palette.warmNeutral,
+      floatingActionButton: Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          Positioned(
+            bottom: 80,
+            right: 16,
+            child: Column(
+              children: [
+                _MiniFab(icon: Icons.person, onPressed: () {}),
+                const SizedBox(height: 12),
+                _MiniFab(icon: Icons.fitness_center, onPressed: () {}),
+                const SizedBox(height: 12),
+                _MiniFab(icon: Icons.restaurant, onPressed: () {}),
+              ],
+            ),
+          ),
+          FloatingActionButton.extended(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FoodSearchScreen())),
+            label: const Text('Add Food'),
+            icon: const Icon(Icons.add),
+            backgroundColor: Palette.forestGreen,
+            foregroundColor: Palette.warmNeutral,
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _addFoodForMeal(String mealLabel) async {
+    // Map string label to MealName enum used by FoodSearchScreen
+    MealName? meal;
+    switch (mealLabel.toLowerCase()) {
+      case 'breakfast':
+        meal = MealName.breakfast;
+        break;
+      case 'lunch':
+        meal = MealName.lunch;
+        break;
+      case 'dinner':
+        meal = MealName.dinner;
+        break;
+      default:
+        meal = null;
+    }
+
+    final result = await Navigator.of(context).push<FoodItem?>(
+      MaterialPageRoute(builder: (_) => FoodSearchScreen(targetMeal: meal, returnOnSelect: true)),
+    );
+
+    if (result != null) {
+      setState(() {
+        final list = _meals.putIfAbsent(mealLabel, () => []);
+        list.add(_MealItem(name: result.name, calories: result.calories, macro: result.macroLine));
+      });
+    }
   }
 
   Widget _dateSelector() {
@@ -112,8 +243,9 @@ class _DiaryScreenState extends State<DiaryScreen> {
 class _MealCard extends StatelessWidget {
   final String title;
   final List<_MealItem> items;
+  final VoidCallback? onAdd;
 
-  const _MealCard({required this.title, required this.items});
+  const _MealCard({required this.title, required this.items, this.onAdd});
 
   @override
   Widget build(BuildContext context) {
@@ -152,9 +284,7 @@ class _MealCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
-              onPressed: () {
-                // TODO: navigate to FoodSearchScreen to add to this meal
-              },
+              onPressed: onAdd,
               icon: const Icon(Icons.add),
               label: const Text('Add'),
             ),
@@ -198,4 +328,79 @@ class _MealItem {
   final String macro;
 
   const _MealItem({required this.name, required this.calories, required this.macro});
+}
+
+class _MealPill extends StatelessWidget {
+  final String label;
+
+  const _MealPill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.lightBlue.shade100,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 12),
+          Row(
+            children: [
+              _SmallCircle(icon: Icons.restaurant),
+              const SizedBox(width: 6),
+              _SmallCircle(icon: Icons.kitchen),
+              const SizedBox(width: 6),
+              _SmallCircle(icon: Icons.search),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallCircle extends StatelessWidget {
+  final IconData icon;
+
+  const _SmallCircle({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: const BoxDecoration(shape: BoxShape.circle, color: Palette.forestGreen),
+      child: Icon(icon, color: Palette.warmNeutral, size: 18),
+    );
+  }
+}
+
+class _MiniFab extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _MiniFab({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: const BoxDecoration(color: Palette.forestGreen, shape: BoxShape.circle),
+        child: Icon(icon, color: Palette.warmNeutral),
+      ),
+    );
+  }
+}
+
+String _hourLabel(int hour) {
+  final h = hour % 12 == 0 ? 12 : hour % 12;
+  final suffix = hour < 12 ? 'AM' : 'PM';
+  return '$h $suffix';
 }
