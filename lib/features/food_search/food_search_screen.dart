@@ -49,6 +49,21 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       (FoodSearchTab.saved, Icons.book, 'Saved Foods'),
     ];
 
+    String? mealLabel;
+    if (widget.targetMeal != null) {
+      switch (widget.targetMeal!) {
+        case MealName.breakfast:
+          mealLabel = 'Breakfast';
+          break;
+        case MealName.lunch:
+          mealLabel = 'Lunch';
+          break;
+        case MealName.dinner:
+          mealLabel = 'Dinner';
+          break;
+      }
+    }
+
     return Scaffold(
       backgroundColor: Palette.warmNeutral,
       appBar: AppBar(
@@ -59,6 +74,13 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       ),
       body: Column(
         children: [
+          if (mealLabel != null)
+            Container(
+              width: double.infinity,
+              color: Palette.forestGreen,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Text('Adding to $mealLabel', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
