@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
 import '../food_search/food_search_screen.dart';
-import '../food_search/models.dart';
 
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});
@@ -13,39 +12,10 @@ class DiaryScreen extends StatefulWidget {
 class _DiaryScreenState extends State<DiaryScreen> {
   DateTime _selectedDay = DateTime.now();
 
-  final Map<MealName, List<_MealItem>> _meals = {
-    MealName.breakfast: [
-      _MealItem(name: 'Oats', calories: 150, macro: 'P 5g • C 27g • F 3g'),
-      _MealItem(name: 'Greek Yogurt', calories: 100, macro: 'P 17g • C 6g • F 0g'),
-    ],
-    MealName.lunch: [
-      _MealItem(name: 'Chicken Breast', calories: 165, macro: 'P 31g • C 0g • F 3g'),
-    ],
-    MealName.dinner: [
-      _MealItem(name: 'Salmon', calories: 208, macro: 'P 22g • C 0g • F 13g'),
-    ],
-    // snacks will be handled under a separate bucket (use lunch as default if needed)
-  };
-
   void _shiftDays(int delta) {
     setState(() {
       _selectedDay = _selectedDay.add(Duration(days: delta));
     });
-  }
-
-  Future<void> _addFoodForMeal(MealName meal) async {
-    final result = await Navigator.of(context).push<FoodItem?>(
-      MaterialPageRoute(
-        builder: (_) => FoodSearchScreen(targetMeal: meal, returnOnSelect: true),
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        final list = _meals.putIfAbsent(meal, () => []);
-        list.add(_MealItem(name: result.name, calories: result.calories, macro: result.macroLine));
-      });
-    }
   }
 
   String get _dayLabel {
@@ -56,6 +26,22 @@ class _DiaryScreenState extends State<DiaryScreen> {
     if (diff == 1) return 'Tomorrow';
     return '${_selectedDay.month}/${_selectedDay.day}/${_selectedDay.year}';
   }
+
+  final Map<String, List<_MealItem>> _meals = {
+    'Breakfast': const [
+      _MealItem(name: 'Oats', calories: 150, macro: 'P 5g • C 27g • F 3g'),
+      _MealItem(name: 'Greek Yogurt', calories: 100, macro: 'P 17g • C 6g • F 0g'),
+    ],
+    'Lunch': const [
+      _MealItem(name: 'Chicken Breast', calories: 165, macro: 'P 31g • C 0g • F 3g'),
+    ],
+    'Dinner': const [
+      _MealItem(name: 'Salmon', calories: 208, macro: 'P 22g • C 0g • F 13g'),
+    ],
+    'Snacks': const [
+      _MealItem(name: 'Banana', calories: 105, macro: 'P 1g • C 27g • F 0g'),
+    ],
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -72,31 +58,10 @@ class _DiaryScreenState extends State<DiaryScreen> {
         children: [
           _dateSelector(),
           const SizedBox(height: 12),
-          _MealCard(
-            title: 'Breakfast',
-            items: _meals[MealName.breakfast]!,
-            onAdd: () => _addFoodForMeal(MealName.breakfast),
-          ),
-          const SizedBox(height: 8),
-          _MealCard(
-            title: 'Lunch',
-            items: _meals[MealName.lunch]!,
-            onAdd: () => _addFoodForMeal(MealName.lunch),
-          ),
-          const SizedBox(height: 8),
-          _MealCard(
-            title: 'Dinner',
-            items: _meals[MealName.dinner]!,
-            onAdd: () => _addFoodForMeal(MealName.dinner),
-          ),
-          const SizedBox(height: 8),
-          _MealCard(
-            title: 'Snacks',
-            items: [
-              _MealItem(name: 'Banana', calories: 105, macro: 'P 1g • C 27g • F 0g'),
-            ],
-            onAdd: () => _addFoodForMeal(MealName.lunch),
-          ),
+          for (final entry in _meals.entries) ...[
+            _MealCard(title: entry.key, items: entry.value),
+            const SizedBox(height: 8),
+          ],
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -117,12 +82,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
         color: Palette.lightStone,
         borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
           IconButton(
             onPressed: () => _shiftDays(-1),
             icon: const Icon(Icons.chevron_left),
+            splashRadius: 20,
           ),
           Expanded(
             child: Center(
@@ -135,6 +101,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
           IconButton(
             onPressed: () => _shiftDays(1),
             icon: const Icon(Icons.chevron_right),
+            splashRadius: 20,
           ),
         ],
       ),
@@ -145,13 +112,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
 class _MealCard extends StatelessWidget {
   final String title;
   final List<_MealItem> items;
-  final VoidCallback? onAdd;
 
-  const _MealCard({required this.title, required this.items, this.onAdd});
+  const _MealCard({required this.title, required this.items});
 
   @override
   Widget build(BuildContext context) {
     final totalCalories = items.fold<int>(0, (sum, i) => sum + i.calories);
+
     return Container(
       decoration: BoxDecoration(
         color: Palette.lightStone,
@@ -159,44 +126,68 @@ class _MealCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
               const Spacer(),
-              Text('$totalCalories kcal', style: const TextStyle(color: Colors.grey)),
+              Text('$totalCalories kcal', style: TextStyle(color: Colors.grey[600])),
             ],
           ),
           const SizedBox(height: 8),
-          for (final i in items) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(i.name),
-                      const SizedBox(height: 2),
-                      Text(i.macro, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
+          Column(
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                _MealRow(item: items[i]),
+                if (i != items.length - 1)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Divider(height: 1.0, thickness: 0.5),
                   ),
-                ),
-                Text('${i.calories} kcal', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
               ],
-            ),
-            if (i != items.last) const Divider(height: 16),
-          ],
+            ],
+          ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
-              onPressed: onAdd,
+              onPressed: () {
+                // TODO: navigate to FoodSearchScreen to add to this meal
+              },
               icon: const Icon(Icons.add),
               label: const Text('Add'),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MealRow extends StatelessWidget {
+  final _MealItem item;
+
+  const _MealRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.name, style: const TextStyle(fontSize: 16)),
+              const SizedBox(height: 4),
+              Text(item.macro, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text('${item.calories} kcal', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }
@@ -208,4 +199,3 @@ class _MealItem {
 
   const _MealItem({required this.name, required this.calories, required this.macro});
 }
-
