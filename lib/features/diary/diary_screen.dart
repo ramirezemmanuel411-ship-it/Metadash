@@ -103,6 +103,15 @@ class _DiaryScreenState extends State<DiaryScreen> {
                       _Ring(value: 0.8, label: 'Calories', number: 2200, color: Palette.forestGreen),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  // Workout and Steps progress bars
+                  Column(
+                    children: [
+                      _ProgressBar(label: 'Workout', value: 0.65, icon: Icons.fitness_center),
+                      const SizedBox(height: 8),
+                      _ProgressBar(label: 'Steps', value: 0.45, icon: Icons.directions_walk),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerRight,
@@ -112,7 +121,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                         backgroundColor: Palette.forestGreen,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
-                      child: const Text('RESULTS', style: TextStyle(fontSize: 12)),
+                      child: const Text('RESULTS', style: TextStyle(fontSize: 12, color: Palette.warmNeutral)),
                     ),
                   ),
                 ],
@@ -426,6 +435,37 @@ String _monthName(int m) {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
   return names[m - 1];
+}
+
+class _ProgressBar extends StatelessWidget {
+  final String label;
+  final double value; // 0..1
+  final IconData icon;
+
+  const _ProgressBar({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: Palette.forestGreen, size: 18),
+        const SizedBox(width: 8),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 6,
+              backgroundColor: Colors.grey.shade300,
+              valueColor: const AlwaysStoppedAnimation<Color>(Palette.forestGreen),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _RadialFab extends StatefulWidget {
