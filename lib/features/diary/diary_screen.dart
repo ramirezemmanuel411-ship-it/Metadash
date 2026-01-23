@@ -63,11 +63,10 @@ class _DiaryScreenState extends State<DiaryScreen> {
             child: _dateSelector(),
           ),
 
-          // Top dashboard placeholder (matches screenshot spacing)
+          // Top dashboard with weekday selector and nutrient rings
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
-              height: 120,
               decoration: BoxDecoration(
                 color: Palette.lightStone,
                 borderRadius: BorderRadius.circular(12),
@@ -75,17 +74,51 @@ class _DiaryScreenState extends State<DiaryScreen> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
+                  // Left: title + weekday row
                   Expanded(
+                    flex: 3,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Friday, January 23', style: TextStyle(fontWeight: FontWeight.w700)),
-                        SizedBox(height: 8),
-                        Text('Summary placeholder', style: TextStyle(color: Colors.grey)),
+                      children: [
+                        Text(
+                          _formattedHeaderDate(),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        _WeekdayRow(selectedWeekday: DateTime.now().weekday),
                       ],
                     ),
                   ),
-                  ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: Palette.forestGreen), child: const Text('RESULTS'))
+
+                  // Middle: nutrient rings
+                  Expanded(
+                    flex: 5,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: const [
+                        _Ring(value: 0.6, label: 'Protein', number: 180, color: Colors.redAccent),
+                        _Ring(value: 0.2, label: 'Fats', number: 60, color: Colors.orange),
+                        _Ring(value: 0.25, label: 'Carbs', number: 200, color: Colors.teal),
+                      ],
+                    ),
+                  ),
+
+                  // Right: calories and results
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const _Ring(value: 0.8, label: 'Calories', number: 2200, color: Palette.forestGreen),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(backgroundColor: Palette.forestGreen),
+                          child: const Text('RESULTS'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -403,4 +436,90 @@ String _hourLabel(int hour) {
   final h = hour % 12 == 0 ? 12 : hour % 12;
   final suffix = hour < 12 ? 'AM' : 'PM';
   return '$h $suffix';
+}
+
+String _formattedHeaderDate() {
+  final now = DateTime.now();
+  return '${_weekdayFullName(now.weekday)}, ${_monthName(now.month)} ${now.day}';
+}
+
+String _weekdayFullName(int w) {
+  const names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  return names[(w - 1) % 7];
+}
+
+String _monthName(int m) {
+  const names = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return names[m - 1];
+}
+
+class _WeekdayRow extends StatelessWidget {
+  final int selectedWeekday; // 1..7
+  const _WeekdayRow({required this.selectedWeekday});
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    return Row(
+      children: List.generate(7, (i) {
+        final idx = i + 1;
+        final selected = idx == selectedWeekday;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(labels[i], style: TextStyle(color: selected ? Palette.forestGreen : Colors.grey)),
+              const SizedBox(height: 6),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: selected ? Palette.forestGreen : Colors.transparent,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _Ring extends StatelessWidget {
+  final double value; // 0..1
+  final String label;
+  final int number;
+  final Color color;
+
+  const _Ring({required this.value, required this.label, required this.number, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 72,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(value: value, color: color, strokeWidth: 6, backgroundColor: Colors.grey.shade300),
+                Text('$number', style: const TextStyle(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
 }
