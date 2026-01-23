@@ -545,21 +545,21 @@ class _RadialFabState extends State<_RadialFab> with TickerProviderStateMixin {
 
   List<Widget> _buildRadialButtons() {
     const buttons = [
-      (icon: Icons.search, label: 'Search', angle: -90.0),
+      (icon: Icons.search, label: 'Search', angle: 270.0),
       (icon: Icons.restaurant, label: 'Restaurant', angle: 0.0),
       (icon: Icons.fitness_center, label: 'Fitness', angle: 90.0),
       (icon: Icons.person, label: 'Profile', angle: 180.0),
     ];
 
     return buttons.map((btn) {
-      final angle = btn.angle * (3.14159 / 180);
-      final radius = 100.0;
-      final x = radius * _animation.value * cos(angle);
-      final y = radius * _animation.value * sin(angle);
+      final radians = btn.angle * (3.14159 / 180);
+      final radius = 120.0;
+      final offsetX = radius * _animation.value * cos(radians);
+      final offsetY = -radius * _animation.value * sin(radians);
 
       return Positioned(
-        bottom: 28 + y,
-        right: 28 + x,
+        bottom: 70 + offsetY,
+        right: 16 + offsetX,
         child: ScaleTransition(
           scale: _animation,
           child: GestureDetector(
