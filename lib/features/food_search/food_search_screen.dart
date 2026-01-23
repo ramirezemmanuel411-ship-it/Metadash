@@ -8,7 +8,10 @@ import 'food_detail_screen.dart';
 enum FoodSearchTab { saved, barcode, search, ai, manual }
 
 class FoodSearchScreen extends StatefulWidget {
-  const FoodSearchScreen({super.key});
+  final MealName? targetMeal;
+  final bool returnOnSelect;
+
+  const FoodSearchScreen({super.key, this.targetMeal, this.returnOnSelect = false});
 
   @override
   State<FoodSearchScreen> createState() => _FoodSearchScreenState();
@@ -17,9 +20,14 @@ class FoodSearchScreen extends StatefulWidget {
 class _FoodSearchScreenState extends State<FoodSearchScreen> {
   FoodSearchTab _selected = FoodSearchTab.search;
   String _searchText = '';
-  List<FoodItem> _recent = mockFoods.take(6).toList();
+  final List<FoodItem> _recent = mockFoods.take(6).toList();
 
   void _onSelectFood(FoodItem item) {
+    if (widget.returnOnSelect) {
+      Navigator.of(context).pop(item);
+      return;
+    }
+
     final v2 = item.name.toLowerCase().contains('egg')
         ? FoodItemV2.eggLarge
         : FoodItemV2.chickenBreast;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
+import '../food_search/food_search_screen.dart';
+import '../food_search/models.dart';
 
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});
@@ -11,10 +13,39 @@ class DiaryScreen extends StatefulWidget {
 class _DiaryScreenState extends State<DiaryScreen> {
   DateTime _selectedDay = DateTime.now();
 
+  final Map<MealName, List<_MealItem>> _meals = {
+    MealName.breakfast: [
+      _MealItem(name: 'Oats', calories: 150, macro: 'P 5g • C 27g • F 3g'),
+      _MealItem(name: 'Greek Yogurt', calories: 100, macro: 'P 17g • C 6g • F 0g'),
+    ],
+    MealName.lunch: [
+      _MealItem(name: 'Chicken Breast', calories: 165, macro: 'P 31g • C 0g • F 3g'),
+    ],
+    MealName.dinner: [
+      _MealItem(name: 'Salmon', calories: 208, macro: 'P 22g • C 0g • F 13g'),
+    ],
+    // snacks will be handled under a separate bucket (use lunch as default if needed)
+  };
+
   void _shiftDays(int delta) {
     setState(() {
       _selectedDay = _selectedDay.add(Duration(days: delta));
     });
+  }
+
+  Future<void> _addFoodForMeal(MealName meal) async {
+    final result = await Navigator.of(context).push<FoodItem?>(
+      MaterialPageRoute(
+        builder: (_) => FoodSearchScreen(targetMeal: meal, returnOnSelect: true),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        final list = _meals.putIfAbsent(meal, () => []);
+        list.add(_MealItem(name: result.name, calories: result.calories, macro: result.macroLine));
+      });
+    }
   }
 
   String get _dayLabel {
@@ -41,27 +72,36 @@ class _DiaryScreenState extends State<DiaryScreen> {
         children: [
           _dateSelector(),
           const SizedBox(height: 12),
-          const _MealCard(title: 'Breakfast', items: [
-            _MealItem(name: 'Oats', calories: 150, macro: 'P 5g • C 27g • F 3g'),
-            _MealItem(name: 'Greek Yogurt', calories: 100, macro: 'P 17g • C 6g • F 0g'),
-          ]),
+          _MealCard(
+            title: 'Breakfast',
+            items: _meals[MealName.breakfast]!,
+            onAdd: () => _addFoodForMeal(MealName.breakfast),
+          ),
           const SizedBox(height: 8),
-          const _MealCard(title: 'Lunch', items: [
-            _MealItem(name: 'Chicken Breast', calories: 165, macro: 'P 31g • C 0g • F 3g'),
-          ]),
+          _MealCard(
+            title: 'Lunch',
+            items: _meals[MealName.lunch]!,
+            onAdd: () => _addFoodForMeal(MealName.lunch),
+          ),
           const SizedBox(height: 8),
-          const _MealCard(title: 'Dinner', items: [
-            _MealItem(name: 'Salmon', calories: 208, macro: 'P 22g • C 0g • F 13g'),
-          ]),
+          _MealCard(
+            title: 'Dinner',
+            items: _meals[MealName.dinner]!,
+            onAdd: () => _addFoodForMeal(MealName.dinner),
+          ),
           const SizedBox(height: 8),
-          const _MealCard(title: 'Snacks', items: [
-            _MealItem(name: 'Banana', calories: 105, macro: 'P 1g • C 27g • F 0g'),
-          ]),
+          _MealCard(
+            title: 'Snacks',
+            items: [
+              _MealItem(name: 'Banana', calories: 105, macro: 'P 1g • C 27g • F 0g'),
+            ],
+            onAdd: () => _addFoodForMeal(MealName.lunch),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // Navigate to your FoodSearchScreen here
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FoodSearchScreen()));
         },
         label: const Text('Add Food'),
         icon: const Icon(Icons.add),
@@ -105,8 +145,9 @@ class _DiaryScreenState extends State<DiaryScreen> {
 class _MealCard extends StatelessWidget {
   final String title;
   final List<_MealItem> items;
+  final VoidCallback? onAdd;
 
-  const _MealCard({required this.title, required this.items});
+  const _MealCard({required this.title, required this.items, this.onAdd});
 
   @override
   Widget build(BuildContext context) {
@@ -149,9 +190,7 @@ class _MealCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
-              onPressed: () {
-                // Navigate to FoodSearchScreen to add to this meal
-              },
+              onPressed: onAdd,
               icon: const Icon(Icons.add),
               label: const Text('Add'),
             ),
@@ -169,3 +208,4 @@ class _MealItem {
 
   const _MealItem({required this.name, required this.calories, required this.macro});
 }
+
