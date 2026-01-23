@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../../shared/palette.dart';
 import '../food_search/food_search_screen.dart';
 import '../food_search/models.dart';
@@ -72,51 +73,46 @@ class _DiaryScreenState extends State<DiaryScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.all(12),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Left: title + weekday row
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _formattedHeaderDate(),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        _WeekdayRow(selectedWeekday: DateTime.now().weekday),
-                      ],
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formattedHeaderDate(),
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                          ),
+                          const SizedBox(height: 6),
+                          _WeekdayRow(selectedWeekday: DateTime.now().weekday),
+                        ],
+                      ),
+                    ],
                   ),
-
-                  // Middle: nutrient rings
-                  Expanded(
-                    flex: 5,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: const [
-                        _Ring(value: 0.6, label: 'Protein', number: 180, color: Colors.redAccent),
-                        _Ring(value: 0.2, label: 'Fats', number: 60, color: Colors.orange),
-                        _Ring(value: 0.25, label: 'Carbs', number: 200, color: Colors.teal),
-                      ],
-                    ),
+                  const SizedBox(height: 12),
+                  // Nutrient rings row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: const [
+                      _Ring(value: 0.6, label: 'Protein', number: 180, color: Colors.redAccent),
+                      _Ring(value: 0.2, label: 'Fats', number: 60, color: Colors.orange),
+                      _Ring(value: 0.25, label: 'Carbs', number: 200, color: Colors.teal),
+                      _Ring(value: 0.8, label: 'Calories', number: 2200, color: Palette.forestGreen),
+                    ],
                   ),
-
-                  // Right: calories and results
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const _Ring(value: 0.8, label: 'Calories', number: 2200, color: Palette.forestGreen),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(backgroundColor: Palette.forestGreen),
-                          child: const Text('RESULTS'),
-                        ),
-                      ],
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Palette.forestGreen,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: const Text('RESULTS', style: TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],
@@ -173,8 +169,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
                   // Meal pill overlay (example: Breakfast at 7 AM)
                   Positioned(
-                    top: rowHeight * 7 + 12,
-                    left: 84,
+                    top: rowHeight * 7,
+                    left: 80,
                     child: _MealPill(label: 'Breakfast'),
                   ),
                 ],
@@ -183,31 +179,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
           ),
         ],
       ),
-      floatingActionButton: Stack(
-        alignment: Alignment.bottomRight,
-        children: [
-          Positioned(
-            bottom: 80,
-            right: 16,
-            child: Column(
-              children: [
-                _MiniFab(icon: Icons.person, onPressed: () {}),
-                const SizedBox(height: 12),
-                _MiniFab(icon: Icons.fitness_center, onPressed: () {}),
-                const SizedBox(height: 12),
-                _MiniFab(icon: Icons.restaurant, onPressed: () {}),
-              ],
-            ),
-          ),
-          FloatingActionButton.extended(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FoodSearchScreen())),
-            label: const Text('Add Food'),
-            icon: const Icon(Icons.add),
-            backgroundColor: Palette.forestGreen,
-            foregroundColor: Palette.warmNeutral,
-          ),
-        ],
-      ),
+      floatingActionButton: _RadialFab(),
     );
   }
 
@@ -456,6 +428,128 @@ String _monthName(int m) {
   return names[m - 1];
 }
 
+class _RadialFab extends StatefulWidget {
+  const _RadialFab();
+
+  @override
+  State<_RadialFab> createState() => _RadialFabState();
+}
+
+class _RadialFabState extends State<_RadialFab> with TickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  bool _isOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
+    _animation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggleMenu() {
+    setState(() {
+      _isOpen = !_isOpen;
+      if (_isOpen) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.bottomRight,
+      children: [
+        // Semi-transparent overlay
+        if (_isOpen)
+          GestureDetector(
+            onTap: _toggleMenu,
+            child: Container(color: Colors.black26),
+          ),
+        // Radial menu buttons
+        ..._buildRadialButtons(),
+        // Center FAB
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: GestureDetector(
+            onTap: _toggleMenu,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: Palette.forestGreen,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _isOpen ? Icons.close : Icons.add,
+                color: Palette.warmNeutral,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildRadialButtons() {
+    const buttons = [
+      (icon: Icons.search, label: 'Search', angle: -90.0),
+      (icon: Icons.restaurant, label: 'Restaurant', angle: 0.0),
+      (icon: Icons.fitness_center, label: 'Fitness', angle: 90.0),
+      (icon: Icons.person, label: 'Profile', angle: 180.0),
+    ];
+
+    return buttons.map((btn) {
+      final angle = btn.angle * (3.14159 / 180);
+      final radius = 100.0;
+      final x = radius * _animation.value * cos(angle);
+      final y = radius * _animation.value * sin(angle);
+
+      return Positioned(
+        bottom: 28 + y,
+        right: 28 + x,
+        child: ScaleTransition(
+          scale: _animation,
+          child: GestureDetector(
+            onTap: () {
+              _toggleMenu();
+              if (btn.label == 'Search') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FoodSearchScreen()),
+                );
+              }
+            },
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: Palette.forestGreen,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(btn.icon, color: Palette.warmNeutral, size: 24),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+}
+
+double cos(double radians) => math.cos(radians);
+double sin(double radians) => math.sin(radians);
+
 class _WeekdayRow extends StatelessWidget {
   final int selectedWeekday; // 1..7
   const _WeekdayRow({required this.selectedWeekday});
@@ -464,22 +558,23 @@ class _WeekdayRow extends StatelessWidget {
   Widget build(BuildContext context) {
     const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: List.generate(7, (i) {
         final idx = i + 1;
         final selected = idx == selectedWeekday;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6.0),
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(labels[i], style: TextStyle(color: selected ? Palette.forestGreen : Colors.grey)),
-              const SizedBox(height: 6),
+              Text(labels[i], style: TextStyle(color: selected ? Palette.forestGreen : Colors.grey, fontSize: 12)),
+              const SizedBox(height: 4),
               Container(
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 decoration: BoxDecoration(
                   color: selected ? Palette.forestGreen : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(2.5),
                 ),
               ),
             ],
@@ -501,23 +596,23 @@ class _Ring extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 72,
+      width: 80,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: 56,
-            height: 56,
+            width: 66,
+            height: 66,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 CircularProgressIndicator(value: value, color: color, strokeWidth: 6, backgroundColor: Colors.grey.shade300),
-                Text('$number', style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text('$number', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               ],
             ),
           ),
           const SizedBox(height: 6),
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
     );
