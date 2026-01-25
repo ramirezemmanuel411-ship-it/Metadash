@@ -2,7 +2,50 @@ import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final DateTime selectedDay;
+  final Function(int) onDayChanged;
+  final int caloriesConsumed;
+  final int caloriesGoal;
+  final int proteinConsumed;
+  final int carbsConsumed;
+  final int fatConsumed;
+
+  const DashboardScreen({
+    super.key,
+    required this.selectedDay,
+    required this.onDayChanged,
+    required this.caloriesConsumed,
+    required this.caloriesGoal,
+    required this.proteinConsumed,
+    required this.carbsConsumed,
+    required this.fatConsumed,
+  });
+
+  Future<void> _showDatePicker(BuildContext context) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: selectedDay,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Palette.forestGreen,
+              onPrimary: Palette.warmNeutral,
+              surface: Palette.lightStone,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      final daysDiff = DateUtils.dateOnly(pickedDate).difference(DateUtils.dateOnly(selectedDay)).inDays;
+      onDayChanged(daysDiff);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,26 +57,78 @@ class DashboardScreen extends StatelessWidget {
         foregroundColor: Colors.black87,
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          _CardSection(
-            title: 'Today\'s Summary',
-            child: _SummaryRow(calories: 1800, goal: 2200, protein: 120, carbs: 180, fat: 60),
-          ),
-          SizedBox(height: 12),
-          _CardSection(
-            title: 'Weekly Trend',
-            child: _TrendPlaceholder(),
-          ),
-          SizedBox(height: 12),
-          _CardSection(
-            title: 'Quick Actions',
-            child: _QuickActionsRow(),
+      body: Stack(
+        children: [
+          ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Palette.lightStone,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => onDayChanged(-1),
+                      icon: const Icon(Icons.chevron_left),
+                      splashRadius: 20,
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _showDatePicker(context),
+                        child: Center(
+                          child: Text(
+                            _dayLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => onDayChanged(1),
+                      icon: const Icon(Icons.chevron_right),
+                      splashRadius: 20,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _CardSection(
+                title: 'Today\'s Summary',
+                child: _SummaryRow(
+                  calories: caloriesConsumed,
+                  goal: caloriesGoal,
+                  protein: proteinConsumed,
+                  carbs: carbsConsumed,
+                  fat: fatConsumed,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const _CardSection(
+                title: 'Weekly Trend',
+                child: _TrendPlaceholder(),
+              ),
+              const SizedBox(height: 12),
+              const _CardSection(
+                title: 'Quick Actions',
+                child: _QuickActionsRow(),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  String get _dayLabel {
+    final now = DateTime.now();
+    final diff = DateUtils.dateOnly(selectedDay).difference(DateUtils.dateOnly(now)).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == -1) return 'Yesterday';
+    if (diff == 1) return 'Tomorrow';
+    return '${selectedDay.month}/${selectedDay.day}/${selectedDay.year}';
   }
 }
 
