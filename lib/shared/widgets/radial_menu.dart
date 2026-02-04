@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../palette.dart';
 import '../../features/food_search/food_search_screen.dart';
-import '../../features/profile/profile_screen.dart';
 import '../../features/progress/progress_screen.dart';
+import '../../features/profile/profile_screen.dart';
+import '../../presentation/screens/exercise_logging/exercise_main_screen.dart';
+import '../../providers/user_state.dart';
 
 class RadialMenu extends StatefulWidget {
-  const RadialMenu();
+  final UserState userState;
+  final VoidCallback onLogout;
+  
+  const RadialMenu({super.key, required this.userState, required this.onLogout});
 
   @override
   State<RadialMenu> createState() => _RadialMenuState();
@@ -94,7 +99,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -167,20 +172,33 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
         },
         child: GestureDetector(
           onTap: () async {
+            // Capture navigator state before the async gap and check mounted after awaiting
+            final navigator = Navigator.of(context);
             _closeMenu();
             await Future.delayed(const Duration(milliseconds: 250));
-            if (!context.mounted) return;
-            
+            if (!mounted) return;
+
             if (item.label == 'Profile') {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(
+                    userState: widget.userState,
+                    onLogout: widget.onLogout,
+                  ),
+                ),
+              );
+            } else if (item.label == 'Workouts') {
+              navigator.push(
+                MaterialPageRoute(builder: (_) => const ExerciseMainScreen()),
               );
             } else if (item.label == 'Log Food') {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const FoodSearchScreen()),
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (_) => FoodSearchScreen(userState: widget.userState),
+                ),
               );
             } else if (item.label == 'Progress') {
-              Navigator.of(context).push(
+              navigator.push(
                 MaterialPageRoute(builder: (_) => const ProgressScreen()),
               );
             }
@@ -197,7 +215,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),

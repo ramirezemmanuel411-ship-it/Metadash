@@ -3,9 +3,11 @@ import 'shared/palette.dart';
 import 'shared/widgets/radial_menu.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/diary/diary_screen.dart';
+import 'providers/user_state.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  final UserState userState;
+  const AppShell({super.key, required this.userState});
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -16,20 +18,61 @@ class _AppShellState extends State<AppShell> {
   int _index = 0;
   DateTime _selectedDay = DateTime.now();
 
-  // Shared nutrition data
-  int _caloriesConsumed = 1800;
-  final int _caloriesGoal = 2200;
-  int _proteinConsumed = 120;
-  final int _proteinGoal = 150;
-  int _carbsConsumed = 180;
-  final int _carbsGoal = 250;
-  int _fatConsumed = 60;
-  final int _fatGoal = 73;
+  // Shared nutrition data - loaded from database
+  int _caloriesConsumed = 0;
+  late int _caloriesGoal;
+  int _proteinConsumed = 0;
+  late int _proteinGoal;
+  int _carbsConsumed = 0;
+  late int _carbsGoal;
+  int _fatConsumed = 0;
+  late int _fatGoal;
+  int _stepsTaken = 0;
+  late int _stepsGoal;
+
+  @override
+  void initState() {
+    super.initState();
+    // Set defaults from user profile
+    final user = widget.userState.currentUser;
+    if (user != null) {
+      _caloriesGoal = user.dailyCaloricGoal;
+      _stepsGoal = user.dailyStepsGoal;
+      _proteinGoal = user.macroTargets?['protein'] ?? 150;
+      _carbsGoal = user.macroTargets?['carbs'] ?? 250;
+      _fatGoal = user.macroTargets?['fat'] ?? 73;
+    }
+    _loadDailyData();
+  }
+
+  Future<void> _loadDailyData() async {
+    final user = widget.userState.currentUser;
+    if (user == null) return;
+
+    final log = await widget.userState.db.getDailyLogByUserAndDate(user.id!, _selectedDay);
+    
+    setState(() {
+      if (log != null) {
+        _caloriesConsumed = log.caloriesConsumed;
+        _proteinConsumed = log.protein;
+        _carbsConsumed = log.carbs;
+        _fatConsumed = log.fat;
+        _stepsTaken = log.stepsCount;
+      } else {
+        _caloriesConsumed = 0;
+        _proteinConsumed = 0;
+        _carbsConsumed = 0;
+        _fatConsumed = 0;
+        _stepsTaken = 0;
+      }
+    });
+  }
 
   void _shiftDays(int delta) {
     setState(() {
       _selectedDay = _selectedDay.add(Duration(days: delta));
     });
+    _loadDailyData();
   }
 
   void _onTapNav(int i) {
@@ -45,10 +88,9 @@ class _AppShellState extends State<AppShell> {
     setState(() => _index = i);
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  void _logout() {
+    widget.userState.logout();
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
   @override
@@ -68,9 +110,12 @@ class _AppShellState extends State<AppShell> {
                   onDayChanged: _shiftDays,
                   caloriesConsumed: _caloriesConsumed,
                   caloriesGoal: _caloriesGoal,
+                  stepsTaken: _stepsTaken,
+                  stepsGoal: _stepsGoal,
                   proteinConsumed: _proteinConsumed,
                   carbsConsumed: _carbsConsumed,
                   fatConsumed: _fatConsumed,
+                  userState: widget.userState,
                 ),
                 DiaryScreen(
                   selectedDay: _selectedDay,
@@ -83,12 +128,18 @@ class _AppShellState extends State<AppShell> {
                   carbsGoal: _carbsGoal,
                   fatConsumed: _fatConsumed,
                   fatGoal: _fatGoal,
+                  stepsTaken: _stepsTaken,
+                  stepsGoal: _stepsGoal,
+                  userState: widget.userState,
                 ),
               ],
             ),
           ),
           // Persistent FAB menu across all screens
-          const RadialMenu(),
+          RadialMenu(
+            userState: widget.userState,
+            onLogout: _logout,
+          ),
           Positioned(
             bottom: 16,
             left: 0,

@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Metadash needs access to your health data to sync workouts, steps, and active calories from HealthKit.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Metadash needs access to update your health data in HealthKit.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Metadash needs camera access to scan food barcodes.</string>
 </dict>
 </plist>

@@ -1,0 +1,15 @@
+name: fatsecret_proxy
+description: FatSecret OAuth 2.0 proxy server for metadash food search
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  shelf: ^1.4.0
+  shelf_router: ^1.1.0
+  http: ^1.1.0
+
+dev_dependencies:
+  lints: ^2.0.0

@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../shared/palette.dart';
+import '../../services/food_service.dart';
+import '../../data/repositories/search_repository.dart';
+import '../../presentation/bloc/food_search_bloc.dart';
+import '../../presentation/screens/fast_food_search_screen.dart';
+import '../../providers/user_state.dart';
+import '../food/barcode_scanner_screen.dart';
+import '../food/food_detail_page.dart';
+import '../food/ai_chat_screen.dart';
 import 'models.dart';
-import 'food_search_results.dart';
 import 'food_manual_entry.dart';
 import 'food_detail_screen.dart';
 
@@ -10,17 +18,44 @@ enum FoodSearchTab { saved, barcode, search, ai, manual }
 class FoodSearchScreen extends StatefulWidget {
   final MealName? targetMeal;
   final bool returnOnSelect;
+  final UserState? userState;
+  final bool autofocusSearch;
+  final FoodSearchTab? initialTab;
 
-  const FoodSearchScreen({super.key, this.targetMeal, this.returnOnSelect = false});
+  const FoodSearchScreen({
+    super.key,
+    this.targetMeal,
+    this.returnOnSelect = false,
+    this.userState,
+    this.autofocusSearch = false,
+    this.initialTab,
+  });
 
   @override
   State<FoodSearchScreen> createState() => _FoodSearchScreenState();
 }
 
 class _FoodSearchScreenState extends State<FoodSearchScreen> {
-  FoodSearchTab _selected = FoodSearchTab.search;
-  String _searchText = '';
-  final List<FoodItem> _recent = mockFoods.take(6).toList();
+  late FoodSearchTab _selected;
+  late FocusNode _searchFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initialTab ?? FoodSearchTab.search;
+    _searchFocusNode = FocusNode();
+    if (widget.autofocusSearch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _searchFocusNode.requestFocus();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
 
   void _onSelectFood(FoodItem item) {
     if (widget.returnOnSelect) {
@@ -79,7 +114,13 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
               width: double.infinity,
               color: Palette.forestGreen,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Text('Adding to $mealLabel', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Adding to $mealLabel',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -91,10 +132,17 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
                     selected: selected,
+                    showCheckmark: false,
                     label: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(t.$2, size: 16, color: selected ? Palette.warmNeutral : Colors.black87),
+                        Icon(
+                          t.$2,
+                          size: 16,
+                          color: selected
+                              ? Palette.warmNeutral
+                              : Colors.black87,
+                        ),
                         const SizedBox(width: 6),
                         Text(t.$3),
                       ],
@@ -131,15 +179,55 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       case FoodSearchTab.barcode:
         return const _ScannerStub(key: ValueKey('barcode'));
       case FoodSearchTab.search:
-        return FoodSearchResults(
-          key: const ValueKey('search'),
-          searchText: _searchText,
-          recent: _recent,
-          onSelect: _onSelectFood,
-          onSearchChanged: (v) => setState(() => _searchText = v),
+        return BlocProvider(
+          create: (_) => FoodSearchBloc(
+            repository: SearchRepository(),
+          )..add(const LoadInitialData()),
+          child: FastFoodSearchScreenLegacy(
+            key: const ValueKey('search'),
+            focusNode: _searchFocusNode,
+            onFoodSelected: (food) {
+              // Convert FoodModel to FoodItem
+              final protein = food.protein;
+              final carbs = food.carbs;
+              final fat = food.fat;
+              final macroLine = 'P: ${protein.toStringAsFixed(1)}g • C: ${carbs.toStringAsFixed(1)}g • F: ${fat.toStringAsFixed(1)}g';
+              
+              final item = FoodItem(
+                name: food.name,
+                calories: food.calories.toInt(),
+                macroLine: macroLine,
+              );
+              _onSelectFood(item);
+            },
+          ),
         );
       case FoodSearchTab.ai:
-        return const _AIStub(key: ValueKey('ai'));
+        try {
+          final userState = widget.userState ?? context.read<UserState>();
+          return _AiTabView(userState: userState);
+        } catch (e) {
+          return Container(
+            color: Palette.warmNeutral,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading AI: $e',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
       case FoodSearchTab.manual:
         return const FoodManualEntry(key: ValueKey('manual'), mealName: null);
     }
@@ -175,45 +263,75 @@ class _SavedLibraryStub extends StatelessWidget {
   }
 }
 
-class _ScannerStub extends StatelessWidget {
+class _ScannerStub extends StatefulWidget {
   const _ScannerStub({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Palette.warmNeutral,
-      alignment: Alignment.center,
-      child: const Text('Scanner (stub) — integrate mobile_scanner later'),
-    );
-  }
+  State<_ScannerStub> createState() => _ScannerStubState();
 }
 
-class _AIStub extends StatelessWidget {
-  const _AIStub({super.key});
+class _ScannerStubState extends State<_ScannerStub> {
+  final FoodService _foodService = FoodService();
+  bool _isLoading = false;
+
+  Future<void> _handleBarcodeScanned(String barcode) async {
+    setState(() => _isLoading = true);
+    try {
+      final food = await _foodService.searchByBarcode(barcode);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (food != null) {
+          // Navigate to food detail page to show full nutrition info
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => FoodDetailPage(food: food)),
+          );
+
+          // If user added food to log, return the result
+          if (result != null && mounted) {
+            Navigator.pop(context, result);
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Product not found. Try manual search.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Palette.warmNeutral,
-      alignment: Alignment.center,
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.auto_awesome, size: 48, color: Colors.grey),
-            SizedBox(height: 8),
-            Text('Chat with AI to estimate nutrition', style: TextStyle(color: Colors.grey)),
-            SizedBox(height: 4),
-            Text(
-              'Describe meals (e.g., at restaurants) and get AI-estimated nutrition to add to your log.',
-              style: TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    if (_isLoading) {
+      return Container(
+        color: Palette.warmNeutral,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(),
+      );
+    }
+
+    return BarcodeScannerScreen(onBarcodeScanned: _handleBarcodeScanned);
+  }
+}
+
+class _AiTabView extends StatelessWidget {
+  final UserState userState;
+
+  const _AiTabView({required this.userState});
+
+  @override
+  Widget build(BuildContext context) {
+    // Unified AI interface - no tabs needed
+    return AiChatScreen(userState: userState);
   }
 }
 
@@ -227,7 +345,14 @@ Widget _sectionCard({required String title, required Widget child}) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title.toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+        Text(
+          title.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 6),
         child,
       ],

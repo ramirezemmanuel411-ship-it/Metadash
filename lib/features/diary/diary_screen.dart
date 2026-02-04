@@ -1,6 +1,6 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
+import '../../providers/user_state.dart';
 import '../food_search/food_search_screen.dart';
 
 class DiaryScreen extends StatefulWidget {
@@ -14,6 +14,9 @@ class DiaryScreen extends StatefulWidget {
   final int carbsGoal;
   final int fatConsumed;
   final int fatGoal;
+  final int stepsTaken;
+  final int stepsGoal;
+  final UserState? userState;
 
   const DiaryScreen({
     super.key,
@@ -27,6 +30,9 @@ class DiaryScreen extends StatefulWidget {
     required this.carbsGoal,
     required this.fatConsumed,
     required this.fatGoal,
+    required this.stepsTaken,
+    required this.stepsGoal,
+    this.userState,
   });
 
   @override
@@ -35,6 +41,31 @@ class DiaryScreen extends StatefulWidget {
 
 class _DiaryScreenState extends State<DiaryScreen> {
   bool _showResults = false;
+  int _currentMacroPage = 0;
+
+  void _openAddFoodSearch() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FoodSearchScreen(
+          returnOnSelect: false,
+          autofocusSearch: true,
+          userState: widget.userState,
+        ),
+      ),
+    );
+  }
+
+  void _openBarcodeScanner() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FoodSearchScreen(
+          returnOnSelect: false,
+          userState: widget.userState,
+          initialTab: FoodSearchTab.barcode,
+        ),
+      ),
+    );
+  }
 
   String get _formattedHeaderDate {
     return '${_weekdayFullName(widget.selectedDay.weekday)}, ${_monthName(widget.selectedDay.month)} ${widget.selectedDay.day}';
@@ -83,14 +114,12 @@ class _DiaryScreenState extends State<DiaryScreen> {
           SafeArea(
             child: Column(
               children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Palette.lightStone,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Palette.lightStone,
+                    borderRadius: BorderRadius.circular(0),
+                  ),
+                  padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -119,33 +148,104 @@ class _DiaryScreenState extends State<DiaryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _ProgressBar(label: 'Workout', value: 0.65, icon: Icons.fitness_center),
+                              // Show workout as a simple calories readout (no per-workout calorie goal)
+                              Row(
+                                children: [
+                                  Icon(Icons.fitness_center, color: Palette.forestGreen, size: 18),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text('Workout', style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text('${widget.caloriesConsumed} cal', style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 8),
-                              _ProgressBar(label: 'Steps', value: 0.45, icon: Icons.directions_walk),
+                              _ProgressBar(
+                                label: 'Steps',
+                                value: widget.stepsGoal > 0 ? (widget.stepsTaken / widget.stepsGoal).clamp(0.0, 1.0) : 0,
+                                icon: Icons.directions_walk,
+                              ),
                             ],
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _Ring(value: widget.proteinGoal > 0 ? widget.proteinConsumed / widget.proteinGoal : 0, label: 'Protein', number: widget.proteinConsumed, color: Colors.redAccent),
-                              const SizedBox(width: 0),
-                              _Ring(value: widget.fatGoal > 0 ? widget.fatConsumed / widget.fatGoal : 0, label: 'Fats', number: widget.fatConsumed, color: Colors.orange),
-                              const SizedBox(width: 0),
-                              _Ring(value: widget.carbsGoal > 0 ? widget.carbsConsumed / widget.carbsGoal : 0, label: 'Carbs', number: widget.carbsConsumed, color: Colors.teal),
-                            ],
-                          ),
+                    SizedBox(
+                      height: 100,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _currentMacroPage = _currentMacroPage == 0 ? 1 : 0);
+                        },
+                        child: IndexedStack(
+                          index: _currentMacroPage,
+                          children: [
+                            // Page 1: Consumed macros
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _Ring(value: widget.proteinGoal > 0 ? widget.proteinConsumed / widget.proteinGoal : 0, label: 'Protein', number: widget.proteinConsumed, color: Colors.redAccent),
+                                      const SizedBox(width: 0),
+                                      _Ring(value: widget.fatGoal > 0 ? widget.fatConsumed / widget.fatGoal : 0, label: 'Fats', number: widget.fatConsumed, color: Colors.orange),
+                                      const SizedBox(width: 0),
+                                      _Ring(value: widget.carbsGoal > 0 ? widget.carbsConsumed / widget.carbsGoal : 0, label: 'Carbs', number: widget.carbsConsumed, color: Colors.teal),
+                                    ],
+                                  ),
+                                ),
+                                _Ring(value: widget.caloriesGoal > 0 ? widget.caloriesConsumed / widget.caloriesGoal : 0, label: 'Calories', number: widget.caloriesConsumed, color: Palette.forestGreen),
+                              ],
+                            ),
+                            // Page 2: Remaining macros
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _Ring(
+                                        value: widget.proteinGoal > 0 ? ((widget.proteinGoal - widget.proteinConsumed) / widget.proteinGoal).clamp(0.0, 1.0) : 0,
+                                        label: 'Protein',
+                                        number: (widget.proteinGoal - widget.proteinConsumed).clamp(0, widget.proteinGoal),
+                                        color: Colors.redAccent,
+                                      ),
+                                      const SizedBox(width: 0),
+                                      _Ring(
+                                        value: widget.fatGoal > 0 ? ((widget.fatGoal - widget.fatConsumed) / widget.fatGoal).clamp(0.0, 1.0) : 0,
+                                        label: 'Fats',
+                                        number: (widget.fatGoal - widget.fatConsumed).clamp(0, widget.fatGoal),
+                                        color: Colors.orange,
+                                      ),
+                                      const SizedBox(width: 0),
+                                      _Ring(
+                                        value: widget.carbsGoal > 0 ? ((widget.carbsGoal - widget.carbsConsumed) / widget.carbsGoal).clamp(0.0, 1.0) : 0,
+                                        label: 'Carbs',
+                                        number: (widget.carbsGoal - widget.carbsConsumed).clamp(0, widget.carbsGoal),
+                                        color: Colors.teal,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                _Ring(
+                                  value: widget.caloriesGoal > 0 ? ((widget.caloriesGoal - widget.caloriesConsumed) / widget.caloriesGoal).clamp(0.0, 1.0) : 0,
+                                  label: 'Calories',
+                                  number: (widget.caloriesGoal - widget.caloriesConsumed).clamp(0, widget.caloriesGoal),
+                                  color: Palette.forestGreen,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        _Ring(value: widget.caloriesGoal > 0 ? widget.caloriesConsumed / widget.caloriesGoal : 0, label: 'Calories', number: widget.caloriesConsumed, color: Palette.forestGreen),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
@@ -162,16 +262,50 @@ class _DiaryScreenState extends State<DiaryScreen> {
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: SingleChildScrollView(
-                  child: Stack(
+            const SizedBox(height: 0),
+            // Search bar with barcode icon
+            GestureDetector(
+                onTap: _openAddFoodSearch,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.grey.shade300,
+                      width: 1,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
                     children: [
-                      Column(
-                        children: List.generate(24, (index) {
+                      Icon(Icons.search, color: Colors.grey.shade600, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Search foods...',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _openBarcodeScanner,
+                        child: Icon(
+                          Icons.qr_code_scanner,
+                          color: Palette.forestGreen,
+                          size: 24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 0),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: List.generate(24, (index) {
                           final label = _hourLabel(index);
                           return SizedBox(
                             height: rowHeight,
@@ -186,92 +320,34 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                 ),
                                 const VerticalDivider(width: 1, thickness: 0.5, color: Colors.grey),
                                 Expanded(
-                                  child: Container(
-                                    alignment: Alignment.centerLeft,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    child: const Icon(Icons.add, color: Palette.forestGreen),
+                                  child: GestureDetector(
+                                    onTap: _openAddFoodSearch,
+                                    child: Container(
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: const Icon(Icons.add, color: Palette.forestGreen),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           );
                         }),
-                      ),
-
-                    ],
-                  ),
                 ),
               ),
             ),
           ],
-            ),
-          ),
-          // Results modal overlay
-          if (_showResults)
-            _ResultsModal(
-              onDismiss: () => setState(() => _showResults = false),
-            ),
-        ],
+        ),
       ),
-      floatingActionButton: null,
-    );
-  }
-}
-
-class _MealItem {
-  final String name;
-  final int calories;
-  final String macro;
-
-  const _MealItem({required this.name, required this.calories, required this.macro});
-}
-
-class _MealPill extends StatelessWidget {
-  final String label;
-
-  const _MealPill({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.lightBlue.shade100,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 12),
-          Row(
-            children: const [
-              _SmallCircle(icon: Icons.restaurant),
-              SizedBox(width: 6),
-              _SmallCircle(icon: Icons.kitchen),
-              SizedBox(width: 6),
-              _SmallCircle(icon: Icons.search),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SmallCircle extends StatelessWidget {
-  final IconData icon;
-
-  const _SmallCircle({required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: const BoxDecoration(shape: BoxShape.circle, color: Palette.forestGreen),
-      child: Icon(icon, color: Palette.warmNeutral, size: 18),
-    );
+      // Results modal overlay
+      if (_showResults)
+        _ResultsModal(
+          onDismiss: () => setState(() => _showResults = false),
+        ),
+    ],
+  ),
+    floatingActionButton: null,
+  );
   }
 }
 
@@ -380,6 +456,8 @@ class _ProgressBar extends StatelessWidget {
   }
 }
 
+// _StatTile removed — calories ring is used instead.
+
 String _hourLabel(int hour) {
   final h = hour % 12 == 0 ? 12 : hour % 12;
   final suffix = hour < 12 ? 'AM' : 'PM';
@@ -436,10 +514,12 @@ class _ResultsModalState extends State<_ResultsModal> with SingleTickerProviderS
 
   @override
   Widget build(BuildContext context) {
-    const tdee = 2850;
-    const netCalories = -650;
-    const fatChangeLb = -0.19;
-    const metabolismTrend = 'up'; // 'up', 'flat', 'down'
+    // Calculate values from real data instead of hardcoding
+    // These are placeholders - proper TDEE calculation will be implemented
+    final tdee = 2850; // TODO: Calculate from user profile + activity
+    final netCalories = -650; // TODO: Calculate from caloriesConsumed - tdee
+    final fatChangeLb = netCalories / 3500.0; // Convert calorie deficit to fat pounds
+    final metabolismTrend = netCalories < -500 ? 'down' : netCalories > 500 ? 'up' : 'flat';
 
     return Stack(
       children: [
@@ -468,7 +548,7 @@ class _ResultsModalState extends State<_ResultsModal> with SingleTickerProviderS
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
+                      color: Colors.black.withValues(alpha: 0.15),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),

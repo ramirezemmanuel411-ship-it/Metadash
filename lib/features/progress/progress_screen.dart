@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../shared/palette.dart';
+import '../../shared/user_settings.dart';
+// scale change helper is used by the summary card; imported in the card file
+import 'scale_change_summary_card.dart';
+// removed mini_summary_card.dart uses; ScaleChangeSummaryCard is now generic
 
 void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
   const dash = 4.0;
@@ -48,6 +52,7 @@ class ProgressScreen extends StatefulWidget {
 class _ProgressScreenState extends State<ProgressScreen> {
   List<WeightEntry> _weightEntries = [];
   
+  
   @override
   void initState() {
     super.initState();
@@ -55,6 +60,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   void _initializeMockWeightData() {
+    // TODO: Replace with real weight data from database
+    // For now using placeholder to avoid crashes - connect to UserState.db.getWeightByUserId()
     final now = DateTime.now();
     _weightEntries = List.generate(15, (i) {
       return WeightEntry(
@@ -69,16 +76,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
     setState(() {
       // Remove any existing entry for the same day
       final dayStart = DateTime(date.year, date.month, date.day);
-      _weightEntries.removeWhere((e) => 
-        DateTime(e.date.year, e.date.month, e.date.day).isAtSameMomentAs(dayStart));
-      
+      _weightEntries.removeWhere((e) => DateTime(e.date.year, e.date.month, e.date.day).isAtSameMomentAs(dayStart));
+
       // Add new entry
       _weightEntries.add(WeightEntry(
         id: id ?? 'weight_${DateTime.now().millisecondsSinceEpoch}',
         date: date,
         weight: weight,
       ));
-      
+
       // Sort by date ascending
       _weightEntries.sort((a, b) => a.date.compareTo(b.date));
     });
@@ -92,6 +98,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentWeight = _weightEntries.isNotEmpty ? _weightEntries.last.weight : null;
+    final initialWeight = _weightEntries.isNotEmpty ? _weightEntries.first.weight : null;
+    final goalWeight = UserSettings.goalWeight.value;
+    double? progressPct;
+    if (goalWeight != null && currentWeight != null && initialWeight != null) {
+      final denom = (initialWeight - goalWeight);
+      if (denom == 0) {
+        progressPct = 1.0;
+      } else {
+        progressPct = ((initialWeight - currentWeight) / denom).clamp(0.0, 1.0);
+      }
+    }
     return Scaffold(
       backgroundColor: Palette.warmNeutral,
       appBar: AppBar(
@@ -110,9 +128,85 @@ class _ProgressScreenState extends State<ProgressScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Goal/Current weight summary box
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                  color: Palette.lightStone,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Current Weight', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                          const SizedBox(height: 6),
+                          Text(
+                            currentWeight != null ? '${currentWeight.toStringAsFixed(1)} lb' : '--',
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Goal', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                          const SizedBox(height: 6),
+                          ValueListenableBuilder<double?>(
+                            valueListenable: UserSettings.goalWeight,
+                            builder: (context, goal, _) => Text(
+                              goal != null ? '${goal.toStringAsFixed(1)} lb' : 'Not set',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ValueListenableBuilder<double?>(
+                    valueListenable: UserSettings.goalWeight,
+                    builder: (context, goal, _) {
+                      final displayPct = progressPct ?? 0.0;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LinearProgressIndicator(
+                            value: displayPct,
+                            color: Palette.forestGreen,
+                            backgroundColor: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${(displayPct * 100).toStringAsFixed(0)}% toward goal',
+                            style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
             _FatChangeSection(),
             const SizedBox(height: 16),
             _TDEETrendSection(),
+            const SizedBox(height: 16),
+            // (removed duplicate summary card; per-chart summaries are shown under each chart)
             const SizedBox(height: 16),
             _WeightSection(
               entries: _weightEntries,
@@ -135,8 +229,12 @@ class _FatChangeSection extends StatefulWidget {
 
 class _FatChangeSectionState extends State<_FatChangeSection> {
   int? _selectedIndex;
-  
+  String _filterType = 'ALL';
+  late final List<DataPoint> _allData;
+
   List<DataPoint> _generateFatChangeData() {
+    // TODO: Calculate real fat change from daily_log deficit/surplus
+    // For now, placeholder data - will be replaced with: daily_logs.map((log) => log.calorieDeficit / 3500)
     final now = DateTime.now();
     return List.generate(30, (i) {
       final date = now.subtract(Duration(days: 29 - i));
@@ -146,19 +244,73 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _allData = _generateFatChangeData();
+  }
+
+  List<DataPoint> _filterData(List<DataPoint> data, String filter) {
+    final now = DateTime.now();
+    DateTime cutoffDate;
+    switch (filter) {
+      case '1D':
+        cutoffDate = now.subtract(const Duration(days: 1));
+        break;
+      case '1W':
+        cutoffDate = now.subtract(const Duration(days: 7));
+        break;
+      case '1M':
+        cutoffDate = DateTime(now.year, now.month - 1, now.day);
+        break;
+      case '3M':
+        cutoffDate = DateTime(now.year, now.month - 3, now.day);
+        break;
+      case '1Y':
+        cutoffDate = DateTime(now.year - 1, now.month, now.day);
+        break;
+      case 'YTD':
+        cutoffDate = DateTime(now.year, 1, 1);
+        break;
+      default:
+        return data;
+    }
+    return data.where((p) => p.date.isAfter(cutoffDate)).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final data = _generateFatChangeData();
-    final last7Days = data.sublist(data.length - 7);
-    final last7Sum = last7Days.fold(0.0, (sum, p) => sum + p.value) / 7;
+    final data = _allData;
+    final filteredData = _filterData(data, _filterType);
+    final last7Days = filteredData.length >= 7 ? filteredData.sublist(filteredData.length - 7) : filteredData;
+    final last7Sum = last7Days.isNotEmpty ? last7Days.fold(0.0, (sum, p) => sum + p.value) / last7Days.length : 0.0;
     
-    return _ChartCard(
-      title: 'Fat Change',
-      subtitle: 'Estimated fat change over time',
-      data: data,
-      color: Colors.blue.withOpacity(0.8),
-      selectedIndex: _selectedIndex,
-      onIndexChanged: (index) => setState(() => _selectedIndex = index),
-      summaryText: 'Last 7 days: ${last7Sum.toStringAsFixed(1)} lb',
+        return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ChartCard(
+          title: 'Fat Change',
+          subtitle: 'Estimated fat change over time',
+          data: filteredData,
+          color: Colors.blue.withValues(alpha: 0.8),
+          selectedIndex: _selectedIndex,
+          onIndexChanged: (index) {
+            // parent received index
+            setState(() => _selectedIndex = index);
+          },
+          summaryText: 'Last 7 days: ${last7Sum.toStringAsFixed(1)} lb',
+          showDecimals: true,
+          yAxisInterval: 0.25,
+          filterType: _filterType,
+          onFilterChanged: (filter) => setState(() => _filterType = filter),
+          attachedSummary: ScaleChangeSummaryCard<DataPoint>(
+            items: filteredData,
+            dateSelector: (p) => p.date,
+            valueSelector: (p) => p.value,
+            filter: _filterType,
+            label: 'Fat Change Summary',
+          ),
+        ),
+      ],
     );
   }
 }
@@ -171,8 +323,11 @@ class _TDEETrendSection extends StatefulWidget {
 
 class _TDEETrendSectionState extends State<_TDEETrendSection> {
   int? _selectedIndex;
+  String _filterType = 'ALL';
   
   List<DataPoint> _generateTDEEData() {
+    // TODO: Calculate real TDEE from daily_log calories + activity
+    // For now, placeholder data - will be replaced with actual TDEE calculations per day
     final now = DateTime.now();
     return List.generate(30, (i) {
       final date = now.subtract(Duration(days: 29 - i));
@@ -181,22 +336,82 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
     });
   }
 
+  late final List<DataPoint> _allData;
+
+  @override
+  void initState() {
+    super.initState();
+    _allData = _generateTDEEData();
+  }
+
+  List<DataPoint> _filterData(List<DataPoint> data, String filter) {
+    final now = DateTime.now();
+    DateTime cutoffDate;
+    switch (filter) {
+      case '1D':
+        cutoffDate = now.subtract(const Duration(days: 1));
+        break;
+      case '1W':
+        cutoffDate = now.subtract(const Duration(days: 7));
+        break;
+      case '1M':
+        cutoffDate = DateTime(now.year, now.month - 1, now.day);
+        break;
+      case '3M':
+        cutoffDate = DateTime(now.year, now.month - 3, now.day);
+        break;
+      case '1Y':
+        cutoffDate = DateTime(now.year - 1, now.month, now.day);
+        break;
+      case 'YTD':
+        cutoffDate = DateTime(now.year, 1, 1);
+        break;
+      default:
+        return data;
+    }
+    return data.where((p) => p.date.isAfter(cutoffDate)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final data = _generateTDEEData();
-    final first = data.first.value;
-    final last = data.last.value;
+    final data = _allData;
+    final filteredData = _filterData(data, _filterType);
+    final first = filteredData.isNotEmpty ? filteredData.first.value : 0.0;
+    final last = filteredData.isNotEmpty ? filteredData.last.value : 0.0;
     final diff = last - first;
     final symbol = diff > 5 ? '↑' : (diff < -5 ? '↓' : '—');
     
-    return _ChartCard(
-      title: 'TDEE Trend',
-      subtitle: 'Daily burn trend',
-      data: data,
-      color: Colors.green.withOpacity(0.8),
-      selectedIndex: _selectedIndex,
-      onIndexChanged: (index) => setState(() => _selectedIndex = index),
-      summaryText: 'Trend: $symbol',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ChartCard(
+          title: 'Daily Energy Expenditure',
+          subtitle: 'Daily energy expenditure',
+          data: filteredData,
+          color: Colors.green.withValues(alpha: 0.8),
+          selectedIndex: _selectedIndex,
+          onIndexChanged: (index) {
+            // parent received index
+            setState(() => _selectedIndex = index);
+          },
+          summaryText: 'Trend: $symbol',
+          showDecimals: false,
+          // Use a smaller interval for TDEE so the Y-axis is more informative
+          yAxisInterval: 50.0,
+          rightPadding: 50.0,
+          abbreviateLabels: true,
+          filterType: _filterType,
+          onFilterChanged: (filter) => setState(() => _filterType = filter),
+            attachedSummary: ScaleChangeSummaryCard<DataPoint>(
+            items: filteredData,
+            dateSelector: (p) => p.date,
+            valueSelector: (p) => p.value,
+            filter: _filterType,
+              label: 'Daily Energy Expenditure Summary',
+              unit: 'Kcal',
+          ),
+        ),
+      ],
     );
   }
 }
@@ -221,9 +436,39 @@ class _WeightSection extends StatefulWidget {
 
 class _WeightSectionState extends State<_WeightSection> {
   int? _selectedIndex;
+  String _filterType = 'ALL';
+
+  List<WeightEntry> _filterEntries(List<WeightEntry> entries, String filter) {
+    final now = DateTime.now();
+    DateTime cutoffDate;
+    switch (filter) {
+      case '1D':
+        cutoffDate = now.subtract(const Duration(days: 1));
+        break;
+      case '1W':
+        cutoffDate = now.subtract(const Duration(days: 7));
+        break;
+      case '1M':
+        cutoffDate = DateTime(now.year, now.month - 1, now.day);
+        break;
+      case '3M':
+        cutoffDate = DateTime(now.year, now.month - 3, now.day);
+        break;
+      case '1Y':
+        cutoffDate = DateTime(now.year - 1, now.month, now.day);
+        break;
+      case 'YTD':
+        cutoffDate = DateTime(now.year, 1, 1);
+        break;
+      default:
+        return entries;
+    }
+    return entries.where((e) => e.date.isAfter(cutoffDate)).toList();
+  }
 
   List<DataPoint> _getScaleData() {
-    return widget.entries.map((e) => DataPoint(
+    final filteredEntries = _filterEntries(widget.entries, _filterType);
+    return filteredEntries.map((e) => DataPoint(
       id: e.id,
       date: e.date,
       value: e.weight,
@@ -231,11 +476,12 @@ class _WeightSectionState extends State<_WeightSection> {
   }
 
   List<DataPoint> _getTrendData() {
-    if (widget.entries.isEmpty) return [];
+    final filteredEntries = _filterEntries(widget.entries, _filterType);
+    if (filteredEntries.isEmpty) return [];
     
-    final last21Days = widget.entries.length > 21 
-        ? widget.entries.sublist(widget.entries.length - 21)
-        : widget.entries;
+    final last21Days = filteredEntries.length > 21 
+        ? filteredEntries.sublist(filteredEntries.length - 21)
+        : filteredEntries;
     
     if (last21Days.isEmpty) return [];
     
@@ -258,11 +504,12 @@ class _WeightSectionState extends State<_WeightSection> {
   }
 
   double? _get7DayAverage() {
-    if (widget.entries.isEmpty) return null;
+    final filteredEntries = _filterEntries(widget.entries, _filterType);
+    if (filteredEntries.isEmpty) return null;
     
     final now = DateTime.now();
     final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
-    final last7Days = widget.entries.where((e) => 
+    final last7Days = filteredEntries.where((e) => 
       endOfToday.difference(e.date).inDays < 7
     ).toList();
     
@@ -276,14 +523,29 @@ class _WeightSectionState extends State<_WeightSection> {
     final scaleData = _getScaleData();
     final trendData = _getTrendData();
     final avg7 = _get7DayAverage();
-    
-    return Container(
+
+    // Map filter type to tick count for Y-axis (shorter ranges -> fewer ticks)
+    int tickCountForFilter(String f) {
+      switch (f) {
+        case '1D': return 2;
+        case '1W': return 4;
+        case '1M': return 5;
+        case '3M': return 6;
+        case '1Y': return 6;
+        case 'YTD': return 6;
+        default: return 5;
+      }
+    }
+    final chartTickCount = tickCountForFilter(_filterType);
+
+    // Main weight chart card (contains chart, legend, and scale-change summary)
+    final weightChartCard = Container(
       decoration: BoxDecoration(
         color: Palette.lightStone,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -293,14 +555,58 @@ class _WeightSectionState extends State<_WeightSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Weight',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Scale weight',
-            style: TextStyle(fontSize: 12, color: Colors.black54),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Weight',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Scale weight',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (filter) => setState(() => _filterType = filter),
+                itemBuilder: (context) => ['1D', '1W', '1M', '3M', '1Y', 'YTD', 'ALL']
+                    .map((label) => PopupMenuItem(
+                          value: label,
+                          child: Text(label, style: const TextStyle(fontSize: 12)),
+                        ))
+                    .toList(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Palette.forestGreen,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _filterType,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Palette.warmNeutral,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_drop_down, color: Palette.warmNeutral, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           
@@ -312,6 +618,7 @@ class _WeightSectionState extends State<_WeightSection> {
               trendData: trendData,
               selectedIndex: _selectedIndex,
               onIndexChanged: (index) => setState(() => _selectedIndex = index),
+              tickCount: chartTickCount,
             ),
           ),
           
@@ -320,12 +627,11 @@ class _WeightSectionState extends State<_WeightSection> {
           // Legend
           Row(
             children: [
-              _LegendItem(color: Colors.orange.withOpacity(0.9), label: 'Scale'),
+              _LegendItem(color: Colors.orange.withValues(alpha: 0.9), label: 'Scale'),
               const SizedBox(width: 16),
-              _LegendItem(color: Colors.purple.withOpacity(0.7), label: 'Trend', isDot: true),
+              _LegendItem(color: Colors.purple.withValues(alpha: 0.7), label: 'Trend', isDot: true),
             ],
           ),
-          
           const SizedBox(height: 8),
           Text(
             '7 Day Average: ${avg7 != null ? avg7.toStringAsFixed(1) : '—'} lb',
@@ -335,16 +641,46 @@ class _WeightSectionState extends State<_WeightSection> {
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 12),
-          
-          // Weight entries list
-          ...widget.entries.reversed.map((entry) => _WeightEntryRow(
-            entry: entry,
-            onDelete: () => widget.onDeleteWeight(entry.id),
-            onEdit: () => _showAddWeightSheet(context, entry: entry),
-          )),
-          
+          // Scale change summary for weight
+          ScaleChangeSummaryCard<WeightEntry>(
+            items: widget.entries,
+            dateSelector: (e) => e.date,
+            valueSelector: (e) => e.weight,
+            filter: _filterType,
+            label: 'Weight Summary',
+          ),
           const SizedBox(height: 12),
-          
+        ],
+      ),
+    );
+
+    // Separate card for entries list + Add button
+    final entriesCard = Container(
+      decoration: BoxDecoration(
+        color: Palette.lightStone,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Weight entries list
+          ..._filterEntries(widget.entries, _filterType).reversed.map((entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: _WeightEntryRow(
+              entry: entry,
+              onDelete: () => widget.onDeleteWeight(entry.id),
+              onEdit: () => _showAddWeightSheet(context, entry: entry),
+            ),
+          )),
+          const SizedBox(height: 8),
           // Add Weight button
           SizedBox(
             width: double.infinity,
@@ -364,6 +700,16 @@ class _WeightSectionState extends State<_WeightSection> {
           ),
         ],
       ),
+    );
+
+    // Return a Column with the chart card followed by the entries card
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        weightChartCard,
+        const SizedBox(height: 12),
+        entriesCard,
+      ],
     );
   }
 
@@ -396,6 +742,13 @@ class _ChartCard extends StatelessWidget {
   final int? selectedIndex;
   final Function(int?) onIndexChanged;
   final String summaryText;
+  final bool showDecimals;
+  final double? yAxisInterval;
+  final double rightPadding;
+  final bool abbreviateLabels;
+  final String? filterType;
+  final Function(String)? onFilterChanged;
+  final Widget? attachedSummary;
 
   const _ChartCard({
     required this.title,
@@ -405,6 +758,13 @@ class _ChartCard extends StatelessWidget {
     required this.selectedIndex,
     required this.onIndexChanged,
     required this.summaryText,
+    this.showDecimals = false,
+    this.yAxisInterval,
+    this.rightPadding = 32.0,
+    this.abbreviateLabels = false,
+    this.filterType,
+    this.onFilterChanged,
+    this.attachedSummary,
   });
 
   @override
@@ -415,7 +775,7 @@ class _ChartCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -425,14 +785,59 @@ class _ChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              if (filterType != null && onFilterChanged != null)
+                PopupMenuButton<String>(
+                  onSelected: onFilterChanged,
+                  itemBuilder: (context) => ['1D', '1W', '1M', '3M', '1Y', 'YTD', 'ALL']
+                      .map((label) => PopupMenuItem(
+                            value: label,
+                            child: Text(label, style: const TextStyle(fontSize: 12)),
+                          ))
+                      .toList(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Palette.forestGreen,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          filterType!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Palette.warmNeutral,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_drop_down, color: Palette.warmNeutral, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -442,6 +847,15 @@ class _ChartCard extends StatelessWidget {
               color: color,
               selectedIndex: selectedIndex,
               onIndexChanged: onIndexChanged,
+              showDecimals: showDecimals,
+              yAxisInterval: yAxisInterval,
+              rightPadding: rightPadding,
+              // Determine tick count from filterType when available
+              tickCount: filterType != null ? _tickCountForFilter(filterType!) : 5,
+              abbreviateLabels: abbreviateLabels,
+              // allow callers to optionally clamp Y bounds for stability
+              minY: (title == 'TDEE') ? 1200.0 : (title == 'Fat Change' ? -10.0 : null),
+              maxY: (title == 'TDEE') ? 4000.0 : (title == 'Fat Change' ? 10.0 : null),
             ),
           ),
           const SizedBox(height: 12),
@@ -449,48 +863,216 @@ class _ChartCard extends StatelessWidget {
             summaryText,
             style: const TextStyle(fontSize: 13, color: Colors.black54),
           ),
+          if (attachedSummary != null) ...[
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            attachedSummary!,
+          ],
         ],
       ),
     );
   }
+
+  int _tickCountForFilter(String f) {
+    switch (f) {
+      case '1D': return 2;
+      case '1W': return 4;
+      case '1M': return 5;
+      case '3M': return 6;
+      case '1Y': return 6;
+      case 'YTD': return 6;
+      default: return 5;
+    }
+  }
 }
 
 // Interactive Chart widget
-class _InteractiveChart extends StatelessWidget {
+class _InteractiveChart extends StatefulWidget {
   final List<DataPoint> data;
   final Color color;
   final int? selectedIndex;
   final Function(int?) onIndexChanged;
+  final bool showDecimals;
+  final double? yAxisInterval;
+  final double rightPadding;
+  final int tickCount;
+  final double? minY;
+  final double? maxY;
+  final bool abbreviateLabels;
 
   const _InteractiveChart({
     required this.data,
     required this.color,
     required this.selectedIndex,
     required this.onIndexChanged,
+    this.showDecimals = false,
+    this.yAxisInterval,
+    this.rightPadding = 32.0,
+    this.tickCount = 5,
+    this.minY,
+    this.maxY,
+    this.abbreviateLabels = false,
   });
 
   @override
+  State<_InteractiveChart> createState() => _InteractiveChartState();
+}
+
+class _InteractiveChartState extends State<_InteractiveChart> {
+  int? _hoverIndex;
+  double? _cachedYMin;
+  double? _cachedYMax;
+
+  @override
+  void initState() {
+    super.initState();
+    _recomputeBounds();
+  }
+
+  @override
+  void didUpdateWidget(covariant _InteractiveChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recompute only when the data's min/max change meaningfully (avoid identity-based churn)
+    final oldMin = oldWidget.data.isNotEmpty ? oldWidget.data.map((p) => p.value).reduce(math.min) : null;
+    final oldMax = oldWidget.data.isNotEmpty ? oldWidget.data.map((p) => p.value).reduce(math.max) : null;
+    final newMin = widget.data.isNotEmpty ? widget.data.map((p) => p.value).reduce(math.min) : null;
+    final newMax = widget.data.isNotEmpty ? widget.data.map((p) => p.value).reduce(math.max) : null;
+    bool needs = false;
+    const eps = 1e-6;
+    if (oldMin == null || newMin == null) {
+      needs = true;
+    } else if ((oldMin - newMin).abs() > eps) {
+      needs = true;
+    }
+    if (oldMax == null || newMax == null) {
+      needs = true;
+    } else if ((oldMax - newMax).abs() > eps) {
+      needs = true;
+    }
+    if (needs) _recomputeBounds();
+  }
+
+  void _recomputeBounds() {
+    final data = widget.data;
+    if (data.isEmpty) {
+      _cachedYMin = null;
+      _cachedYMax = null;
+      return;
+    }
+    final minValue = data.map((p) => p.value).reduce(math.min);
+    final maxValue = data.map((p) => p.value).reduce(math.max);
+    // If explicit clamps provided, use them as base
+    final clampMin = widget.minY;
+    final clampMax = widget.maxY;
+    if (widget.yAxisInterval != null && widget.yAxisInterval! > 0) {
+      final interval = widget.yAxisInterval!;
+      var yMin = (minValue / interval).floor() * interval;
+      var yMax = (maxValue / interval).ceil() * interval;
+      if (yMax - yMin < interval) yMax = yMin + interval;
+      // apply clamps if provided (keep bounds inside the clamp range)
+      if (clampMin != null) yMin = math.max(yMin, clampMin);
+      if (clampMax != null) yMax = math.min(yMax, clampMax);
+      // ensure a reasonable min span relative to data to avoid jitter
+      final span = yMax - yMin;
+      final minSpan = math.max(interval, (maxValue - minValue).abs() * 0.15);
+      if (span < minSpan) {
+        final mid = (yMax + yMin) / 2.0;
+        yMin = mid - minSpan / 2.0;
+        yMax = mid + minSpan / 2.0;
+      }
+      _cachedYMin = yMin;
+      _cachedYMax = yMax;
+    } else {
+      final padding = (maxValue - minValue) * 0.1;
+      var yMin = minValue - padding;
+      var yMax = maxValue + padding;
+      if (yMin == yMax) {
+        yMin -= 1;
+        yMax += 1;
+      }
+      // apply clamps if provided (keep bounds inside the clamp range)
+      if (clampMin != null) yMin = math.max(yMin, clampMin);
+      if (clampMax != null) yMax = math.min(yMax, clampMax);
+      // enforce a minimum span so tiny variations don't rescale the chart while dragging
+      final currentSpan = yMax - yMin;
+      // pick an absolute minimum span based on magnitude
+      double absoluteMin;
+      final absMax = math.max(yMax.abs(), yMin.abs());
+      if (absMax < 10) {
+        absoluteMin = 1.0;
+      } else if (absMax < 100) {
+        absoluteMin = 5.0;
+      } else if (absMax < 1000) {
+        absoluteMin = 50.0;
+      } else {
+        absoluteMin = 100.0;
+      }
+      final minSpan = math.max(absoluteMin, (maxValue - minValue).abs() * 0.2);
+      if (currentSpan < minSpan) {
+        final mid = (yMax + yMin) / 2.0;
+        yMin = mid - minSpan / 2.0;
+        yMax = mid + minSpan / 2.0;
+      }
+      _cachedYMin = yMin;
+      _cachedYMax = yMax;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (details) => _handleTouch(details.localPosition),
-      onPanUpdate: (details) => _handleTouch(details.localPosition),
-      onTapUp: (_) => Future.delayed(const Duration(milliseconds: 300), () => onIndexChanged(null)),
-      onPanEnd: (_) => Future.delayed(const Duration(milliseconds: 300), () => onIndexChanged(null)),
-      child: CustomPaint(
-        painter: _ChartPainter(
-          data: data,
-          color: color,
-          selectedIndex: selectedIndex,
-        ),
-        child: Container(),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GestureDetector(
+          onTapDown: (details) {
+            final idx = _computeIndex(details.localPosition, constraints.maxWidth);
+            setState(() => _hoverIndex = idx);
+          },
+          onPanUpdate: (details) {
+            final idx = _computeIndex(details.localPosition, constraints.maxWidth);
+            setState(() => _hoverIndex = idx);
+          },
+          onTapUp: (_) {
+            if (_hoverIndex != null) {
+              widget.onIndexChanged(_hoverIndex);
+            }
+          },
+          onPanEnd: (_) {
+            if (_hoverIndex != null) {
+              widget.onIndexChanged(_hoverIndex);
+            }
+          },
+          child: CustomPaint(
+            painter: _ChartPainter(
+              data: widget.data,
+              color: widget.color,
+              selectedIndex: _hoverIndex ?? widget.selectedIndex,
+              fixedYMin: _cachedYMin,
+              fixedYMax: _cachedYMax,
+              showDecimals: widget.showDecimals,
+              yAxisInterval: widget.yAxisInterval,
+              rightPadding: widget.rightPadding,
+              tickCount: widget.tickCount,
+              abbreviateLabels: widget.abbreviateLabels,
+            ),
+            child: Container(),
+          ),
+        );
+      },
     );
   }
 
-  void _handleTouch(Offset position) {
-    // Simple nearest point selection based on X position
-    final index = (position.dx / 300 * data.length).round().clamp(0, data.length - 1);
-    onIndexChanged(index);
+  // Removed: previously unused helper _handleTouch is omitted; touch handled inline.
+
+  int? _computeIndex(Offset position, double width) {
+    if (widget.data.isEmpty) return null;
+    const leftPad = 6.0;
+    final plotWidth = width - leftPad - widget.rightPadding;
+    if (plotWidth <= 0) return 0;
+    final clampedX = (position.dx - leftPad).clamp(0.0, plotWidth);
+    final fraction = widget.data.length > 1 ? clampedX / plotWidth : 0.0;
+    final index = (fraction * (widget.data.length - 1)).round().clamp(0, widget.data.length - 1);
+    return index;
   }
 }
 
@@ -499,22 +1081,38 @@ class _ChartPainter extends CustomPainter {
   final List<DataPoint> data;
   final Color color;
   final int? selectedIndex;
+  final double? fixedYMin;
+  final double? fixedYMax;
+  final bool showDecimals;
+  final double? yAxisInterval;
+  final double rightPadding;
+  final int tickCount;
+  final bool abbreviateLabels;
 
-  _ChartPainter({required this.data, required this.color, this.selectedIndex});
+  _ChartPainter({
+    required this.data,
+    required this.color,
+    this.selectedIndex,
+    this.fixedYMin,
+    this.fixedYMax,
+    this.showDecimals = false,
+    this.yAxisInterval,
+    this.rightPadding = 32.0,
+    this.tickCount = 5,
+    this.abbreviateLabels = false,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
 
-    const axisColor = Colors.black54;
-    const labelStyle = TextStyle(color: Colors.black54, fontSize: 10);
-    const tickCount = 5;
+    // Slightly smaller axis label font for readability
+    final labelStyle = const TextStyle(color: Colors.black54, fontSize: 9);
     const leftPad = 6.0;
-    const rightPad = 32.0;
     const bottomPad = 18.0;
     const topPad = 6.0;
 
-    final plotWidth = size.width - leftPad - rightPad;
+    final plotWidth = size.width - leftPad - rightPadding;
     final plotHeight = size.height - topPad - bottomPad;
     if (plotWidth <= 0 || plotHeight <= 0) return;
 
@@ -527,45 +1125,110 @@ class _ChartPainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
-    // Calculate bounds
-    final minValue = data.map((p) => p.value).reduce(math.min);
-    final maxValue = data.map((p) => p.value).reduce(math.max);
-    final padding = (maxValue - minValue) * 0.1;
-    final yMin = minValue - padding;
-    final yMax = maxValue + padding;
+    // Calculate bounds (use fixed if provided to avoid rescaling during hover)
+    double yMin, yMax;
+    if (fixedYMin != null && fixedYMax != null) {
+      yMin = fixedYMin!;
+      yMax = fixedYMax!;
+    } else {
+      final minValue = data.map((p) => p.value).reduce(math.min);
+      final maxValue = data.map((p) => p.value).reduce(math.max);
+      // Calculate Y-axis bounds based on interval if specified
+      if (yAxisInterval != null && yAxisInterval! > 0) {
+        final interval = yAxisInterval!;
+        yMin = (minValue / interval).floor() * interval;
+        yMax = (maxValue / interval).ceil() * interval;
+        if (yMax - yMin < interval) yMax = yMin + interval;
+      } else {
+        final padding = (maxValue - minValue) * 0.1;
+        yMin = minValue - padding;
+        yMax = maxValue + padding;
+        if (yMin == yMax) {
+          yMin -= 1;
+          yMax += 1;
+        }
+      }
+    }
 
     // Draw gridlines (dashed)
     final gridPaint = Paint()
       ..color = Colors.black12
       ..strokeWidth = 0.5;
 
-    for (int i = 0; i <= 5; i++) {
-      final y = topPad + plotHeight * i / 5;
-      _drawDashedLine(canvas, Offset(leftPad, y), Offset(leftPad + plotWidth, y), gridPaint);
+    // Draw horizontal gridlines at Y-axis label positions
+    if (yAxisInterval != null && yAxisInterval! > 0) {
+      final interval = yAxisInterval!;
+      double gridStartValue = yMin;
+      // Cap the number of Y labels to avoid overlapping text (max ~8)
+      int steps = ((yMax - yMin) / interval).round();
+      double usedInterval = interval;
+      if (steps > 8) {
+        final factor = (steps / 8).ceil();
+        usedInterval = interval * factor;
+        // snap bounds to the new interval
+        yMin = (yMin / usedInterval).floor() * usedInterval;
+        yMax = (yMax / usedInterval).ceil() * usedInterval;
+      }
+      while (gridStartValue <= yMax) {
+        final normalizedY = (gridStartValue - yMin) / (yMax - yMin);
+        final y = topPad + plotHeight - (normalizedY * plotHeight);
+        _drawDashedLine(canvas, Offset(leftPad, y), Offset(leftPad + plotWidth, y), gridPaint);
+        gridStartValue += usedInterval;
+      }
+    } else {
+      final effectiveTicks = tickCount > 1 ? tickCount : 5;
+      for (int i = 0; i <= effectiveTicks; i++) {
+        final y = topPad + plotHeight * i / effectiveTicks;
+        _drawDashedLine(canvas, Offset(leftPad, y), Offset(leftPad + plotWidth, y), gridPaint);
+      }
     }
+
+    // Vertical gridlines
     for (int i = 0; i <= 5; i++) {
       final x = leftPad + plotWidth * i / 5;
       _drawDashedLine(canvas, Offset(x, topPad), Offset(x, topPad + plotHeight), gridPaint);
     }
 
-    // Axes (y-axis on right)
-    final axisPaint = Paint()
-      ..color = axisColor
-      ..strokeWidth = 1;
+    // Axes removed for cleaner look
     final xAxisY = topPad + plotHeight;
-    final yAxisX = leftPad + plotWidth;
-    canvas.drawLine(Offset(leftPad, xAxisY), Offset(leftPad + plotWidth, xAxisY), axisPaint); // x-axis
-    canvas.drawLine(Offset(yAxisX, topPad), Offset(yAxisX, topPad + plotHeight), axisPaint); // y-axis on right
 
     // Y-axis labels (right aligned)
-    for (int i = 0; i <= tickCount; i++) {
-      final y = topPad + plotHeight * i / tickCount;
-      final value = yMax - (yMax - yMin) * (i / tickCount);
-      final tp = TextPainter(
-        text: TextSpan(text: value.toStringAsFixed(1), style: labelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(size.width - tp.width - 2, y - tp.height));
+    if (yAxisInterval != null && yAxisInterval! > 0) {
+      final interval = yAxisInterval!;
+      int steps = ((yMax - yMin) / interval).round();
+      double usedInterval = interval;
+      if (steps > 8) {
+        final factor = (steps / 8).ceil();
+        usedInterval = interval * factor;
+      }
+      double labelValue = yMin;
+      while (labelValue <= yMax + 0.0001) {
+        final normalizedY = (labelValue - yMin) / (yMax - yMin);
+        final y = topPad + plotHeight - (normalizedY * plotHeight);
+        final labelText = abbreviateLabels
+          ? _formatWithCommas(labelValue, showDecimals)
+          : (showDecimals ? labelValue.toStringAsFixed(1) : labelValue.toStringAsFixed(0));
+        final tp = TextPainter(
+          text: TextSpan(text: labelText, style: labelStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, Offset(size.width - tp.width - 2, y - tp.height / 2));
+        labelValue += usedInterval;
+      }
+    } else {
+      final effectiveTicks = tickCount > 1 ? tickCount : 5;
+      for (int i = 0; i <= effectiveTicks; i++) {
+        final y = topPad + plotHeight * i / effectiveTicks;
+        final value = yMax - (yMax - yMin) * (i / effectiveTicks);
+        final labelText = abbreviateLabels
+          ? _formatWithCommas(value, showDecimals)
+          : (showDecimals ? value.toStringAsFixed(1) : value.toStringAsFixed(0));
+        final tp = TextPainter(
+          text: TextSpan(text: labelText, style: labelStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, Offset(size.width - tp.width - 2, y - tp.height));
+      }
     }
 
     // X-axis labels (month/day)
@@ -614,7 +1277,7 @@ class _ChartPainter extends CustomPainter {
       canvas.drawCircle(Offset(x, y), 5, dotPaint);
 
       // Tooltip background
-      final tooltipText = '${_formatDate(data[selectedIndex!].date)}\n${data[selectedIndex!].value.toStringAsFixed(1)}';
+      final tooltipText = '${_formatDate(data[selectedIndex!].date)}\n${showDecimals ? data[selectedIndex!].value.toStringAsFixed(1) : data[selectedIndex!].value.toStringAsFixed(0)}';
       final textPainter = TextPainter(
         text: TextSpan(
           text: tooltipText,
@@ -639,6 +1302,23 @@ class _ChartPainter extends CustomPainter {
     canvas.restore();
   }
 
+  String _formatWithCommas(double v, bool showDecimals) {
+    final negative = v < 0;
+    final absVal = v.abs();
+    final text = showDecimals ? absVal.toStringAsFixed(1) : absVal.toStringAsFixed(0);
+    final parts = text.split('.');
+    var intPart = parts[0];
+    final buffer = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      final pos = intPart.length - i;
+      buffer.write(intPart[i]);
+      if (pos > 1 && pos % 3 == 1) buffer.write(',');
+    }
+    var result = buffer.toString();
+    if (parts.length > 1) result = '$result.${parts[1]}';
+    return negative ? '-$result' : result;
+  }
+
   String _formatDate(DateTime date) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}';
@@ -650,41 +1330,132 @@ class _ChartPainter extends CustomPainter {
 }
 
 // Weight Chart with scale line and trend dots
-class _WeightChart extends StatelessWidget {
+class _WeightChart extends StatefulWidget {
   final List<DataPoint> scaleData;
   final List<DataPoint> trendData;
   final int? selectedIndex;
   final Function(int?) onIndexChanged;
+  final int tickCount;
 
   const _WeightChart({
     required this.scaleData,
     required this.trendData,
     required this.selectedIndex,
     required this.onIndexChanged,
+    this.tickCount = 5,
   });
 
   @override
+  State<_WeightChart> createState() => _WeightChartState();
+}
+
+class _WeightChartState extends State<_WeightChart> {
+  int? _hoverIndex;
+  double? _cachedYMin;
+  double? _cachedYMax;
+
+  @override
+  void initState() {
+    super.initState();
+    _recomputeBounds();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WeightChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.scaleData, oldWidget.scaleData) || !identical(widget.trendData, oldWidget.trendData)) {
+      _recomputeBounds();
+    }
+  }
+
+  void _recomputeBounds() {
+    final allValues = [...widget.scaleData.map((p) => p.value), ...widget.trendData.map((p) => p.value)];
+    if (allValues.isEmpty) {
+      _cachedYMin = null;
+      _cachedYMax = null;
+      return;
+    }
+    final minValue = allValues.reduce(math.min);
+    final maxValue = allValues.reduce(math.max);
+    final rawRange = maxValue - minValue;
+    final desiredTicks = widget.tickCount > 0 ? widget.tickCount : 5;
+    double interval = rawRange / (desiredTicks > 0 ? desiredTicks : 5);
+    double niceInterval(double v) {
+      if (v <= 0) return 1.0;
+      final mag = math.pow(10, (math.log(v) / math.ln10).floor()).toDouble();
+      final norm = v / mag;
+      double niceNorm;
+      if (norm < 1.5) {
+        niceNorm = 1.0;
+      } else if (norm < 3) {
+        niceNorm = 2.5;
+      } else if (norm < 7) {
+        niceNorm = 5.0;
+      } else {
+        niceNorm = 10.0;
+      }
+      return niceNorm * mag;
+    }
+    interval = niceInterval(interval);
+    var yMin = (minValue / interval).floor() * interval;
+    var yMax = (maxValue / interval).ceil() * interval;
+    if (yMax - yMin < interval) yMax = yMin + interval;
+    yMin = yMin.clamp(30, 400);
+    yMax = yMax.clamp(yMin + interval, 500);
+    _cachedYMin = yMin;
+    _cachedYMax = yMax;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (details) => _handleTouch(details.localPosition),
-      onPanUpdate: (details) => _handleTouch(details.localPosition),
-      onTapUp: (_) => Future.delayed(const Duration(milliseconds: 300), () => onIndexChanged(null)),
-      onPanEnd: (_) => Future.delayed(const Duration(milliseconds: 300), () => onIndexChanged(null)),
-      child: CustomPaint(
-        painter: _WeightChartPainter(
-          scaleData: scaleData,
-          trendData: trendData,
-          selectedIndex: selectedIndex,
-        ),
-        child: Container(),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GestureDetector(
+          onTapDown: (details) {
+            // Show transient hover on tap down but don't commit selection yet.
+            final idx = _computeIndex(details.localPosition, constraints.maxWidth);
+            setState(() => _hoverIndex = idx);
+          },
+          onPanUpdate: (details) {
+            final idx = _computeIndex(details.localPosition, constraints.maxWidth);
+            setState(() => _hoverIndex = idx);
+          },
+          onTapUp: (_) {
+            // Commit selection on tap release and keep hover state so visuals remain identical.
+            if (_hoverIndex != null) widget.onIndexChanged(_hoverIndex);
+          },
+          onPanEnd: (_) {
+            // Commit selection on pan end and keep hover so the overlay doesn't jump.
+            if (_hoverIndex != null) widget.onIndexChanged(_hoverIndex);
+          },
+          child: CustomPaint(
+            painter: _WeightChartPainter(
+              scaleData: widget.scaleData,
+              trendData: widget.trendData,
+              selectedIndex: _hoverIndex ?? widget.selectedIndex,
+              fixedYMin: _cachedYMin,
+              fixedYMax: _cachedYMax,
+              tickCount: widget.tickCount,
+            ),
+            child: Container(),
+          ),
+        );
+      },
     );
   }
 
-  void _handleTouch(Offset position) {
-    if (scaleData.isEmpty) return;
-    final index = (position.dx / 300 * scaleData.length).round().clamp(0, scaleData.length - 1);
-    onIndexChanged(index);
+  // Removed: previously unused helper _handleTouch for weight chart; touch handled inline.
+
+  int? _computeIndex(Offset position, double width) {
+    if (widget.scaleData.isEmpty) return null;
+    const leftPad = 6.0;
+    const rightPad = 32.0;
+    final plotWidth = width - leftPad - rightPad;
+    if (plotWidth <= 0) return 0;
+    final clampedX = (position.dx - leftPad).clamp(0.0, plotWidth);
+    final fraction = widget.scaleData.length > 1 ? clampedX / plotWidth : 0.0;
+    final index = (fraction * (widget.scaleData.length - 1)).round().clamp(0, widget.scaleData.length - 1);
+    return index;
   }
 }
 
@@ -693,20 +1464,26 @@ class _WeightChartPainter extends CustomPainter {
   final List<DataPoint> scaleData;
   final List<DataPoint> trendData;
   final int? selectedIndex;
+  final double? fixedYMin;
+  final double? fixedYMax;
+  final int tickCount;
 
   _WeightChartPainter({
     required this.scaleData,
     required this.trendData,
     this.selectedIndex,
+    this.fixedYMin,
+    this.fixedYMax,
+    this.tickCount = 5,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (scaleData.isEmpty) return;
 
-    const axisColor = Colors.black54;
-    const labelStyle = TextStyle(color: Colors.black54, fontSize: 10);
-    const tickCount = 5;
+    // Make Y-axis label font slightly smaller
+    final labelStyle = const TextStyle(color: Colors.black54, fontSize: 9);
+    final effectiveTickCount = tickCount > 1 ? tickCount : 5;
     const leftPad = 6.0;
     const rightPad = 32.0;
     const bottomPad = 18.0;
@@ -716,45 +1493,97 @@ class _WeightChartPainter extends CustomPainter {
     final plotHeight = size.height - topPad - bottomPad;
     if (plotWidth <= 0 || plotHeight <= 0) return;
 
-    // Calculate bounds
+    // Calculate bounds (use fixed values when provided to prevent rescaling during hover)
     final allValues = [...scaleData.map((p) => p.value), ...trendData.map((p) => p.value)];
-    final minValue = (allValues.reduce(math.min) - 5).clamp(50, 400);
-    final maxValue = (allValues.reduce(math.max) + 5).clamp(50, 400);
-    final yMin = minValue;
-    final yMax = maxValue;
+    if (allValues.isEmpty) return;
+    double yMin, yMax, interval;
+    if (fixedYMin != null && fixedYMax != null) {
+      yMin = fixedYMin!;
+      yMax = fixedYMax!;
+      interval = (yMax - yMin) / (effectiveTickCount > 0 ? effectiveTickCount : 5);
+    } else {
+      final minValue = allValues.reduce(math.min);
+      final maxValue = allValues.reduce(math.max);
+      final rawRange = maxValue - minValue;
+      final desiredTicks = effectiveTickCount;
+      interval = rawRange / (desiredTicks > 0 ? desiredTicks : 5);
 
-    // Draw gridlines (dashed)
+      // Round interval to a "nice" value (0.1, 0.25, 0.5, 1, 2.5, 5, 10, ...)
+      double niceInterval(double v) {
+        if (v <= 0) return 1.0;
+        final mag = math.pow(10, (math.log(v) / math.ln10).floor()).toDouble();
+        final norm = v / mag;
+        double niceNorm;
+        if (norm < 1.5) {
+          niceNorm = 1.0;
+        } else if (norm < 3) {
+          niceNorm = 2.5;
+        } else if (norm < 7) {
+          niceNorm = 5.0;
+        } else {
+          niceNorm = 10.0;
+        }
+        return niceNorm * mag;
+      }
+
+      interval = niceInterval(interval);
+
+      yMin = (minValue / interval).floor() * interval;
+      yMax = (maxValue / interval).ceil() * interval;
+
+      // Ensure at least one interval between min and max
+      if (yMax - yMin < interval) {
+        yMax = yMin + interval;
+      }
+
+      // Clamp to reasonable weight ranges
+      yMin = yMin.clamp(30, 400);
+      yMax = yMax.clamp(yMin + interval, 500);
+    }
+
+    // Draw gridlines (dashed) - Draw horizontal gridlines at Y-axis label positions
     final gridPaint = Paint()
       ..color = Colors.black12
       ..strokeWidth = 0.5;
 
-    for (int i = 0; i <= 5; i++) {
-      final y = topPad + plotHeight * i / 5;
-      _drawDashedLine(canvas, Offset(leftPad, y), Offset(leftPad + plotWidth, y), gridPaint);
+    // Limit number of Y-axis lines/labels to avoid overlap
+    int steps = ((yMax - yMin) / interval).round();
+    double usedInterval = interval;
+    if (steps > 8) {
+      final factor = (steps / 8).ceil();
+      usedInterval = interval * factor;
+      yMin = (yMin / usedInterval).floor() * usedInterval;
+      yMax = (yMax / usedInterval).ceil() * usedInterval;
     }
+
+    double gridValue = yMin;
+    while (gridValue <= yMax + 0.0001) {
+      final normalizedY = (gridValue - yMin) / (yMax - yMin);
+      final y = topPad + plotHeight - (normalizedY * plotHeight);
+      _drawDashedLine(canvas, Offset(leftPad, y), Offset(leftPad + plotWidth, y), gridPaint);
+      gridValue += usedInterval;
+    }
+    
+    // Vertical gridlines
     for (int i = 0; i <= 5; i++) {
       final x = leftPad + plotWidth * i / 5;
       _drawDashedLine(canvas, Offset(x, topPad), Offset(x, topPad + plotHeight), gridPaint);
     }
 
-    // Axes (y-axis on right)
-    final axisPaint = Paint()
-      ..color = axisColor
-      ..strokeWidth = 1;
+    // Axes removed for cleaner look
     final xAxisY = topPad + plotHeight;
-    final yAxisX = leftPad + plotWidth;
-    canvas.drawLine(Offset(leftPad, xAxisY), Offset(leftPad + plotWidth, xAxisY), axisPaint);
-    canvas.drawLine(Offset(yAxisX, topPad), Offset(yAxisX, topPad + plotHeight), axisPaint);
 
-    // Y-axis labels (right aligned)
-    for (int i = 0; i <= tickCount; i++) {
-      final y = topPad + plotHeight * i / tickCount;
-      final value = yMax - (yMax - yMin) * (i / tickCount);
+    // Y-axis labels (right aligned) - at each interval
+    double labelValue = yMin;
+    while (labelValue <= yMax + 0.0001) {
+      final normalizedY = (labelValue - yMin) / (yMax - yMin);
+      final y = topPad + plotHeight - (normalizedY * plotHeight);
       final tp = TextPainter(
-        text: TextSpan(text: value.toStringAsFixed(1), style: labelStyle),
+        text: TextSpan(text: labelValue.toStringAsFixed(0), style: labelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, Offset(size.width - tp.width - 2, y - tp.height));
+      tp.paint(canvas, Offset(size.width - tp.width - 2, y - tp.height / 2));
+      labelValue += usedInterval;
     }
 
     // X-axis labels
@@ -776,13 +1605,15 @@ class _WeightChartPainter extends CustomPainter {
 
     // Draw scale line
     final scalePaint = Paint()
-      ..color = Colors.orange.withOpacity(0.9)
+      ..color = Colors.orange.withValues(alpha: 0.9)
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
     final scalePath = Path();
     for (int i = 0; i < scaleData.length; i++) {
-      final x = leftPad + plotWidth * i / (scaleData.length - 1);
+      final x = scaleData.length > 1 
+          ? leftPad + plotWidth * i / (scaleData.length - 1)
+          : leftPad + plotWidth / 2;
       final y = topPad + plotHeight - ((scaleData[i].value - yMin) / (yMax - yMin) * plotHeight);
 
       if (i == 0) {
@@ -792,13 +1623,15 @@ class _WeightChartPainter extends CustomPainter {
       }
 
       // Draw point markers
-      canvas.drawCircle(Offset(x, y), 4, Paint()..color = Colors.orange.withOpacity(0.9));
+      if (!x.isNaN && !y.isNaN) {
+        canvas.drawCircle(Offset(x, y), 4, Paint()..color = Colors.orange.withValues(alpha: 0.9));
+      }
     }
     canvas.drawPath(scalePath, scalePaint);
 
     // Draw trend dots
     final trendPaint = Paint()
-      ..color = Colors.purple.withOpacity(0.7)
+      ..color = Colors.purple.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
 
     for (final point in trendData) {
@@ -809,9 +1642,13 @@ class _WeightChartPainter extends CustomPainter {
       );
       
       if (scaleIndex >= 0) {
-        final x = leftPad + plotWidth * scaleIndex / (scaleData.length - 1);
+        final x = scaleData.length > 1 
+            ? leftPad + plotWidth * scaleIndex / (scaleData.length - 1)
+            : leftPad + plotWidth / 2;
         final y = topPad + plotHeight - ((point.value - yMin) / (yMax - yMin) * plotHeight);
-        canvas.drawCircle(Offset(x, y), 5, trendPaint);
+        if (!x.isNaN && !y.isNaN) {
+          canvas.drawCircle(Offset(x, y), 5, trendPaint);
+        }
       }
     }
 

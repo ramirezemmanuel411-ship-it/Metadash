@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
+import '../../providers/user_state.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final UserState userState;
+  final VoidCallback onLogout;
+  
+  const ProfileScreen({
+    super.key,
+    required this.userState,
+    required this.onLogout,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -11,19 +19,33 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
+    final user = widget.userState.currentUser;
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: Palette.warmNeutral,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Palette.warmNeutral,
       appBar: AppBar(
         backgroundColor: Palette.warmNeutral,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: const Text(
           'Profile',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
         ),
+        actions: [
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                onTap: widget.onLogout,
+                child: const Text('Logout'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -78,9 +100,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
               
               // Name
-              const Text(
-                'John Doe',
-                style: TextStyle(
+              Text(
+                user.name,
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -94,7 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: _StatCard(
                       label: 'Weight',
-                      value: '185',
+                      value: user.weight.toStringAsFixed(0),
                       unit: 'lbs',
                     ),
                   ),
@@ -102,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: _StatCard(
                       label: 'Height',
-                      value: '5\'11"',
+                      value: '${(user.height / 12).toStringAsFixed(0)}\'${(user.height % 12).toStringAsFixed(0)}"',
                       unit: '',
                     ),
                   ),
@@ -114,16 +136,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: _StatCard(
                       label: 'Age',
-                      value: '28',
+                      value: user.age.toString(),
                       unit: 'years',
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _StatCard(
-                      label: 'BMI',
-                      value: '25.8',
-                      unit: '',
+                      label: 'BMR',
+                      value: user.bmr.toStringAsFixed(0),
+                      unit: 'kcal',
                     ),
                   ),
                 ],
@@ -131,25 +153,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 32),
               
               // Settings Section
-              _SectionTitle('Personal Information'),
+              _SectionTitle('Account'),
               const SizedBox(height: 12),
               _SettingsTile(
                 icon: Icons.email,
                 title: 'Email',
-                value: 'john.doe@email.com',
+                value: user.email,
                 onTap: () {},
               ),
               _SettingsTile(
                 icon: Icons.cake,
                 title: 'Date of Birth',
-                value: 'January 15, 1998',
+                value: '${user.dateOfBirth.month}/${user.dateOfBirth.day}/${user.dateOfBirth.year}',
                 onTap: () {},
               ),
               _SettingsTile(
                 icon: Icons.wc,
                 title: 'Gender',
-                value: 'Male',
+                value: user.gender,
                 onTap: () {},
+              ),
+              _SettingsTile(
+                icon: Icons.settings,
+                title: 'Settings',
+                value: '',
+                onTap: () {
+                  // Navigate to settings screen
+                },
               ),
               
               const SizedBox(height: 24),
@@ -158,25 +188,137 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _SettingsTile(
                 icon: Icons.flag,
                 title: 'Goal Weight',
-                value: '175 lbs',
-                onTap: () {},
+                value: '${user.goalWeight.toStringAsFixed(0)} lbs',
+                onTap: () async {
+                  final controller = TextEditingController(text: user.goalWeight.toStringAsFixed(1));
+                  final v = await showDialog<double?>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Set Goal Weight'),
+                      content: TextField(
+                        controller: controller,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(hintText: 'e.g. 175.0'),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
+                        ElevatedButton(
+                          onPressed: () {
+                            final val = double.tryParse(controller.text);
+                            Navigator.of(context).pop(val);
+                          },
+                          child: const Text('Save'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (v != null) {
+                    await widget.userState.updateCurrentUser(user.copyWith(goalWeight: v));
+                  }
+                },
               ),
               _SettingsTile(
                 icon: Icons.local_fire_department,
                 title: 'Daily Calorie Goal',
-                value: '2200 cal',
-                onTap: () {},
+                value: '${user.dailyCaloricGoal} cal',
+                onTap: () async {
+                  final controller = TextEditingController(text: user.dailyCaloricGoal.toString());
+                  final v = await showDialog<int?>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Set Daily Calorie Goal'),
+                      content: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(hintText: 'e.g. 2200'),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
+                        ElevatedButton(
+                          onPressed: () {
+                            final val = int.tryParse(controller.text);
+                            Navigator.of(context).pop(val);
+                          },
+                          child: const Text('Save'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (v != null) {
+                    await widget.userState.updateCurrentUser(user.copyWith(dailyCaloricGoal: v));
+                  }
+                },
               ),
               _SettingsTile(
                 icon: Icons.track_changes,
                 title: 'Activity Level',
-                value: 'Moderately Active',
-                onTap: () {},
+                value: user.activityLevel,
+                onTap: () async {
+                  final selected = await showDialog<String?>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: const Text('Select Activity Level'),
+                      children: [
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Sedentary'),
+                          child: const Text('Sedentary'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Lightly Active'),
+                          child: const Text('Lightly Active'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Moderately Active'),
+                          child: const Text('Moderately Active'),
+                        ),
+                        SimpleDialogOption(
+                          onPressed: () => Navigator.pop(context, 'Very Active'),
+                          child: const Text('Very Active'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (selected != null) {
+                    await widget.userState.updateCurrentUser(user.copyWith(activityLevel: selected));
+                  }
+                },
               ),
               
               const SizedBox(height: 24),
               _SectionTitle('Preferences'),
               const SizedBox(height: 12),
+              _SettingsTile(
+                icon: Icons.track_changes,
+                title: 'Daily Steps Goal',
+                value: '${user.dailyStepsGoal} steps',
+                onTap: () async {
+                  final controller = TextEditingController(text: user.dailyStepsGoal.toString());
+                  final v = await showDialog<int?>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Set Daily Steps Goal'),
+                      content: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(hintText: 'e.g. 10000'),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
+                        ElevatedButton(
+                          onPressed: () {
+                            final val = int.tryParse(controller.text);
+                            Navigator.of(context).pop(val);
+                          },
+                          child: const Text('Save'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (v != null) {
+                    await widget.userState.updateCurrentUser(user.copyWith(dailyStepsGoal: v));
+                  }
+                },
+              ),
               _SettingsTile(
                 icon: Icons.scale,
                 title: 'Units',
@@ -195,18 +337,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // Logout Button
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Palette.forestGreen,
-                    foregroundColor: Palette.warmNeutral,
+                child: TextButton(
+                  onPressed: widget.onLogout,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                   child: const Text(
-                    'Save Changes',
+                    'Logout',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -346,8 +484,8 @@ class _SettingsTile extends StatelessWidget {
         leading: Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(
-            color: Palette.forestGreen.withOpacity(0.1),
+            decoration: BoxDecoration(
+            color: Palette.forestGreen.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -364,13 +502,13 @@ class _SettingsTile extends StatelessWidget {
             color: Colors.black87,
           ),
         ),
-        subtitle: Text(
+        subtitle: value.isNotEmpty ? Text(
           value,
           style: const TextStyle(
             fontSize: 13,
             color: Colors.black54,
           ),
-        ),
+        ) : null,
         trailing: const Icon(
           Icons.chevron_right,
           color: Colors.black38,

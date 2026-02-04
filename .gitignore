@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# API Keys - DO NOT COMMIT
+.env
+
 # IntelliJ related
 *.iml
 *.ipr
