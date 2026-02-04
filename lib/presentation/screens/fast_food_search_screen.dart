@@ -840,3 +840,4 @@ class _FastFoodSearchScreenLegacyState extends State<FastFoodSearchScreenLegacy>
     }
     debugPrint('================================\n');
   }
+}
