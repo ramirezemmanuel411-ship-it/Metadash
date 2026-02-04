@@ -234,13 +234,17 @@ class TokenManager {
   /// Refresh access token from FatSecret
   Future<String> _refreshAccessToken() async {
     try {
+      // Use Basic Authentication as per OAuth 2.0 spec
+      final credentials = base64Encode(utf8.encode('$clientId:$clientSecret'));
+      
       final response = await _httpClient.post(
         Uri.parse('https://oauth.fatsecret.com/connect/token'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic $credentials',
+        },
         body: {
           'grant_type': 'client_credentials',
-          'client_id': clientId,
-          'client_secret': clientSecret,
           'scope': 'basic',
         },
       ).timeout(const Duration(seconds: 10));
