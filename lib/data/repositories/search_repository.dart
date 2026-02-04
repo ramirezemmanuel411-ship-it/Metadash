@@ -40,7 +40,7 @@ class SearchRepository {
     try {
       // Try to initialize FatSecret if credentials are available
       fatSecretDatasource = FatSecretRemoteDatasource(
-        backendUrl: backendUrl ?? 'https://api.fatsecret.com',
+        backendUrl: backendUrl ?? 'https://metadash-production.up.railway.app',
       );
     } catch (e) {
       print('FatSecret initialization failed: $e - will use fallback databases');
