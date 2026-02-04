@@ -246,6 +246,8 @@ class TokenManager {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
+        print('❌ FatSecret OAuth error: ${response.statusCode}');
+        print('   Response body: ${response.body}');
         throw Exception('Token refresh failed: ${response.statusCode}');
       }
 
