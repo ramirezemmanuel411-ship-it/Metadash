@@ -2,7 +2,10 @@ FROM google/dart:latest
 
 WORKDIR /app
 
-COPY deployment/ ./
+# Copy only the deployment folder contents
+COPY deployment/pubspec.yaml .
+COPY deployment/pubspec.lock .
+COPY deployment/bin ./bin
 
 RUN dart pub get
 

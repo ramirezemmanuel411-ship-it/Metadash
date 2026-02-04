@@ -1,0 +1,14 @@
+.git
+.github
+test
+ios
+android
+linux
+windows
+macos
+web
+build
+.dart_tool
+coverage
+*.iml
+.env
