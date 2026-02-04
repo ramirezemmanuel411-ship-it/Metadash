@@ -2,10 +2,11 @@ FROM google/dart:latest
 
 WORKDIR /app
 
-COPY deployment/pubspec.* ./
+COPY deployment/pubspec.yaml deployment/pubspec.lock ./
+
 RUN dart pub get
 
-COPY deployment/ ./
+COPY deployment/bin ./bin
 
 EXPOSE 8080
 
