@@ -64,42 +64,49 @@ Future<Response> _handleFatSecretProxy(
     // Get valid access token
     final accessToken = await tokenManager.getAccessToken();
 
-    // Build FatSecret URL
-    final path = request.requestedUri.path;
+    // Build FatSecret URL using REST API format
+    final path = request.requestedUri.path.startsWith('/') 
+        ? request.requestedUri.path.substring(1) 
+        : request.requestedUri.path;
     final queryParams = request.requestedUri.queryParameters;
     
-    // Add access token to query params
-    final allParams = {...queryParams, 'access_token': accessToken};
-    
+    // FatSecret REST API endpoint
     final fatsecretUrl = Uri(
       scheme: 'https',
       host: 'platform.fatsecret.com',
       path: '/rest/$path',
-      queryParameters: allParams,
+      queryParameters: queryParams,
     );
+
+    // Create headers with Bearer token
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'Content-Type': 'application/json',
+    };
 
     // Forward request based on method
     late http.Response response;
     
     switch (request.method) {
       case 'GET':
-        response = await http.get(fatsecretUrl);
+        response = await http.get(fatsecretUrl, headers: headers);
         break;
       case 'POST':
         response = await http.post(
           fatsecretUrl,
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          headers: headers,
           body: await request.readAsString(),
         );
         break;
       case 'PUT':
         response = await http.put(
           fatsecretUrl,
+          headers: headers,
           body: await request.readAsString(),
         );
         break;
       case 'DELETE':
-        response = await http.delete(fatsecretUrl);
+        response = await http.delete(fatsecretUrl, headers: headers);
         break;
       default:
         return Response(405, body: jsonEncode({'error': 'Method not allowed'}));
