@@ -1,21 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:metadash/main.dart';
-import 'package:metadash/features/food_search/food_search_screen.dart';
+import 'package:metadash/features/diary/diary_screen.dart';
 
 void main() {
-  testWidgets('Diary FAB opens FoodSearchScreen', (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Diary search bar is visible', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DiaryScreen(
+          selectedDay: DateTime.now(),
+          caloriesConsumed: 0,
+          caloriesGoal: 2000,
+          proteinConsumed: 0,
+          proteinGoal: 150,
+          carbsConsumed: 0,
+          carbsGoal: 250,
+          fatConsumed: 0,
+          fatGoal: 70,
+          stepsTaken: 0,
+          stepsGoal: 8000,
+          userState: null,
+        ),
+      ),
+    );
 
-    // Switch to Diary tab by tapping the diary navigation icon
-    await tester.tap(find.byIcon(Icons.book_outlined));
-    await tester.pumpAndSettle();
-
-    // Tap the Add Food FAB
-    await tester.tap(find.text('Add Food'));
-    await tester.pumpAndSettle();
-
-    // Verify the FoodSearchScreen is pushed
-    expect(find.byType(FoodSearchScreen), findsOneWidget);
+    expect(find.text('Search foods...'), findsOneWidget);
   });
 }

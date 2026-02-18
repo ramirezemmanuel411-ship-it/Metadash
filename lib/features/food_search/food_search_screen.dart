@@ -8,12 +8,11 @@ import '../../presentation/screens/fast_food_search_screen.dart';
 import '../../providers/user_state.dart';
 import '../food/barcode_scanner_screen.dart';
 import '../food/food_detail_page.dart';
-import '../food/ai_chat_screen.dart';
 import 'models.dart';
 import 'food_manual_entry.dart';
 import 'food_detail_screen.dart';
 
-enum FoodSearchTab { saved, barcode, search, ai, manual }
+enum FoodSearchTab { saved, barcode, search, manual }
 
 class FoodSearchScreen extends StatefulWidget {
   final MealName? targetMeal;
@@ -63,13 +62,9 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       return;
     }
 
-    final v2 = item.name.toLowerCase().contains('egg')
-        ? FoodItemV2.eggLarge
-        : FoodItemV2.chickenBreast;
-
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FoodDetailScreen(item: v2, mealName: null),
+        builder: (_) => FoodDetailScreen(item: item, mealName: null, userState: widget.userState),
       ),
     );
   }
@@ -79,7 +74,6 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
     final tabs = [
       (FoodSearchTab.barcode, Icons.qr_code, 'Barcode'),
       (FoodSearchTab.search, Icons.search, 'Search'),
-      (FoodSearchTab.ai, Icons.auto_awesome, 'AI'),
       (FoodSearchTab.manual, Icons.bolt, 'Quick Add'),
       (FoodSearchTab.saved, Icons.book, 'Saved Foods'),
     ];
@@ -187,47 +181,17 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
             key: const ValueKey('search'),
             focusNode: _searchFocusNode,
             onFoodSelected: (food) {
-              // Convert FoodModel to FoodItem
-              final protein = food.protein;
-              final carbs = food.carbs;
-              final fat = food.fat;
-              final macroLine = 'P: ${protein.toStringAsFixed(1)}g • C: ${carbs.toStringAsFixed(1)}g • F: ${fat.toStringAsFixed(1)}g';
-              
               final item = FoodItem(
                 name: food.name,
                 calories: food.calories.toInt(),
-                macroLine: macroLine,
+                protein: food.protein,
+                carbs: food.carbs,
+                fat: food.fat,
               );
               _onSelectFood(item);
             },
           ),
         );
-      case FoodSearchTab.ai:
-        try {
-          final userState = widget.userState ?? context.read<UserState>();
-          return _AiTabView(userState: userState);
-        } catch (e) {
-          return Container(
-            color: Palette.warmNeutral,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading AI: $e',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
       case FoodSearchTab.manual:
         return const FoodManualEntry(key: ValueKey('manual'), mealName: null);
     }
@@ -320,18 +284,6 @@ class _ScannerStubState extends State<_ScannerStub> {
     }
 
     return BarcodeScannerScreen(onBarcodeScanned: _handleBarcodeScanned);
-  }
-}
-
-class _AiTabView extends StatelessWidget {
-  final UserState userState;
-
-  const _AiTabView({required this.userState});
-
-  @override
-  Widget build(BuildContext context) {
-    // Unified AI interface - no tabs needed
-    return AiChatScreen(userState: userState);
   }
 }
 

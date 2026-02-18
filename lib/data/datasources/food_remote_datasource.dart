@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:dio/dio.dart';
 import '../models/food_model.dart';
 import '../models/food_search_result_raw.dart';

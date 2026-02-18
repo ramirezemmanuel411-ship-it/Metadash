@@ -3,6 +3,7 @@ import 'shared/palette.dart';
 import 'shared/widgets/radial_menu.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/diary/diary_screen.dart';
+import 'features/food/ai_chat_screen.dart';
 import 'providers/user_state.dart';
 
 class AppShell extends StatefulWidget {
@@ -29,6 +30,7 @@ class _AppShellState extends State<AppShell> {
   late int _fatGoal;
   int _stepsTaken = 0;
   late int _stepsGoal;
+  bool _fabMenuOpen = false;
 
   @override
   void initState() {
@@ -51,18 +53,34 @@ class _AppShellState extends State<AppShell> {
 
     final log = await widget.userState.db.getDailyLogByUserAndDate(user.id!, _selectedDay);
     
+    // Also get food entries for the day
+    final foodEntryMaps = await widget.userState.db.getFoodEntriesForDay(user.id!, _selectedDay);
+    
+    // Sum up calories and macros from food entries
+    int foodCalories = 0;
+    int foodProtein = 0;
+    int foodCarbs = 0;
+    int foodFat = 0;
+    
+    for (final map in foodEntryMaps) {
+      foodCalories += (map['calories'] as int?) ?? 0;
+      foodProtein += (map['proteinG'] as int?) ?? 0;
+      foodCarbs += (map['carbsG'] as int?) ?? 0;
+      foodFat += (map['fatG'] as int?) ?? 0;
+    }
+    
     setState(() {
       if (log != null) {
-        _caloriesConsumed = log.caloriesConsumed;
-        _proteinConsumed = log.protein;
-        _carbsConsumed = log.carbs;
-        _fatConsumed = log.fat;
+        _caloriesConsumed = log.caloriesConsumed + foodCalories;
+        _proteinConsumed = log.protein + foodProtein;
+        _carbsConsumed = log.carbs + foodCarbs;
+        _fatConsumed = log.fat + foodFat;
         _stepsTaken = log.stepsCount;
       } else {
-        _caloriesConsumed = 0;
-        _proteinConsumed = 0;
-        _carbsConsumed = 0;
-        _fatConsumed = 0;
+        _caloriesConsumed = foodCalories;
+        _proteinConsumed = foodProtein;
+        _carbsConsumed = foodCarbs;
+        _fatConsumed = foodFat;
         _stepsTaken = 0;
       }
     });
@@ -93,6 +111,17 @@ class _AppShellState extends State<AppShell> {
     Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
+  void _openAiAssistant() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AiChatScreen(
+          userState: widget.userState,
+          selectedDay: _selectedDay,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,6 +137,7 @@ class _AppShellState extends State<AppShell> {
                 DashboardScreen(
                   selectedDay: _selectedDay,
                   onDayChanged: _shiftDays,
+                  onOpenDiary: () => _onTapNav(1),
                   caloriesConsumed: _caloriesConsumed,
                   caloriesGoal: _caloriesGoal,
                   stepsTaken: _stepsTaken,
@@ -120,6 +150,7 @@ class _AppShellState extends State<AppShell> {
                 DiaryScreen(
                   selectedDay: _selectedDay,
                   onDayChanged: _shiftDays,
+                  onEntriesChanged: _loadDailyData,
                   caloriesConsumed: _caloriesConsumed,
                   caloriesGoal: _caloriesGoal,
                   proteinConsumed: _proteinConsumed,
@@ -139,6 +170,44 @@ class _AppShellState extends State<AppShell> {
           RadialMenu(
             userState: widget.userState,
             onLogout: _logout,
+            onOpenChanged: (isOpen) => setState(() => _fabMenuOpen = isOpen),
+          ),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            bottom: 48 + 56 + 12 + (_fabMenuOpen ? 140 : 0),
+            right: 32,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _fabMenuOpen ? 0.95 : 1,
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 200),
+                scale: _fabMenuOpen ? 0.98 : 1,
+                child: GestureDetector(
+                  onTap: _openAiAssistant,
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Palette.forestGreen,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      color: Palette.warmNeutral,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           Positioned(
             bottom: 16,

@@ -10,8 +10,14 @@ import '../../providers/user_state.dart';
 class RadialMenu extends StatefulWidget {
   final UserState userState;
   final VoidCallback onLogout;
+  final ValueChanged<bool>? onOpenChanged;
   
-  const RadialMenu({super.key, required this.userState, required this.onLogout});
+  const RadialMenu({
+    super.key,
+    required this.userState,
+    required this.onLogout,
+    this.onOpenChanged,
+  });
 
   @override
   State<RadialMenu> createState() => _RadialMenuState();
@@ -53,6 +59,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
         _controller.reverse();
       }
     });
+    widget.onOpenChanged?.call(_isOpen);
   }
 
   void _closeMenu() {
@@ -61,6 +68,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
         _isOpen = false;
         _controller.reverse();
       });
+      widget.onOpenChanged?.call(false);
     }
   }
 

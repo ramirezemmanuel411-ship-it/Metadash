@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 /// FatSecret Remote Data Source
 /// Communicates with FatSecret OAuth 2.0 Proxy Server
 /// 
@@ -10,6 +12,7 @@
 /// - Send requests to proxy
 /// - Proxy handles adding authentication
 /// - Proxy returns FatSecret responses
+library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -44,7 +47,7 @@ class FatSecretRemoteDatasource {
 
     try {
       // Build URL - proxy will add token automatically
-      final url = Uri.parse('$backendUrl/food.search.v3.1').replace(
+      final url = Uri.parse('$backendUrl/foods.search').replace(
         queryParameters: {'search_expression': query},
       );
 
@@ -147,7 +150,10 @@ class FatSecretRemoteDatasource {
     final foods = <FoodModel>[];
 
     try {
-      final foodsData = data['foods'] as List?;
+      final foodsDataRaw = data['foods'];
+      final foodsData = foodsDataRaw is Map<String, dynamic>
+          ? foodsDataRaw['food'] as List?
+          : foodsDataRaw as List?;
       if (foodsData == null || foodsData.isEmpty) {
         return foods;
       }
@@ -156,13 +162,15 @@ class FatSecretRemoteDatasource {
         if (foodJson is! Map<String, dynamic>) continue;
 
         try {
-          // Extract nutrition values, defaulting to 0
-          final calories = (foodJson['food_calories'] as num?)?.toInt() ?? 0;
-          final protein = (foodJson['nutrition']?['protein'] as num?)?.toDouble() ?? 0;
-          final carbs = (foodJson['nutrition']?['carbs'] as num?)?.toDouble() ?? 0;
-          final fat = (foodJson['nutrition']?['fat'] as num?)?.toDouble() ?? 0;
-          final servingSizeNum = (foodJson['serving_size'] as num?)?.toDouble() ?? 1.0;
-          final servingUnit = foodJson['serving_unit'] ?? 'serving';
+          final description = foodJson['food_description']?.toString() ?? '';
+
+          final parsed = _parseDescription(description);
+          final calories = parsed.calories ?? 0;
+          final protein = parsed.protein ?? 0;
+          final carbs = parsed.carbs ?? 0;
+          final fat = parsed.fat ?? 0;
+          final servingSizeNum = parsed.servingQty ?? 1.0;
+          final servingUnit = parsed.servingUnit ?? 'serving';
 
           final food = FoodModel(
             id: 'fs_${foodJson['food_id']}',
@@ -197,4 +205,62 @@ class FatSecretRemoteDatasource {
 
     return foods;
   }
+
+  static _ParsedDescription _parseDescription(String description) {
+    if (description.isEmpty) return const _ParsedDescription();
+
+    final pattern = RegExp(
+      r'Per\s+(.+?)\s+-\s+Calories:\s*([\d.]+)kcal\s*\|\s*Fat:\s*([\d.]+)g\s*\|\s*Carbs:\s*([\d.]+)g\s*\|\s*Protein:\s*([\d.]+)g',
+      caseSensitive: false,
+    );
+    final match = pattern.firstMatch(description);
+    if (match == null) return const _ParsedDescription();
+
+    final servingPart = match.group(1)?.trim() ?? '';
+    final calories = double.tryParse(match.group(2) ?? '');
+    final fat = double.tryParse(match.group(3) ?? '');
+    final carbs = double.tryParse(match.group(4) ?? '');
+    final protein = double.tryParse(match.group(5) ?? '');
+
+    double? servingQty;
+    String? servingUnit;
+
+    final servingMatch = RegExp(r'^([\d.]+)\s*([a-zA-Z]+)$').firstMatch(
+      servingPart.replaceAll(' ', ''),
+    );
+    if (servingMatch != null) {
+      servingQty = double.tryParse(servingMatch.group(1) ?? '');
+      servingUnit = servingMatch.group(2)?.toLowerCase();
+    } else if (servingPart.toLowerCase().contains('serving')) {
+      servingQty = 1.0;
+      servingUnit = 'serving';
+    }
+
+    return _ParsedDescription(
+      calories: calories?.toInt(),
+      fat: fat,
+      carbs: carbs,
+      protein: protein,
+      servingQty: servingQty,
+      servingUnit: servingUnit,
+    );
+  }
+}
+
+class _ParsedDescription {
+  final int? calories;
+  final double? fat;
+  final double? carbs;
+  final double? protein;
+  final double? servingQty;
+  final String? servingUnit;
+
+  const _ParsedDescription({
+    this.calories,
+    this.fat,
+    this.carbs,
+    this.protein,
+    this.servingQty,
+    this.servingUnit,
+  });
 }

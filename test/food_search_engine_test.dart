@@ -174,7 +174,7 @@ void main() {
 
 FoodModel _food(String name, String brand, int calories, double servingSize, String servingUnit) {
   return FoodModel(
-    id: '${name}_${brand}',
+    id: '${name}_$brand',
     name: name,
     brand: brand,
     servingSize: servingSize,

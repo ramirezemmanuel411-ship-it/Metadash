@@ -215,7 +215,7 @@ class FoodDisplayFormatter {
   }
 
   /// Build subtitle with SINGLE serving selection
-  /// Format: "{kcal} kcal · {serving}"
+  /// Format: "{kcal} kcal · P xg · C yg · F zg · {serving}"
   static String buildSubtitle(FoodModel item) {
     if (item.calories <= 0) {
       return 'No nutrition info';
@@ -224,8 +224,30 @@ class FoodDisplayFormatter {
     // Always use rounded integer kcal
     final kcal = item.calories;
     final servingStr = _selectBestServing(item);
+    final macros = _formatMacros(item);
+    final parts = <String>['$kcal kcal'];
+    if (macros.isNotEmpty) {
+      parts.add(macros);
+    }
+    if (servingStr.isNotEmpty) {
+      parts.add(servingStr);
+    }
 
-    return '$kcal kcal · $servingStr';
+    return parts.join(' · ');
+  }
+
+  static String _formatMacros(FoodModel item) {
+    final protein = _formatMacroValue(item.protein);
+    final carbs = _formatMacroValue(item.carbs);
+    final fat = _formatMacroValue(item.fat);
+
+    return 'P $protein · C $carbs · F $fat';
+  }
+
+  static String _formatMacroValue(double value) {
+    if (value <= 0) return '0g';
+    final formatted = value >= 10 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
+    return '${formatted}g';
   }
 
   /// Select best serving representation (ONE only)

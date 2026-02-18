@@ -4,16 +4,25 @@ import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../shared/palette.dart';
 import '../../models/ai_food_estimate.dart';
+import '../../models/ai_suggestion.dart';
 import '../../models/diary_entry_food.dart';
+import '../../data/models/food_model.dart';
 import '../../services/ai_service.dart';
+import '../../services/ai_suggestion_engine.dart';
 import '../../services/food_text_normalizer.dart';
+import '../../data/repositories/ai_suggestion_repository.dart';
 import '../../providers/user_state.dart';
 
 /// Unified AI screen for food estimation via text, camera, or gallery
 class AiChatScreen extends StatefulWidget {
   final UserState userState;
+  final DateTime selectedDay;
 
-  const AiChatScreen({super.key, required this.userState});
+  const AiChatScreen({
+    super.key,
+    required this.userState,
+    required this.selectedDay,
+  });
 
   @override
   State<AiChatScreen> createState() => _AiChatScreenState();
@@ -22,9 +31,12 @@ class AiChatScreen extends StatefulWidget {
 class _AiChatScreenState extends State<AiChatScreen> {
   final TextEditingController _controller = TextEditingController();
   late AiService _aiService;
+  final AiSuggestionEngine _suggestionEngine = AiSuggestionEngine();
+  final AiSuggestionRepository _suggestionRepository = AiSuggestionRepository();
   bool _serviceInitialized = false;
 
   AiFoodEstimate? _currentEstimate;
+  AiSuggestionResponse? _suggestionResponse;
   bool _isLoading = false;
   String? _error;
 
@@ -217,9 +229,35 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _isLoading = true;
       _error = null;
       _currentEstimate = null;
+      _suggestionResponse = null;
     });
 
     try {
+      final intent = _suggestionEngine.detectIntent(input);
+      if (intent.isSuggestionIntent) {
+        final suggestionInput = await _buildSuggestionInput(
+          query: input,
+          restaurantName: intent.restaurantName,
+        );
+
+        final candidates = intent.isRestaurantIntent
+            ? await _suggestionRepository.searchRestaurantItems(
+                intent.restaurantName ?? input,
+              )
+            : <FoodModel>[];
+
+        final response = _suggestionEngine.buildSuggestions(
+          input: suggestionInput,
+          candidates: candidates,
+        );
+
+        setState(() {
+          _suggestionResponse = response;
+          _isLoading = false;
+        });
+        return;
+      }
+
       final estimate = await _aiService.estimateFoodFromChat(input);
       setState(() {
         _currentEstimate = estimate;
@@ -231,6 +269,132 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<AiSuggestionInput> _buildSuggestionInput({
+    required String query,
+    String? restaurantName,
+  }) async {
+    final calorieLimit = _parseCalorieLimit(query);
+    final user = widget.userState.currentUser;
+    if (user == null) {
+      return AiSuggestionInput(
+        calLeft: 0,
+        calorieLimit: calorieLimit,
+        pLeft: 0,
+        cLeft: 0,
+        fLeft: 0,
+        pTarget: 0,
+        cTarget: 0,
+        fTarget: 0,
+        query: query,
+        restaurantName: restaurantName,
+      );
+    }
+
+    final log = await widget.userState.db.getDailyLogByUserAndDate(
+      user.id!,
+      widget.selectedDay,
+    );
+    final foodEntryMaps = await widget.userState.db.getFoodEntriesForDay(
+      user.id!,
+      widget.selectedDay,
+    );
+
+    int foodCalories = 0;
+    int foodProtein = 0;
+    int foodCarbs = 0;
+    int foodFat = 0;
+
+    for (final map in foodEntryMaps) {
+      foodCalories += (map['calories'] as int?) ?? 0;
+      foodProtein += (map['proteinG'] as int?) ?? 0;
+      foodCarbs += (map['carbsG'] as int?) ?? 0;
+      foodFat += (map['fatG'] as int?) ?? 0;
+    }
+
+    final caloriesConsumed = (log?.caloriesConsumed ?? 0) + foodCalories;
+    final proteinConsumed = (log?.protein ?? 0) + foodProtein;
+    final carbsConsumed = (log?.carbs ?? 0) + foodCarbs;
+    final fatConsumed = (log?.fat ?? 0) + foodFat;
+
+    final pTarget = user.macroTargets?['protein'] ?? 150;
+    final cTarget = user.macroTargets?['carbs'] ?? 250;
+    final fTarget = user.macroTargets?['fat'] ?? 73;
+
+    final calLeft = user.dailyCaloricGoal - caloriesConsumed;
+    final pLeft = pTarget - proteinConsumed;
+    final cLeft = cTarget - carbsConsumed;
+    final fLeft = fTarget - fatConsumed;
+
+    return AiSuggestionInput(
+      calLeft: calLeft,
+      calorieLimit: calorieLimit,
+      pLeft: pLeft,
+      cLeft: cLeft,
+      fLeft: fLeft,
+      pTarget: pTarget,
+      cTarget: cTarget,
+      fTarget: fTarget,
+      query: query,
+      restaurantName: restaurantName,
+    );
+  }
+
+  int? _parseCalorieLimit(String query) {
+    final pattern = RegExp(
+      r'(?:under|below|less than|at most|<=)\s*(\d{2,4})\s*(?:kcal|cal|calories)?',
+      caseSensitive: false,
+    );
+    final match = pattern.firstMatch(query);
+    if (match == null) return null;
+
+    final value = int.tryParse(match.group(1) ?? '');
+    if (value == null || value <= 0) return null;
+    return value;
+  }
+
+  DateTime _timestampForSelectedDay() {
+    final now = DateTime.now();
+    return DateTime(
+      widget.selectedDay.year,
+      widget.selectedDay.month,
+      widget.selectedDay.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+  }
+
+  Future<void> _addSuggestionToDiary(Map<String, dynamic> payload) async {
+    final user = widget.userState.currentUser;
+    if (user == null) return;
+
+    final entry = DiaryEntryFood(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: user.id!,
+      timestamp: _timestampForSelectedDay(),
+      name: payload['name'] as String,
+      calories: payload['calories'] as int,
+      proteinG: payload['proteinG'] as int,
+      carbsG: payload['carbsG'] as int,
+      fatG: payload['fatG'] as int,
+      source: payload['source'] as String,
+      confidence: payload['confidence'] as double?,
+      assumptions: (payload['assumptions'] as List?)?.cast<String>(),
+      rawInput: _controller.text.trim(),
+    );
+
+    await widget.userState.db.addFoodEntry(entry);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✓ Added to Diary'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _onAddToDiary() async {
@@ -248,6 +412,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       final entry = DiaryEntryFood.fromAiEstimate(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         userId: user.id!,
+        timestamp: _timestampForSelectedDay(),
         itemName: _currentEstimate!.itemName,
         calories: _currentEstimate!.calories,
         protein: _currentEstimate!.proteinG,
@@ -292,221 +457,233 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
 
     // Show main chat interface
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Container(
-        color: Palette.warmNeutral,
-        height: double.infinity,
-        width: double.infinity,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Instructions
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Palette.lightStone,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: Palette.forestGreen,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'AI Food Assistant',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
+    return Scaffold(
+      backgroundColor: Palette.warmNeutral,
+      appBar: AppBar(
+        title: const Text('AI Assistant'),
+        backgroundColor: Palette.warmNeutral,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          color: Palette.warmNeutral,
+          height: double.infinity,
+          width: double.infinity,
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Instructions
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Palette.lightStone,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: Palette.forestGreen,
+                                  size: 20,
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Type what you ate, snap a photo, or upload from gallery. '
-                            'AI will estimate the nutrition for you.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.black87,
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'AI Food Assistant',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Result card
-                    if (_currentEstimate != null)
-                      _buildResultCard(_currentEstimate!),
-
-                    if (_isLoading) _buildLoadingCard(),
-
-                    if (_error != null) _buildErrorCard(_error!),
-                  ],
-                ),
-              ),
-            ),
-
-            // Input area with photo above text field
-            Container(
-              padding: const EdgeInsets.fromLTRB(
-                12,
-                8,
-                12,
-                24,
-              ), // Extra bottom padding for home indicator
-              decoration: BoxDecoration(
-                color: Palette.lightStone,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Camera button
-                  Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: IconButton(
-                          onPressed: _isLoading ? null : _openCamera,
-                          icon: Icon(
-                            Icons.camera_alt,
-                            color:
-                                _isLoading ? Colors.grey : Palette.vibrantAction,
-                            size: 28,
-                          ),
-                          tooltip: 'Take photo',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                          ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Type what you ate, snap a photo, or upload from gallery. '
+                              'AI will estimate the nutrition for you.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.grey.shade300,
-                              width: 1,
-                            ),
+                      const SizedBox(height: 16),
+
+                      if (_suggestionResponse != null)
+                        _buildSuggestionResponse(_suggestionResponse!),
+
+                      // Result card
+                      if (_currentEstimate != null)
+                        _buildResultCard(_currentEstimate!),
+
+                      if (_isLoading) _buildLoadingCard(),
+
+                      if (_error != null) _buildErrorCard(_error!),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Input area with photo above text field
+              Container(
+                padding: const EdgeInsets.fromLTRB(
+                  12,
+                  8,
+                  12,
+                  24,
+                ), // Extra bottom padding for home indicator
+                decoration: BoxDecoration(
+                  color: Palette.lightStone,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Camera button
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: IconButton(
+                        onPressed: _isLoading ? null : _openCamera,
+                        icon: Icon(
+                          Icons.camera_alt,
+                          color:
+                              _isLoading ? Colors.grey : Palette.vibrantAction,
+                          size: 28,
+                        ),
+                        tooltip: 'Take photo',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1,
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Photo preview inside search bar
-                              if (_capturedImage != null &&
-                                  _currentEstimate == null &&
-                                  !_isLoading)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                                  child: Stack(
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.file(
-                                          _capturedImage!,
-                                          width: 120,
-                                          height: 160,
-                                          fit: BoxFit.cover,
-                                        ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Photo preview inside search bar
+                            if (_capturedImage != null &&
+                                _currentEstimate == null &&
+                                !_isLoading)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(
+                                        _capturedImage!,
+                                        width: 120,
+                                        height: 160,
+                                        fit: BoxFit.cover,
                                       ),
-                                      Positioned(
-                                        top: 4,
-                                        right: 4,
-                                        child: GestureDetector(
-                                          onTap: _removePhoto,
-                                          child: Container(
-                                            width: 28,
-                                            height: 28,
-                                            decoration: BoxDecoration(
-                                              color: Colors.black.withValues(
-                                                alpha: 0.7,
-                                              ),
-                                              shape: BoxShape.circle,
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: GestureDetector(
+                                        onTap: _removePhoto,
+                                        child: Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.7,
                                             ),
-                                            child: const Icon(
-                                              Icons.close,
-                                              color: Colors.white,
-                                              size: 18,
-                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 18,
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              // Text field
-                              TextField(
-                                controller: _controller,
-                                decoration: InputDecoration(
-                                  hintText: _capturedImage != null
-                                      ? 'Add comment or Send'
-                                      : 'Describe what you ate...',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey.shade500,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                ),
-                                maxLines: null,
-                                textInputAction: TextInputAction.send,
-                                onSubmitted: (_) => _onSendMessage(),
                               ),
-                            ],
+                            // Text field
+                            TextField(
+                              controller: _controller,
+                              decoration: InputDecoration(
+                                hintText: _capturedImage != null
+                                    ? 'Add comment or Send'
+                                    : 'Describe what you ate...',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey.shade500,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                              ),
+                              maxLines: null,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _onSendMessage(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Send button (forest green arrow)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: GestureDetector(
+                        onTap: _isLoading ? null : _onSendMessage,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: _isLoading
+                                ? Colors.grey
+                                : Palette.forestGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_upward,
+                            color: Colors.white,
+                            size: 20,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // Send button (forest green arrow)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: GestureDetector(
-                          onTap: _isLoading ? null : _onSendMessage,
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: _isLoading
-                                  ? Colors.grey
-                                  : Palette.forestGreen,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.arrow_upward,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -770,6 +947,187 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildSuggestionResponse(AiSuggestionResponse response) {
+    return Card(
+      color: Palette.lightStone,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Palette.forestGreen, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'AI Suggestions',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              response.message,
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+            const SizedBox(height: 12),
+            if (response.mode == AiSuggestionMode.meal)
+              ...response.meals.map(_buildMealSuggestionCard),
+            if (response.mode == AiSuggestionMode.singleItem)
+              ...response.groups.map(_buildSingleItemGroup),
+            if (response.mode == AiSuggestionMode.none)
+              const Text(
+                'You are at or over your target. Consider ultra-low add-ons only.',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMealSuggestionCard(AiMealSuggestion suggestion) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    suggestion.title,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  '${suggestion.totals.calories} kcal',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              suggestion.description,
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 6),
+            ...suggestion.items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text('• $item', style: const TextStyle(fontSize: 12)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _macroLine(suggestion.totals),
+              style: const TextStyle(fontSize: 12, color: Colors.black87),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: () => _addSuggestionToDiary(
+                  suggestion.addActionPayload,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Palette.forestGreen,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: const Text(
+                  'Add to Diary',
+                  style: TextStyle(fontSize: 12, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSingleItemGroup(AiSuggestionGroup group) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            group.title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...group.items.map((item) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.foodName,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.serving,
+                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _macroLine(item.totals),
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${item.totals.calories} kcal',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle, color: Palette.forestGreen),
+                    onPressed: () => _addSuggestionToDiary(item.addActionPayload),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  String _macroLine(AiSuggestionTotals totals) {
+    return 'P ${totals.proteinG}g • C ${totals.carbsG}g • F ${totals.fatG}g';
   }
 
   Widget _buildMacroBox(String label, String value, String unit, Color color) {

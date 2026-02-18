@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -353,14 +355,19 @@ Return ONLY this JSON format (no markdown, no explanations):
     String type = 'described';
     if (lower.contains('run') || lower.contains('jog')) {
       type = 'run';
-    } else if (lower.contains('lift') || lower.contains('weight')) type = 'weightlifting';
-    else if (lower.contains('walk')) type = 'run'; // Treat walking as running
+    } else if (lower.contains('lift') || lower.contains('weight')) {
+      type = 'weightlifting';
+    } else if (lower.contains('walk')) {
+      type = 'run'; // Treat walking as running
+    }
 
     // Estimate intensity
     String intensity = 'medium';
     if (lower.contains('light') || lower.contains('easy')) {
       intensity = 'low';
-    } else if (lower.contains('hard') || lower.contains('intense') || lower.contains('high')) intensity = 'high';
+    } else if (lower.contains('hard') || lower.contains('intense') || lower.contains('high')) {
+      intensity = 'high';
+    }
 
     // Rough calorie estimation
     final intensityMultiplier = intensity == 'low' ? 0.7 : intensity == 'high' ? 1.3 : 1.0;

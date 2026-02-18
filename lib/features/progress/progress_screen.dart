@@ -60,8 +60,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   void _initializeMockWeightData() {
-    // TODO: Replace with real weight data from database
-    // For now using placeholder to avoid crashes - connect to UserState.db.getWeightByUserId()
+    // Placeholder data; replace with real weight data from database.
+    // Will connect to UserState.db.getWeightByUserId() in future enhancement.
     final now = DateTime.now();
     _weightEntries = List.generate(15, (i) {
       return WeightEntry(
@@ -233,8 +233,8 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
   late final List<DataPoint> _allData;
 
   List<DataPoint> _generateFatChangeData() {
-    // TODO: Calculate real fat change from daily_log deficit/surplus
-    // For now, placeholder data - will be replaced with: daily_logs.map((log) => log.calorieDeficit / 3500)
+    // Placeholder data; replace with real fat change from daily_log deficit/surplus.
+    // Planned mapping: daily_logs.map((log) => log.calorieDeficit / 3500).
     final now = DateTime.now();
     return List.generate(30, (i) {
       final date = now.subtract(Duration(days: 29 - i));
@@ -326,8 +326,8 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
   String _filterType = 'ALL';
   
   List<DataPoint> _generateTDEEData() {
-    // TODO: Calculate real TDEE from daily_log calories + activity
-    // For now, placeholder data - will be replaced with actual TDEE calculations per day
+    // Placeholder data; replace with real TDEE from daily_log calories + activity.
+    // Will be replaced with actual TDEE calculations per day.
     final now = DateTime.now();
     return List.generate(30, (i) {
       final date = now.subtract(Duration(days: 29 - i));

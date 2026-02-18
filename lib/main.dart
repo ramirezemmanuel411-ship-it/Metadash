@@ -13,6 +13,7 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
+    // ignore: avoid_print
     print('Note: .env file not found. AI features will be disabled. Create a .env file with your API keys.');
   }
   

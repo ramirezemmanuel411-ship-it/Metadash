@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import '../data/models/food_model.dart';
 
 /// Enhanced food deduplication with improved core name inference
@@ -396,8 +398,11 @@ class FoodDeduplicationService {
       // 4. Preferred source (+50 to +100)
       if (item.source == 'usda') {
         score += 100;
-      } else if (item.source == 'open_food_facts') score += 80;
-      else score += 50;
+      } else if (item.source == 'open_food_facts') {
+        score += 80;
+      } else {
+        score += 50;
+      }
 
       // 5. Avoid "USDA" as source for non-USDA queries (-30 if USDA)
       if (item.source == 'usda') score -= 10;
@@ -422,7 +427,9 @@ class FoodDeduplicationService {
       final ratio = upperCount / totalLetters;
       if (ratio > 0.8) {
         score -= 30;
-      } else if (ratio > 0.5) score -= 15;
+      } else if (ratio > 0.5) {
+        score -= 15;
+      }
     }
 
     // Penalize weird tokens

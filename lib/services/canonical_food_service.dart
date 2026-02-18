@@ -22,6 +22,8 @@ class CanonicalFoodService {
   }) {
     if (results.isEmpty) return results;
 
+    print('🔍 [Canonical] Processing ${results.length} results for query: $query');
+
     // Extract raw results from FoodModel
     final rawResults = <FoodSearchResultRaw>[];
     for (final food in results) {
@@ -31,20 +33,32 @@ class CanonicalFoodService {
       }
     }
 
-    if (rawResults.isEmpty) return results;
+    if (rawResults.isEmpty) {
+      print('⚠️ [Canonical] No raw results extracted');
+      return results;
+    }
+
+    print('🔍 [Canonical] Extracted ${rawResults.length} raw results');
 
     // Group and select representatives
     final groups = CanonicalFoodParser.groupAndSelectRepresentatives(
       rawResults,
     );
 
-    if (groups.isEmpty) return results;
+    if (groups.isEmpty) {
+      print('⚠️ [Canonical] No groups formed');
+      return results;
+    }
+
+    print('🔍 [Canonical] Formed ${groups.length} groups');
 
     // Rank groups by query relevance
     final rankedGroups = CanonicalFoodRanker.rankGroups(
       groups.values.toList(),
       query,
     );
+
+    print('🔍 [Canonical] Ranked ${rankedGroups.length} groups');
 
     // Convert back to FoodModel (representatives only)
     final canonicalResults = <FoodModel>[];
@@ -68,9 +82,13 @@ class CanonicalFoodService {
       }
     }
 
+    print('🔍 [Canonical] Created ${canonicalResults.length} canonical results');
+
     // Limit results if requested
     if (maxResults != null && canonicalResults.length > maxResults) {
-      return canonicalResults.take(maxResults).toList();
+      final limited = canonicalResults.take(maxResults).toList();
+      print('🔍 [Canonical] Limited to $maxResults results');
+      return limited;
     }
 
     return canonicalResults;

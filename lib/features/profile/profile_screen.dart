@@ -5,7 +5,7 @@ import '../../providers/user_state.dart';
 class ProfileScreen extends StatefulWidget {
   final UserState userState;
   final VoidCallback onLogout;
-  
+
   const ProfileScreen({
     super.key,
     required this.userState,
@@ -17,6 +17,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  void _showInvalid(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = widget.userState.currentUser;
@@ -52,7 +58,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // Profile Photo
               Center(
                 child: Stack(
                   children: [
@@ -98,8 +103,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              
-              // Name
               Text(
                 user.name,
                 style: const TextStyle(
@@ -109,23 +112,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              
-              // Stats Cards
               Row(
                 children: [
                   Expanded(
-                    child: _StatCard(
+                    child: _EditableStatCard(
                       label: 'Weight',
                       value: user.weight.toStringAsFixed(0),
                       unit: 'lbs',
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onSave: (text) async {
+                        final val = double.tryParse(text);
+                        if (val == null || val <= 0) {
+                          _showInvalid('Enter a valid weight');
+                          return false;
+                        }
+                        await widget.userState.updateCurrentUser(user.copyWith(weight: val));
+                        return true;
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _StatCard(
+                    child: _EditableHeightCard(
                       label: 'Height',
-                      value: '${(user.height / 12).toStringAsFixed(0)}\'${(user.height % 12).toStringAsFixed(0)}"',
-                      unit: '',
+                      heightInInches: user.height,
+                      onSave: (feet, inches) async {
+                        if (feet <= 0 || inches < 0 || inches > 11) {
+                          _showInvalid('Enter a valid height');
+                          return false;
+                        }
+                        final total = (feet * 12) + inches;
+                        await widget.userState.updateCurrentUser(user.copyWith(height: total.toDouble()));
+                        return true;
+                      },
                     ),
                   ),
                 ],
@@ -134,25 +153,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _StatCard(
+                    child: _EditableStatCard(
                       label: 'Age',
                       value: user.age.toString(),
                       unit: 'years',
+                      keyboardType: TextInputType.number,
+                      onSave: (text) async {
+                        final val = int.tryParse(text);
+                        if (val == null || val <= 0) {
+                          _showInvalid('Enter a valid age');
+                          return false;
+                        }
+                        await widget.userState.updateCurrentUser(user.copyWith(age: val));
+                        return true;
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _StatCard(
+                    child: _EditableStatCard(
                       label: 'BMR',
                       value: user.bmr.toStringAsFixed(0),
                       unit: 'kcal',
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onSave: (text) async {
+                        final val = double.tryParse(text);
+                        if (val == null || val <= 0) {
+                          _showInvalid('Enter a valid BMR');
+                          return false;
+                        }
+                        await widget.userState.updateCurrentUser(user.copyWith(bmr: val));
+                        return true;
+                      },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 32),
-              
-              // Settings Section
               _SectionTitle('Account'),
               const SizedBox(height: 12),
               _SettingsTile(
@@ -177,11 +214,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: Icons.settings,
                 title: 'Settings',
                 value: '',
-                onTap: () {
-                  // Navigate to settings screen
-                },
+                onTap: () {},
               ),
-              
               const SizedBox(height: 24),
               _SectionTitle('Goals'),
               const SizedBox(height: 12),
@@ -283,7 +317,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                 },
               ),
-              
               const SizedBox(height: 24),
               _SectionTitle('Preferences'),
               const SizedBox(height: 12),
@@ -331,10 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 value: 'Enabled',
                 onTap: () {},
               ),
-              
               const SizedBox(height: 32),
-              
-              // Logout Button
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
@@ -345,28 +375,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: const Text(
                     'Logout',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
-              
-              const SizedBox(height: 12),
-              
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  'Log Out',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              
               const SizedBox(height: 20),
             ],
           ),
@@ -376,16 +388,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _EditableStatCard extends StatefulWidget {
   final String label;
   final String value;
   final String unit;
+  final TextInputType keyboardType;
+  final Future<bool> Function(String value) onSave;
 
-  const _StatCard({
+  const _EditableStatCard({
     required this.label,
     required this.value,
     required this.unit,
+    required this.keyboardType,
+    required this.onSave,
   });
+
+  @override
+  State<_EditableStatCard> createState() => _EditableStatCardState();
+}
+
+class _EditableStatCardState extends State<_EditableStatCard> {
+  late TextEditingController _controller;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _EditableStatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isEditing && oldWidget.value != widget.value) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final ok = await widget.onSave(_controller.text.trim());
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _isEditing = false);
+    }
+  }
+
+  void _startEdit() {
+    setState(() => _isEditing = true);
+    _controller.selection = TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _controller.text = widget.value;
+      _isEditing = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -397,41 +461,250 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                value,
+                widget.label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              InkWell(
+                onTap: _isEditing ? _cancelEdit : _startEdit,
+                child: Icon(
+                  _isEditing ? Icons.close : Icons.edit,
+                  size: 16,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_isEditing)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: 70,
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: widget.keyboardType,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                      border: UnderlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _handleSave(),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  widget.unit,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: _handleSave,
+                  child: const Icon(Icons.check, size: 18, color: Palette.forestGreen),
+                ),
+              ],
+            )
+          else
+            InkWell(
+              onTap: _startEdit,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    widget.value,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Palette.forestGreen,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  if (widget.unit.isNotEmpty)
+                    Text(
+                      widget.unit,
+                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EditableHeightCard extends StatefulWidget {
+  final String label;
+  final double heightInInches;
+  final Future<bool> Function(int feet, int inches) onSave;
+
+  const _EditableHeightCard({
+    required this.label,
+    required this.heightInInches,
+    required this.onSave,
+  });
+
+  @override
+  State<_EditableHeightCard> createState() => _EditableHeightCardState();
+}
+
+class _EditableHeightCardState extends State<_EditableHeightCard> {
+  late TextEditingController _feetController;
+  late TextEditingController _inchesController;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final feet = (widget.heightInInches / 12).floor();
+    final inches = (widget.heightInInches % 12).round();
+    _feetController = TextEditingController(text: feet.toString());
+    _inchesController = TextEditingController(text: inches.toString());
+  }
+
+  @override
+  void didUpdateWidget(covariant _EditableHeightCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isEditing && oldWidget.heightInInches != widget.heightInInches) {
+      final feet = (widget.heightInInches / 12).floor();
+      final inches = (widget.heightInInches % 12).round();
+      _feetController.text = feet.toString();
+      _inchesController.text = inches.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _feetController.dispose();
+    _inchesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final feet = int.tryParse(_feetController.text.trim()) ?? 0;
+    final inches = int.tryParse(_inchesController.text.trim()) ?? -1;
+    final ok = await widget.onSave(feet, inches);
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _isEditing = false);
+    }
+  }
+
+  void _startEdit() {
+    setState(() => _isEditing = true);
+  }
+
+  void _cancelEdit() {
+    final feet = (widget.heightInInches / 12).floor();
+    final inches = (widget.heightInInches % 12).round();
+    setState(() {
+      _feetController.text = feet.toString();
+      _inchesController.text = inches.toString();
+      _isEditing = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final feet = (widget.heightInInches / 12).floor();
+    final inches = (widget.heightInInches % 12).round();
+    final display = '$feet\'$inches"';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Palette.lightStone,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              InkWell(
+                onTap: _isEditing ? _cancelEdit : _startEdit,
+                child: Icon(
+                  _isEditing ? Icons.close : Icons.edit,
+                  size: 16,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_isEditing)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 40,
+                  child: TextField(
+                    controller: _feetController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                      border: UnderlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Text('\'', style: TextStyle(fontSize: 16, color: Colors.black54)),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 40,
+                  child: TextField(
+                    controller: _inchesController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                      border: UnderlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Text('"', style: TextStyle(fontSize: 16, color: Colors.black54)),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: _handleSave,
+                  child: const Icon(Icons.check, size: 18, color: Palette.forestGreen),
+                ),
+              ],
+            )
+          else
+            InkWell(
+              onTap: _startEdit,
+              child: Text(
+                display,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Palette.forestGreen,
                 ),
               ),
-              if (unit.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 2),
-                  child: Text(
-                    unit,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -484,7 +757,7 @@ class _SettingsTile extends StatelessWidget {
         leading: Container(
           width: 40,
           height: 40,
-            decoration: BoxDecoration(
+          decoration: BoxDecoration(
             color: Palette.forestGreen.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
@@ -502,13 +775,15 @@ class _SettingsTile extends StatelessWidget {
             color: Colors.black87,
           ),
         ),
-        subtitle: value.isNotEmpty ? Text(
-          value,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.black54,
-          ),
-        ) : null,
+        subtitle: value.isNotEmpty
+            ? Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                ),
+              )
+            : null,
         trailing: const Icon(
           Icons.chevron_right,
           color: Colors.black38,

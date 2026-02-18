@@ -32,6 +32,7 @@ class DiaryEntryFood {
   factory DiaryEntryFood.fromAiEstimate({
     required String id,
     required int userId,
+    DateTime? timestamp,
     required String itemName,
     required int calories,
     required int protein,
@@ -45,7 +46,7 @@ class DiaryEntryFood {
     return DiaryEntryFood(
       id: id,
       userId: userId,
-      timestamp: DateTime.now(),
+      timestamp: timestamp ?? DateTime.now(),
       name: itemName,
       calories: calories,
       proteinG: protein,

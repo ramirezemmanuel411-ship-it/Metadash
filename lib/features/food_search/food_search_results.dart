@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, use_build_context_synchronously
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';

@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -394,7 +396,7 @@ class _FastFoodSearchScreenState extends State<FastFoodSearchScreen> {
                       color: isMissingServing ? Colors.orange[700] : Colors.grey[600],
                       fontWeight: isMissingServing ? FontWeight.w600 : FontWeight.normal,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -646,15 +648,16 @@ class _FastFoodSearchScreenLegacyState extends State<FastFoodSearchScreenLegacy>
                     if (state is domain.SearchInitial && state.favorites.isNotEmpty) {
                       return Column(
                         children: state.favorites.map((food) {
+                          final display = buildFoodDisplayStrings(food);
                           return ListTile(
                             title: Text(
-                              food.displayTitle,
+                              display.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             subtitle: Text(
-                              '${food.calories} cal • ${food.servingLine}',
-                              maxLines: 1,
+                              display.subtitle,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             onTap: () => widget.onFoodSelected(food),
@@ -816,28 +819,5 @@ class _FastFoodSearchScreenLegacyState extends State<FastFoodSearchScreenLegacy>
         ],
       ),
     );
-  }
-
-  /// Debug method: Print normalized food display values for verification
-  void _debugPrintNormalization(List<FoodModel> foods) {
-    if (!kDebugMode || foods.isEmpty) return;
-
-    debugPrint('\n=== FOOD NORMALIZATION DEBUG ===');
-    debugPrint('Total items: ${foods.length}');
-    debugPrint('');
-
-    for (int i = 0; i < foods.take(10).length; i++) {
-      final food = foods[i];
-      final norm = FoodDisplayNormalizer.normalize(food);
-
-      debugPrint('[$i] ${norm.displayTitle}');
-      debugPrint('    Brand: ${norm.displayBrandLine}');
-      debugPrint('    Source: ${norm.displaySourceTag}');
-      debugPrint('    Calories: ${norm.displayCaloriesText}');
-      debugPrint('    Serving: ${norm.displayServingText}');
-      debugPrint('    Subtitle: ${norm.subtitle}');
-      debugPrint('');
-    }
-    debugPrint('================================\n');
   }
 }

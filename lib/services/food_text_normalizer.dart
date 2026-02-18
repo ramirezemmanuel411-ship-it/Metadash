@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 /// Single source of truth for food text normalization
 /// Ensures consistent display across all food search interfaces
 class FoodTextNormalizer {

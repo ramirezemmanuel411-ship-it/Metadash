@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, constant_identifier_names
+
 /// Advanced deduplication and normalization for food search results
 /// Handles accents, diacritics, brand aliases, and smart title selection
 class FoodDedupNormalizer {

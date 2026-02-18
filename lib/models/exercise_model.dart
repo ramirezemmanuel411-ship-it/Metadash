@@ -94,7 +94,7 @@ class Exercise extends Equatable {
   }
 
   /// Get estimated calories burned for run
-  /// TODO: Integrate with HealthKit data and user profile
+  /// Note: planned integration with HealthKit data and user profile.
   int? getEstimatedCalories(double? userWeight) {
     if (type != ExerciseType.run || durationMinutes == null) return null;
     

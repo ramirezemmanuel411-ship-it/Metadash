@@ -260,7 +260,7 @@ class SearchNormalization {
 
     // Then qty + unit
     if (item.servingQty != null && item.servingQty! > 0) {
-      final unit = item.servingUnitRaw ?? item.servingUnit ?? '';
+      final unit = item.servingUnitRaw ?? '';
       if (unit.isNotEmpty) {
         final qtyStr = item.servingQty! == item.servingQty!.toInt()
             ? item.servingQty!.toInt().toString()

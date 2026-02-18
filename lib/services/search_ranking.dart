@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import '../data/models/food_model.dart';
 import 'search_normalization.dart';
 

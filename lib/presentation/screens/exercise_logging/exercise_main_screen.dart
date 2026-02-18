@@ -21,7 +21,7 @@ class _ExerciseMainScreenState extends State<ExerciseMainScreen> {
   }
 
   void _navigateToWeightLifting() {
-    // TODO: Create weight lifting screen
+    // Placeholder until weight lifting screen is implemented.
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Weight lifting coming soon')),
     );

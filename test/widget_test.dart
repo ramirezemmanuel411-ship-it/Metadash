@@ -13,8 +13,9 @@ void main() {
   testWidgets('App shows dashboard screen', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
+    await tester.pump(const Duration(milliseconds: 200));
 
-    // Verify that the Dashboard screen is visible by checking AppBar title.
-    expect(find.text('Dashboard'), findsWidgets);
+    // Verify that the initial screen is user selection (no logged-in user).
+    expect(find.text('Select User'), findsWidgets);
   });
 }

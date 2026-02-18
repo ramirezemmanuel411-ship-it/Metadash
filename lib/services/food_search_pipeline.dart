@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import '../data/models/food_model.dart';
 import 'food_text_normalizer.dart';
 
@@ -74,7 +76,7 @@ class FoodSearchPipeline {
       isGeneric: _isGenericBrand(brand),
       isForeignLanguage: _isForeignLanguageOnly(name, normalizedQuery),
       hasCompleteServing: !item.isMissingServing,
-      isUSDA: (item.source ?? '').toLowerCase().contains('usda'),
+      isUSDA: item.source.toLowerCase().contains('usda'),
       brandFamily: _extractBrandFamily(brand, name),
     );
   }

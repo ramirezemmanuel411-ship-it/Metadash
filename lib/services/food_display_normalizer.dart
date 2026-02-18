@@ -7,6 +7,7 @@ class DisplayNormalization {
   final String displaySourceTag;
   final String displayServingText;
   final String displayCaloriesText;
+  final String displayMacrosText;
 
   const DisplayNormalization({
     required this.displayTitle,
@@ -14,6 +15,7 @@ class DisplayNormalization {
     required this.displaySourceTag,
     required this.displayServingText,
     required this.displayCaloriesText,
+    required this.displayMacrosText,
   });
 
   /// Subtitle formatted as: "Brand • Calories • Serving"
@@ -21,13 +23,14 @@ class DisplayNormalization {
     final parts = <String>[];
     if (displayBrandLine.isNotEmpty) parts.add(displayBrandLine);
     if (displayCaloriesText.isNotEmpty) parts.add(displayCaloriesText);
+    if (displayMacrosText.isNotEmpty) parts.add(displayMacrosText);
     if (displayServingText.isNotEmpty) parts.add(displayServingText);
     return parts.join(' • ');
   }
 
   @override
   String toString() =>
-      'DisplayNormalization(title: "$displayTitle", brand: "$displayBrandLine", source: "$displaySourceTag", cal: "$displayCaloriesText", serving: "$displayServingText")';
+      'DisplayNormalization(title: "$displayTitle", brand: "$displayBrandLine", source: "$displaySourceTag", cal: "$displayCaloriesText", macros: "$displayMacrosText", serving: "$displayServingText")';
 }
 
 /// Pure normalization service for food display
@@ -38,6 +41,7 @@ class FoodDisplayNormalizer {
     final brand = _normalizeBrand(food);
     final tag = _normalizeSourceTag(food);
     final calories = _normalizeCalories(food);
+    final macros = _normalizeMacros(food);
     final serving = _normalizeServing(food);
 
     return DisplayNormalization(
@@ -45,6 +49,7 @@ class FoodDisplayNormalizer {
       displayBrandLine: brand,
       displaySourceTag: tag,
       displayCaloriesText: calories,
+      displayMacrosText: macros,
       displayServingText: serving,
     );
   }
@@ -116,6 +121,26 @@ class FoodDisplayNormalizer {
     final serving = extractServing(food);
     if (serving == null) return '';
     return serving;
+  }
+
+  /// Extract macros text
+  static String _normalizeMacros(FoodModel food) {
+    final protein = extractProtein(food) ?? 0;
+    final carbs = extractCarbs(food) ?? 0;
+    final fat = extractFat(food) ?? 0;
+
+    final p = _formatMacroValue(protein);
+    final c = _formatMacroValue(carbs);
+    final f = _formatMacroValue(fat);
+
+    return 'P $p · C $c · F $f';
+  }
+
+  static String _formatMacroValue(double value) {
+    final formatted = value >= 10
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(1);
+    return '${formatted}g';
   }
 
   /// Clean comma-separated text (USDA format)
@@ -194,7 +219,7 @@ double? extractCalories(FoodModel food) {
           if (nutrient['nutrientId'] == 1008 || nutrient['nutrientId'] == '1008') {
             final value = nutrient['value'];
             if (value != null) {
-              return double.tryParse(value.toString()) ?? null;
+              return double.tryParse(value.toString());
             }
           }
         }
@@ -212,6 +237,80 @@ double? extractCalories(FoodModel food) {
       }
     } catch (_) {
       // Ignore parse errors
+    }
+  }
+
+  return null;
+}
+
+double? extractProtein(FoodModel food) {
+  if (food.protein > 0) {
+    return food.protein;
+  }
+
+  if (food.rawJson != null) {
+    final raw = food.rawJson!;
+    final fromNutrients = _extractNutrientValue(raw, ['protein', 'prot'], [1003]);
+    if (fromNutrients != null) return fromNutrients;
+  }
+
+  return null;
+}
+
+double? extractCarbs(FoodModel food) {
+  if (food.carbs > 0) {
+    return food.carbs;
+  }
+
+  if (food.rawJson != null) {
+    final raw = food.rawJson!;
+    final fromNutrients = _extractNutrientValue(raw, ['carb', 'carbohydrate'], [1005]);
+    if (fromNutrients != null) return fromNutrients;
+  }
+
+  return null;
+}
+
+double? extractFat(FoodModel food) {
+  if (food.fat > 0) {
+    return food.fat;
+  }
+
+  if (food.rawJson != null) {
+    final raw = food.rawJson!;
+    final fromNutrients = _extractNutrientValue(raw, ['fat', 'total lipid'], [1004]);
+    if (fromNutrients != null) return fromNutrients;
+  }
+
+  return null;
+}
+
+double? _extractNutrientValue(
+  Map<String, dynamic> raw,
+  List<String> nameHints,
+  List<int> nutrientIds,
+) {
+  if (raw['nutrients'] is List) {
+    for (final nutrient in raw['nutrients']) {
+      final name = nutrient['name']?.toString().toLowerCase() ?? '';
+      final id = nutrient['nutrientId'] ?? nutrient['nutrient_id'];
+      final parsedId = id is int ? id : int.tryParse('$id');
+      final isIdMatch = parsedId != null && nutrientIds.contains(parsedId);
+      final isNameMatch = nameHints.any((hint) => name.contains(hint));
+      if (isIdMatch || isNameMatch) {
+        final value = nutrient['value'] ?? nutrient['amount'] ?? nutrient['qty'];
+        if (value != null) {
+          return double.tryParse(value.toString());
+        }
+      }
+    }
+  }
+
+  if (raw['nutrition'] is Map) {
+    final nutrition = raw['nutrition'] as Map<String, dynamic>;
+    for (final hint in nameHints) {
+      final value = nutrition[hint] ?? nutrition[hint.replaceAll(' ', '_')];
+      if (value != null) return double.tryParse(value.toString());
     }
   }
 

@@ -20,7 +20,7 @@ String createDedupeKey(FoodModel food) {
   final serving = food.servingQty?.toStringAsFixed(0) ?? 'unknown';
   final unit = food.servingUnitRaw ?? 'unknown';
 
-  return 'name:${norm.displayTitle}|brand:${norm.displayBrandLine}|serving:${serving}${unit}|cal:${cal.toStringAsFixed(0)}|type:${food.dataType ?? 'unknown'}';
+  return 'name:${norm.displayTitle}|brand:${norm.displayBrandLine}|serving:$serving$unit|cal:${cal.toStringAsFixed(0)}|type:${food.dataType ?? 'unknown'}';
 }
 
 /// Check if two items are similar enough to be considered duplicates

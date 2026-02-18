@@ -1,6 +1,7 @@
 /// FatSecret Backend Proxy Service
 /// Handles OAuth 2.0 token management and proxies requests to FatSecret API
 /// This runs on a backend server with a static IP for IP whitelisting
+library;
 
 import 'dart:async';
 import 'dart:convert';

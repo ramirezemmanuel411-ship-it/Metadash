@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import '../data/models/food_model.dart';
 
 /// Universal food deduplication system
@@ -685,7 +687,9 @@ class UniversalFoodDeduper {
       final capsRatio = upperCount / totalLetters;
       if (capsRatio > 0.8) {
         score -= 30; // Mostly caps
-      } else if (capsRatio > 0.5) score -= 15; // Half caps
+      } else if (capsRatio > 0.5) {
+        score -= 15; // Half caps
+      }
     }
     
     // Penalize weird tokens

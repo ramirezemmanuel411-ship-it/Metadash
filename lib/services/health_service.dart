@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:health/health.dart';
 
 /// Service for syncing health data from HealthKit (iOS) and Google Fit / Health Connect (Android)

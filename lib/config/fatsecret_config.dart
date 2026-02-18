@@ -1,5 +1,6 @@
 /// FatSecret API Configuration Service
 /// Loads credentials from environment variables securely
+library;
 
 class FatSecretConfig {
   static String get clientId {
@@ -33,7 +34,7 @@ class FatSecretConfig {
   /// Get authorization header for OAuth2
   static Map<String, String> getAuthHeaders() {
     return {
-      'Authorization': 'OAuth oauth_consumer_key="${clientId}"',
+      'Authorization': 'OAuth oauth_consumer_key="$clientId"',
       'Content-Type': 'application/x-www-form-urlencoded',
     };
   }

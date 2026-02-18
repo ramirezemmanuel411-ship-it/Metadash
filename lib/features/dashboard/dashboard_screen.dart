@@ -1,13 +1,20 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../shared/palette.dart';
 import '../../providers/user_state.dart';
 import '../../services/calorie_calculation_service.dart';
+import '../../shared/date_utils.dart';
+import 'dashboard_state.dart';
+import 'horizontal_date_wheel_picker.dart';
+import 'calorie_progress_ring.dart';
+import 'macro_progress_bars.dart';
 
 class DashboardScreen extends StatefulWidget {
   final DateTime selectedDay;
   final Function(int) onDayChanged;
+  final VoidCallback? onOpenDiary;
   final int caloriesConsumed;
   final int caloriesGoal;
   final int proteinConsumed;
@@ -21,6 +28,7 @@ class DashboardScreen extends StatefulWidget {
     super.key,
     required this.selectedDay,
     required this.onDayChanged,
+    this.onOpenDiary,
     required this.caloriesConsumed,
     required this.caloriesGoal,
     required this.proteinConsumed,
@@ -39,19 +47,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<double> _weeklyDeficit = List<double>.filled(7, 0);
   List<double> _weeklyTDEE = List<double>.filled(7, 0);
   bool _loadingWeekly = false;
+  late final DashboardState _dashboardState;
+  DateTime? _lastNotifiedDate;
 
   @override
   void initState() {
     super.initState();
+    _dashboardState = DashboardState(
+      initialDate: widget.selectedDay,
+      userState: widget.userState,
+    );
+    _lastNotifiedDate = _dashboardState.selectedDate;
+    _dashboardState.addListener(_handleSelectedDateChanged);
     _loadWeeklyDeficit();
   }
 
   @override
   void didUpdateWidget(covariant DashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!DateUtils.isSameDay(oldWidget.selectedDay, widget.selectedDay) || oldWidget.userState != widget.userState) {
+    if (!DateUtils.isSameDay(oldWidget.selectedDay, widget.selectedDay)) {
+      _dashboardState.setSelectedDateFromExternal(widget.selectedDay);
+    }
+    if (oldWidget.userState != widget.userState) {
       _loadWeeklyDeficit();
     }
+  }
+
+  @override
+  void dispose() {
+    _dashboardState.removeListener(_handleSelectedDateChanged);
+    _dashboardState.dispose();
+    super.dispose();
+  }
+
+  void _handleSelectedDateChanged() {
+    final selectedDate = _dashboardState.selectedDate;
+    if (_lastNotifiedDate != null && AppDateUtils.isSameDay(_lastNotifiedDate!, selectedDate)) {
+      return;
+    }
+    final daysDiff = DateUtils.dateOnly(selectedDate)
+        .difference(DateUtils.dateOnly(widget.selectedDay))
+        .inDays;
+    if (daysDiff != 0) {
+      widget.onDayChanged(daysDiff);
+    }
+    _lastNotifiedDate = selectedDate;
+    _loadWeeklyDeficit();
   }
 
   Future<void> _loadWeeklyDeficit() async {
@@ -68,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     setState(() => _loadingWeekly = true);
 
-    final endDate = DateUtils.dateOnly(widget.selectedDay);
+    final endDate = DateUtils.dateOnly(_dashboardState.selectedDate);
     final startDate = endDate.subtract(const Duration(days: 6));
     final logs = await userState.db.getDailyLogsByUserAndDateRange(user.id!, startDate, endDate);
 
@@ -99,127 +140,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  Future<void> _showDatePicker(BuildContext context) async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: widget.selectedDay,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Palette.forestGreen,
-              onPrimary: Palette.warmNeutral,
-              surface: Palette.lightStone,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (pickedDate != null) {
-      final daysDiff = DateUtils.dateOnly(pickedDate).difference(DateUtils.dateOnly(widget.selectedDay)).inDays;
-      widget.onDayChanged(daysDiff);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Palette.warmNeutral,
-      appBar: AppBar(
-        title: const Text('Dashboard'),
+    return ChangeNotifierProvider.value(
+      value: _dashboardState,
+      child: Scaffold(
         backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-      ),
-      body: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Palette.lightStone,
-                  borderRadius: BorderRadius.circular(12),
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          backgroundColor: Palette.warmNeutral,
+          foregroundColor: Colors.black87,
+          elevation: 0,
+        ),
+        body: Stack(
+          children: [
+            ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Consumer<DashboardState>(
+                  builder: (context, state, _) {
+                    return HorizontalDateWheelPicker(
+                      selectedDate: state.selectedDate,
+                      onSelectedDateChanged: state.setSelectedDate,
+                    );
+                  },
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => widget.onDayChanged(-1),
-                      icon: const Icon(Icons.chevron_left),
-                      splashRadius: 20,
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showDatePicker(context),
-                        child: Center(
-                          child: Text(
-                            _dayLabel,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
+                const SizedBox(height: 16),
+                Consumer<DashboardState>(
+                  builder: (context, state, _) {
+                    final data = state.selectedData;
+                    return GestureDetector(
+                      onTap: widget.onOpenDiary,
+                      child: _CardSection(
+                        title: 'Today\'s Summary',
+                        child: _SummaryRow(
+                          calories: data.caloriesConsumed,
+                          goal: data.caloriesGoal,
+                          protein: data.proteinConsumed,
+                          carbs: data.carbsConsumed,
+                          fat: data.fatConsumed,
                         ),
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () => widget.onDayChanged(1),
-                      icon: const Icon(Icons.chevron_right),
-                      splashRadius: 20,
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 16),
-              _CardSection(
-                title: 'Today\'s Summary',
-                child: _SummaryRow(
-                  calories: widget.caloriesConsumed,
-                  goal: widget.caloriesGoal,
-                  protein: widget.proteinConsumed,
-                  carbs: widget.carbsConsumed,
-                  fat: widget.fatConsumed,
+                const SizedBox(height: 12),
+                Consumer<DashboardState>(
+                  builder: (context, state, _) {
+                    final data = state.selectedData;
+                    return _CardSection(
+                      title: 'Steps',
+                      child: _StepsCard(
+                        stepsTaken: data.stepsTaken,
+                        stepsGoal: data.stepsGoal,
+                      ),
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-              _CardSection(
-                title: 'Steps',
-                child: _StepsCard(
-                  stepsTaken: widget.stepsTaken,
-                  stepsGoal: widget.stepsGoal,
+                const SizedBox(height: 12),
+                Consumer<DashboardState>(
+                  builder: (context, state, _) {
+                    return _CardSection(
+                      title: 'Weekly Deficit',
+                      child: _WeeklyDeficitChart(
+                        dailyDeficit: _weeklyDeficit,
+                        dailyTDEE: _weeklyTDEE,
+                        endDate: state.selectedDate,
+                        isLoading: _loadingWeekly,
+                      ),
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-              _CardSection(
-                title: 'Weekly Deficit',
-                child: _WeeklyDeficitChart(
-                  dailyDeficit: _weeklyDeficit,
-                  dailyTDEE: _weeklyTDEE,
-                  endDate: widget.selectedDay,
-                  isLoading: _loadingWeekly,
+                const SizedBox(height: 12),
+                const _CardSection(
+                  title: 'Quick Actions',
+                  child: _QuickActionsRow(),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const _CardSection(
-                title: 'Quick Actions',
-                child: _QuickActionsRow(),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
-  }
-
-  String get _dayLabel {
-    final now = DateTime.now();
-    final diff = DateUtils.dateOnly(widget.selectedDay).difference(DateUtils.dateOnly(now)).inDays;
-    if (diff == 0) return 'Today';
-    if (diff == -1) return 'Yesterday';
-    if (diff == 1) return 'Tomorrow';
-    return '${widget.selectedDay.month}/${widget.selectedDay.day}/${widget.selectedDay.year}';
   }
 }
 
@@ -265,29 +267,24 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remaining = goal - calories;
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Calories', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
-                Text('$calories / $goal kcal', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-              Text('Remaining: $remaining kcal', style: const TextStyle(color: Colors.grey)),
-            ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          CalorieProgressRing(
+            consumed: calories,
+            target: goal,
           ),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('P $protein g', style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text('C $carbs g', style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text('F $fat g', style: const TextStyle(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ],
+          const SizedBox(height: 24),
+          MacroProgressBars(
+            proteinConsumed: protein,
+            proteinTarget: goal ~/ 8,
+            carbsConsumed: carbs,
+            carbsTarget: goal ~/ 2,
+            fatConsumed: fat,
+            fatTarget: goal ~/ 4,
+          ),
+        ],
+      ),
     );
   }
 }

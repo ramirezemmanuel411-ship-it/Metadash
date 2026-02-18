@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
 import '../../providers/user_state.dart';
+import '../../models/diary_entry_food.dart';
 import '../food_search/food_search_screen.dart';
 
 class DiaryScreen extends StatefulWidget {
   final DateTime selectedDay;
   final Function(int)? onDayChanged;
+  final VoidCallback? onEntriesChanged;
   final int caloriesConsumed;
   final int caloriesGoal;
   final int proteinConsumed;
@@ -22,6 +24,7 @@ class DiaryScreen extends StatefulWidget {
     super.key,
     required this.selectedDay,
     this.onDayChanged,
+    this.onEntriesChanged,
     required this.caloriesConsumed,
     required this.caloriesGoal,
     required this.proteinConsumed,
@@ -42,9 +45,40 @@ class DiaryScreen extends StatefulWidget {
 class _DiaryScreenState extends State<DiaryScreen> {
   bool _showResults = false;
   int _currentMacroPage = 0;
+  List<DiaryEntryFood> _foodEntries = [];
 
-  void _openAddFoodSearch() {
-    Navigator.of(context).push(
+  @override
+  void initState() {
+    super.initState();
+    _loadFoodEntries();
+  }
+
+  @override
+  void didUpdateWidget(DiaryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDay != widget.selectedDay) {
+      _loadFoodEntries();
+    }
+  }
+
+  Future<void> _loadFoodEntries() async {
+    if (widget.userState?.currentUser == null) return;
+    
+    final entries = await widget.userState!.db.getFoodEntriesForDay(
+      widget.userState!.currentUser!.id!,
+      widget.selectedDay,
+    );
+    
+    setState(() {
+      _foodEntries = entries.map((map) => DiaryEntryFood.fromMap(map)).toList();
+    });
+    
+    // Notify parent that entries changed so macros can be updated
+    widget.onEntriesChanged?.call();
+  }
+
+  void _openAddFoodSearch() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FoodSearchScreen(
           returnOnSelect: false,
@@ -53,6 +87,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
         ),
       ),
     );
+    // Reload entries when returning from search
+    _loadFoodEntries();
   }
 
   void _openBarcodeScanner() {
@@ -307,6 +343,11 @@ class _DiaryScreenState extends State<DiaryScreen> {
                 child: Column(
                   children: List.generate(24, (index) {
                           final label = _hourLabel(index);
+                          // Find food entries for this hour
+                          final entriesForHour = _foodEntries.where((entry) {
+                            return entry.timestamp.hour == index;
+                          }).toList();
+                          
                           return SizedBox(
                             height: rowHeight,
                             child: Row(
@@ -320,14 +361,45 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                 ),
                                 const VerticalDivider(width: 1, thickness: 0.5, color: Colors.grey),
                                 Expanded(
-                                  child: GestureDetector(
-                                    onTap: _openAddFoodSearch,
-                                    child: Container(
-                                      alignment: Alignment.centerLeft,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                                      child: const Icon(Icons.add, color: Palette.forestGreen),
-                                    ),
-                                  ),
+                                  child: entriesForHour.isEmpty
+                                      ? GestureDetector(
+                                          onTap: _openAddFoodSearch,
+                                          child: Container(
+                                            alignment: Alignment.centerLeft,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                                            child: const Icon(Icons.add, color: Palette.forestGreen),
+                                          ),
+                                        )
+                                      : ListView.builder(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                          itemCount: entriesForHour.length,
+                                          itemBuilder: (context, entryIndex) {
+                                            final entry = entriesForHour[entryIndex];
+                                            return Padding(
+                                              padding: const EdgeInsets.only(bottom: 4),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      '${entry.name} - ${entry.calories} kcal · P ${entry.proteinG}g · C ${entry.carbsG}g · F ${entry.fatG}g',
+                                                      style: const TextStyle(fontSize: 12),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.delete_outline, size: 16),
+                                                    padding: EdgeInsets.zero,
+                                                    constraints: const BoxConstraints(),
+                                                    onPressed: () async {
+                                                      await widget.userState!.db.deleteFoodEntry(entry.id);
+                                                      _loadFoodEntries();
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
                                 ),
                               ],
                             ),
@@ -516,8 +588,8 @@ class _ResultsModalState extends State<_ResultsModal> with SingleTickerProviderS
   Widget build(BuildContext context) {
     // Calculate values from real data instead of hardcoding
     // These are placeholders - proper TDEE calculation will be implemented
-    final tdee = 2850; // TODO: Calculate from user profile + activity
-    final netCalories = -650; // TODO: Calculate from caloriesConsumed - tdee
+    final tdee = 2850; // Placeholder for user profile + activity.
+    final netCalories = -650; // Placeholder for caloriesConsumed - tdee.
     final fatChangeLb = netCalories / 3500.0; // Convert calorie deficit to fat pounds
     final metabolismTrend = netCalories < -500 ? 'down' : netCalories > 500 ? 'up' : 'flat';
 

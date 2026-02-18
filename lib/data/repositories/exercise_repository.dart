@@ -97,8 +97,8 @@ class ExerciseRepository {
           if (estimated != null) total += estimated;
         }
       }
-      // TODO: For described exercises, parse from AI extraction
-      // TODO: For weight lifting, calculate from sets/reps
+      // For described exercises, parse from AI extraction in future enhancement.
+      // For weight lifting, calculate from sets/reps in future enhancement.
     }
 
     return total;

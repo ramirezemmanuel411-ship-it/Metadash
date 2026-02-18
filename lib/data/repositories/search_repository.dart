@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -40,10 +42,11 @@ class SearchRepository {
     try {
       // Try to initialize FatSecret if credentials are available
       fatSecretDatasource = FatSecretRemoteDatasource(
-        backendUrl: backendUrl ?? 'https://metadash-production.up.railway.app',
+        backendUrl: backendUrl ?? 'https://fatsecret-proxy-production-d58c.up.railway.app',
       );
+      print('✅ FatSecret datasource initialized successfully');
     } catch (e) {
-      print('FatSecret initialization failed: $e - will use fallback databases');
+      print('❌ FatSecret initialization failed: $e - will use fallback databases');
     }
 
     return SearchRepository(
@@ -69,78 +72,25 @@ class SearchRepository {
     _cancelPreviousRequest();
 
     try {
-      // ===== STAGE 1: Local Search (fastest, always runs) =====
-      final localResults = await _localDatasource.searchFoodsLocal(
-        query,
-        limit: 50,
-      );
-
-      if (localResults.isNotEmpty) {
-        _debugLogRawResults('LOCAL', query);
-        // Apply deduplication first
-        final deduped = deduplicateFoods(localResults);
-        
-        // Apply canonical parsing to clean and group results
-        final canonicalLocal = CanonicalFoodService.processSearchResults(
-          results: deduped,
-          query: query,
-          maxResults: 12,
-        );
-        _debugLogResults('LOCAL', query, canonicalLocal);
-
-        yield SearchResult(
-          results: canonicalLocal,
-          source: SearchSource.local,
-          isComplete: false,
-        );
-      }
-
-      // ===== STAGE 2: Check Cache =====
-      if (!forceRefresh) {
-        final cacheKey = SearchCacheEntry.createKey(query, filters: filters);
-        final cached = await _localDatasource.getCachedSearch(cacheKey);
-
-        if (cached != null && cached.isValid) {
-          // Merge cached with local (prefer local for duplicates)
-          final mergedResults = _mergeResults(localResults, cached.results);
-
-          // Apply deduplication
-          final deduped = deduplicateFoods(mergedResults);
-
-          // Apply canonical parsing to clean and group merged results
-          final canonicalMerged = CanonicalFoodService.processSearchResults(
-            results: deduped,
-            query: query,
-            maxResults: 12,
-          );
-          _debugLogRawResults('CACHE', query);
-          _debugLogResults('CACHE', query, canonicalMerged);
-
-          yield SearchResult(
-            results: canonicalMerged,
-            source: SearchSource.cache,
-            isComplete: false, // Will still fetch fresh data
-          );
-
-          // Prefetch details for top results in background
-          _prefetchTopResults(canonicalMerged.take(10).toList());
-        }
-      }
-
-      // ===== STAGE 3: Fetch Fresh from APIs =====
-      // PRIMARY: Try FatSecret first
+      // ===== STAGE 1: Fetch Fresh from APIs (FatSecret primary) =====
       List<FoodModel> remoteResults = [];
+      
+      print('🔍 FatSecret datasource available: ${_fatSecretDatasource != null}');
       
       if (_fatSecretDatasource != null) {
         try {
+          print('🔍 Attempting FatSecret search for: $query');
           _debugLogRawResults('FATSECRET', query);
           final rawFatSecretData = await _fatSecretDatasource.searchFoods(query);
           final fatSecretResults = FatSecretRemoteDatasource.parseFoodsFromSearch(rawFatSecretData);
+          print('✅ FatSecret returned ${fatSecretResults.length} results');
           remoteResults.addAll(fatSecretResults);
           _debugLogResults('FATSECRET', query, fatSecretResults);
         } catch (e) {
-          print('FatSecret search error: $e - Falling back to USDA/OpenFoodFacts');
+          print('❌ FatSecret search error: $e - Falling back to USDA/OpenFoodFacts');
         }
+      } else {
+        print('⚠️ FatSecret datasource is null - will use fallback');
       }
 
       // FALLBACK: If FatSecret empty or failed, try USDA + OpenFoodFacts
@@ -193,17 +143,14 @@ class SearchRepository {
         // Save as recent search
         await _localDatasource.saveRecentSearch(query);
 
-        // Merge all results (local + cached + remote, deduplicated)
-        final allResults = _mergeResults(localResults, remoteResults);
-
-        // Apply deduplication
-        final deduped = deduplicateFoods(allResults);
+        // Apply deduplication to remote results
+        final deduped = deduplicateFoods(remoteResults);
 
         // Apply canonical parsing to clean and group all results
         final canonicalAll = CanonicalFoodService.processSearchResults(
           results: deduped,
           query: query,
-          maxResults: 12,
+          maxResults: 50,
         );
         _debugLogResults('FINAL', query, canonicalAll);
 
@@ -216,20 +163,43 @@ class SearchRepository {
         // Prefetch details for top 10 results
         _prefetchTopResults(canonicalAll.take(10).toList());
       } else {
-        // No remote results, apply deduplication to local only
-        final deduped = deduplicateFoods(localResults);
-        
-        final canonicalLocal = CanonicalFoodService.processSearchResults(
-          results: deduped,
-          query: query,
-          maxResults: 12,
-        );
+        // No remote results, fallback to cache/local for anything available
+        List<FoodModel> localResults = [];
 
-        yield SearchResult(
-          results: canonicalLocal,
-          source: SearchSource.local,
-          isComplete: true,
+        if (!forceRefresh) {
+          final cacheKey = SearchCacheEntry.createKey(query, filters: filters);
+          final cached = await _localDatasource.getCachedSearch(cacheKey);
+          if (cached != null && cached.isValid) {
+            localResults.addAll(cached.results);
+            _debugLogRawResults('CACHE', query);
+          }
+        }
+
+        final localSearchResults = await _localDatasource.searchFoodsLocal(
+          query,
+          limit: 50,
         );
+        if (localSearchResults.isNotEmpty) {
+          localResults = _mergeResults(localResults, localSearchResults);
+          _debugLogRawResults('LOCAL', query);
+        }
+
+        if (localResults.isNotEmpty) {
+          final deduped = deduplicateFoods(localResults);
+          final canonicalLocal = CanonicalFoodService.processSearchResults(
+            results: deduped,
+            query: query,
+            maxResults: 50,
+          );
+
+          yield SearchResult(
+            results: canonicalLocal,
+            source: SearchSource.local,
+            isComplete: true,
+          );
+        } else {
+          yield SearchResult.empty();
+        }
       }
     } catch (e) {
       print('Search error: $e');

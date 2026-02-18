@@ -38,7 +38,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 2, // Incremented version to trigger upgrade
+      version: 3, // Incremented version to trigger upgrade
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -66,7 +66,8 @@ class DatabaseService {
         activityLevel TEXT NOT NULL,
         dailyStepsGoal INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        macroTargets TEXT
       )
     ''');
 
@@ -160,6 +161,15 @@ class DatabaseService {
         )
       ''');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_food_entries_user_timestamp ON food_entries(userId, timestamp DESC)');
+    }
+
+    // Add macroTargets column if missing
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE user_profiles ADD COLUMN macroTargets TEXT');
+      } catch (_) {
+        // Column may already exist
+      }
     }
   }
 

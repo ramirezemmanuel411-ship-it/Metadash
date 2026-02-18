@@ -1,57 +1,33 @@
-class Nutrient {
-  final NutrientCategory category;
-  final int amount;
-  Nutrient({required this.category, required this.amount});
-}
-
-enum NutrientCategory { protein, carbs, fat }
-
 class FoodItem {
   final String name;
   final int calories;
-  final String macroLine;
-  const FoodItem({required this.name, required this.calories, required this.macroLine});
-}
+  final double protein;
+  final double carbs;
+  final double fat;
 
-enum FoodItemV2 {
-  eggLarge,
-  chickenBreast,
-}
+  const FoodItem({
+    required this.name,
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
 
-extension FoodItemV2Info on FoodItemV2 {
-  String get name {
-    switch (this) {
-      case FoodItemV2.eggLarge:
-        return 'Egg (large)';
-      case FoodItemV2.chickenBreast:
-        return 'Chicken Breast';
-    }
-  }
+  String get macroLine =>
+      'P ${_formatMacro(protein)} • C ${_formatMacro(carbs)} • F ${_formatMacro(fat)}';
 
-  int get calories {
-    switch (this) {
-      case FoodItemV2.eggLarge:
-        return 78;
-      case FoodItemV2.chickenBreast:
-        return 165;
-    }
-  }
-
-  List<Nutrient> get nutrients {
-    switch (this) {
-      case FoodItemV2.eggLarge:
-        return [Nutrient(category: NutrientCategory.protein, amount: 6)];
-      case FoodItemV2.chickenBreast:
-        return [Nutrient(category: NutrientCategory.protein, amount: 31)];
-    }
+  String _formatMacro(double value) {
+    if (value <= 0) return '0g';
+    final formatted = value >= 10 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
+    return '${formatted}g';
   }
 }
 
 enum MealName { breakfast, lunch, dinner }
 
 const mockFoods = <FoodItem>[
-  FoodItem(name: 'Chicken Breast', calories: 165, macroLine: 'P 31g • C 0g • F 3g'),
-  FoodItem(name: 'Greek Yogurt', calories: 100, macroLine: 'P 17g • C 6g • F 0g'),
-  FoodItem(name: 'Oats', calories: 150, macroLine: 'P 5g • C 27g • F 3g'),
-  FoodItem(name: 'Banana', calories: 105, macroLine: 'P 1g • C 27g • F 0g'),
+  FoodItem(name: 'Chicken Breast', calories: 165, protein: 31, carbs: 0, fat: 3),
+  FoodItem(name: 'Greek Yogurt', calories: 100, protein: 17, carbs: 6, fat: 0),
+  FoodItem(name: 'Oats', calories: 150, protein: 5, carbs: 27, fat: 3),
+  FoodItem(name: 'Banana', calories: 105, protein: 1, carbs: 27, fat: 0),
 ];
