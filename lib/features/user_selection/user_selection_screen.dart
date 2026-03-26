@@ -76,6 +76,25 @@ class _UserSelectionScreenState extends State<UserSelectionScreen> {
           'Select User',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.black54),
+            tooltip: 'Delete Demo User',
+            onPressed: () async {
+              final removed =
+                  await widget.userState.deleteUserByEmail('demo@metadash.app');
+              if (!mounted) return;
+              await _loadUsers();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    removed ? 'Demo user deleted.' : 'Demo user not found.',
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'shared/palette.dart';
-import 'shared/widgets/radial_menu.dart';
+import 'shared/widgets/floating_action_hub.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/diary/diary_screen.dart';
 import 'features/food/ai_chat_screen.dart';
+import 'features/food_search/food_search_screen.dart';
+import 'features/control_center/control_center_screen.dart';
+import 'features/progress/progress_screen.dart';
+import 'presentation/screens/exercise_logging/exercise_main_screen.dart';
 import 'providers/user_state.dart';
+import 'models/data_inputs_settings.dart';
+import 'services/health_service.dart';
+import 'services/calorie_calculation_service.dart';
 
 class AppShell extends StatefulWidget {
   final UserState userState;
@@ -14,7 +21,7 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final _pageController = PageController(initialPage: 0);
   int _index = 0;
   DateTime _selectedDay = DateTime.now();
@@ -30,11 +37,12 @@ class _AppShellState extends State<AppShell> {
   late int _fatGoal;
   int _stepsTaken = 0;
   late int _stepsGoal;
-  bool _fabMenuOpen = false;
+  int _workoutCalories = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Set defaults from user profile
     final user = widget.userState.currentUser;
     if (user != null) {
@@ -45,11 +53,80 @@ class _AppShellState extends State<AppShell> {
       _fatGoal = user.macroTargets?['fat'] ?? 73;
     }
     _loadDailyData();
+    widget.userState.addListener(_handleUserStateChange);
+    
+    // Start automatic sync on app open (async, non-blocking)
+    Future.delayed(const Duration(milliseconds: 500), _syncHealthDataInBackground);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.userState.removeListener(_handleUserStateChange);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Sync again whenever the app is opened/resumed
+      _syncHealthDataInBackground();
+    }
+  }
+
+  void _handleUserStateChange() {
+    if (!mounted) return;
+    if (widget.userState.currentUser == null) return;
+    _loadDailyData();
+  }
+
+  /// Automatically sync health data from HealthKit/Google Fit
+  /// Runs silently in the background
+  Future<void> _syncHealthDataInBackground() async {
+    try {
+      final user = widget.userState.currentUser;
+      if (user == null) return;
+
+      try {
+        // Check if user has given health permissions
+        final hasPermissions = await HealthService().hasPermissions();
+        if (!hasPermissions) return;
+      } catch (e) {
+        // If health service fails to check permissions, skip sync
+        print('Could not check health permissions: $e');
+        return;
+      }
+
+      try {
+        // Sync last 7 days INCLUDING today
+        final now = DateTime.now();
+        final start = now.subtract(const Duration(days: 6));
+        final end = now; // Include today by using current time, not midnight
+
+        await widget.userState.db.syncHealthDataForDateRange(user.id!, start, end);
+
+        // Reload UI with new data
+        if (mounted) {
+          _loadDailyData();
+        }
+      } catch (e) {
+        // If sync fails, still let app continue
+        print('Health data sync failed: $e');
+      }
+    } catch (e) {
+      // Catch all - don't let anything crash the app
+      print('Background health sync error (non-blocking): $e');
+    }
   }
 
   Future<void> _loadDailyData() async {
     final user = widget.userState.currentUser;
     if (user == null) return;
+
+    final settings = await widget.userState.db.getDataInputsSettings(user.id!) ??
+      DataInputsSettings.defaults(user.id!).copyWith(stepGoal: user.dailyStepsGoal);
+    await widget.userState.db.createOrUpdateDataInputsSettings(settings);
 
     final log = await widget.userState.db.getDailyLogByUserAndDate(user.id!, _selectedDay);
     
@@ -70,18 +147,27 @@ class _AppShellState extends State<AppShell> {
     }
     
     setState(() {
+      _stepsGoal = settings.stepGoal;
       if (log != null) {
+        final metrics = CalorieCalculationService.calculateDayMetrics(
+          user: user,
+          log: log,
+          settings: widget.userState.metabolicSettings,
+          inputs: widget.userState.dataInputsSettings,
+        );
         _caloriesConsumed = log.caloriesConsumed + foodCalories;
         _proteinConsumed = log.protein + foodProtein;
         _carbsConsumed = log.carbs + foodCarbs;
         _fatConsumed = log.fat + foodFat;
         _stepsTaken = log.stepsCount;
+        _workoutCalories = metrics.workoutCalories.round();
       } else {
         _caloriesConsumed = foodCalories;
         _proteinConsumed = foodProtein;
         _carbsConsumed = foodCarbs;
         _fatConsumed = foodFat;
         _stepsTaken = 0;
+        _workoutCalories = 0;
       }
     });
   }
@@ -106,11 +192,6 @@ class _AppShellState extends State<AppShell> {
     setState(() => _index = i);
   }
 
-  void _logout() {
-    widget.userState.logout();
-    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-  }
-
   void _openAiAssistant() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -118,6 +199,42 @@ class _AppShellState extends State<AppShell> {
           userState: widget.userState,
           selectedDay: _selectedDay,
         ),
+      ),
+    );
+  }
+
+  void _openAddFood() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FoodSearchScreen(
+          userState: widget.userState,
+          targetTimestamp: _selectedDay,
+          autofocusSearch: true,
+        ),
+      ),
+    ).then((_) => _loadDailyData());
+  }
+
+  void _openAddWorkout() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ExerciseMainScreen(),
+      ),
+    ).then((_) => _loadDailyData());
+  }
+
+  void _openAddWeight() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ProgressScreen(),
+      ),
+    );
+  }
+
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ControlCenterScreen(),
       ),
     );
   }
@@ -161,53 +278,21 @@ class _AppShellState extends State<AppShell> {
                   fatGoal: _fatGoal,
                   stepsTaken: _stepsTaken,
                   stepsGoal: _stepsGoal,
+                  workoutCalories: _workoutCalories,
                   userState: widget.userState,
                 ),
               ],
             ),
           ),
-          // Persistent FAB menu across all screens
-          RadialMenu(
-            userState: widget.userState,
-            onLogout: _logout,
-            onOpenChanged: (isOpen) => setState(() => _fabMenuOpen = isOpen),
-          ),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            bottom: 48 + 56 + 12 + (_fabMenuOpen ? 140 : 0),
-            right: 32,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: _fabMenuOpen ? 0.95 : 1,
-              child: AnimatedScale(
-                duration: const Duration(milliseconds: 200),
-                scale: _fabMenuOpen ? 0.98 : 1,
-                child: GestureDetector(
-                  onTap: _openAiAssistant,
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Palette.forestGreen,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.auto_awesome,
-                      color: Palette.warmNeutral,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          // Floating action hub with radial menu
+          FloatingActionHub(
+            onAddFood: _openAddFood,
+            onOpenAI: _openAiAssistant,
+            onAddWorkout: _openAddWorkout,
+            onAddWeight: _openAddWeight,
+            onSettings: _openSettings,
+            fabColor: Palette.forestGreen,
+            backgroundColor: Palette.warmNeutral,
           ),
           Positioned(
             bottom: 16,

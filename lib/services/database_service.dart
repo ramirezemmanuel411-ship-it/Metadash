@@ -3,6 +3,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
 import '../models/user_profile.dart';
 import '../models/daily_log.dart';
+import '../models/reentry_mode_state.dart';
+import '../models/data_inputs_settings.dart';
 import 'health_service.dart';
 
 class DatabaseService {
@@ -38,7 +40,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 3, // Incremented version to trigger upgrade
+      version: 8, // Incremented version to add additional health fields
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -82,11 +84,19 @@ class DatabaseService {
         runningSteps INTEGER,
         workoutCalories INTEGER,
         workoutType TEXT,
+        workoutDurationMinutes INTEGER,
         waterIntake REAL NOT NULL,
         workoutActivities TEXT NOT NULL,
         protein INTEGER NOT NULL,
         carbs INTEGER NOT NULL,
         fat INTEGER NOT NULL,
+        sleepMinutes INTEGER,
+        restingHeartRate INTEGER,
+        averageHeartRate INTEGER,
+        distanceMeters REAL,
+        vo2Max REAL,
+        weight REAL,
+        tdeeAdjustment REAL,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -129,6 +139,7 @@ class DatabaseService {
         carbsG INTEGER NOT NULL,
         fatG INTEGER NOT NULL,
         source TEXT NOT NULL,
+        serving TEXT,
         confidence REAL,
         assumptions TEXT,
         rawInput TEXT,
@@ -138,6 +149,55 @@ class DatabaseService {
 
     // Create index for faster timeline queries
     await db.execute('CREATE INDEX idx_food_entries_user_timestamp ON food_entries(userId, timestamp DESC)');
+
+    // Create Reentry Mode table
+    await db.execute('''
+      CREATE TABLE reentry_mode (
+        userId INTEGER PRIMARY KEY,
+        isActive INTEGER NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT,
+        preReentryWeight REAL,
+        returnWeight REAL,
+        intakeDelta TEXT,
+        activityDelta TEXT,
+        fatEstimateLowLb REAL,
+        fatEstimateHighLb REAL,
+        refineUntil TEXT,
+        lastRefineWeightDate TEXT,
+        lastKnownWeight REAL,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Create Data Inputs Settings table
+    await db.execute('''
+      CREATE TABLE data_inputs_settings (
+        userId INTEGER PRIMARY KEY,
+        stepCalorieMethod TEXT NOT NULL,
+        stepGoal INTEGER NOT NULL,
+        includeStepsInExpenditure INTEGER NOT NULL,
+        useTrackedWorkoutCalories INTEGER NOT NULL,
+        workoutAccuracy TEXT NOT NULL,
+        includeStrengthInExpenditure INTEGER NOT NULL,
+        foodPrimarySource TEXT NOT NULL,
+        showVerifiedItemsFirst INTEGER NOT NULL,
+        preferBarcodeMatches INTEGER NOT NULL,
+        macroCalcMode TEXT NOT NULL,
+        showFiber INTEGER NOT NULL,
+        showSugar INTEGER NOT NULL,
+        appleHealthConnected INTEGER NOT NULL DEFAULT 0,
+        googleFitConnected INTEGER NOT NULL DEFAULT 0,
+        garminConnected INTEGER NOT NULL DEFAULT 0,
+        fitbitConnected INTEGER NOT NULL DEFAULT 0,
+        stravaConnected INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -154,6 +214,7 @@ class DatabaseService {
           carbsG INTEGER NOT NULL,
           fatG INTEGER NOT NULL,
           source TEXT NOT NULL,
+          serving TEXT,
           confidence REAL,
           assumptions TEXT,
           rawInput TEXT,
@@ -170,6 +231,112 @@ class DatabaseService {
       } catch (_) {
         // Column may already exist
       }
+    }
+
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE food_entries ADD COLUMN serving TEXT');
+      } catch (_) {
+        // Column may already exist
+      }
+    }
+
+    if (oldVersion < 5) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS reentry_mode (
+            userId INTEGER PRIMARY KEY,
+            isActive INTEGER NOT NULL,
+            startDate TEXT NOT NULL,
+            endDate TEXT,
+            preReentryWeight REAL,
+            returnWeight REAL,
+            intakeDelta TEXT,
+            activityDelta TEXT,
+            fatEstimateLowLb REAL,
+            fatEstimateHighLb REAL,
+            refineUntil TEXT,
+            lastRefineWeightDate TEXT,
+            lastKnownWeight REAL,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL,
+            FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
+          )
+        ''');
+      } catch (_) {
+        // Table may already exist
+      }
+    }
+
+    if (oldVersion < 6) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS data_inputs_settings (
+            userId INTEGER PRIMARY KEY,
+            stepCalorieMethod TEXT NOT NULL,
+            stepGoal INTEGER NOT NULL,
+            includeStepsInExpenditure INTEGER NOT NULL,
+            useTrackedWorkoutCalories INTEGER NOT NULL,
+            workoutAccuracy TEXT NOT NULL,
+            includeStrengthInExpenditure INTEGER NOT NULL,
+            foodPrimarySource TEXT NOT NULL,
+            showVerifiedItemsFirst INTEGER NOT NULL,
+            preferBarcodeMatches INTEGER NOT NULL,
+            macroCalcMode TEXT NOT NULL,
+            showFiber INTEGER NOT NULL,
+            showSugar INTEGER NOT NULL,
+            appleHealthConnected INTEGER NOT NULL DEFAULT 0,
+            googleFitConnected INTEGER NOT NULL DEFAULT 0,
+            garminConnected INTEGER NOT NULL DEFAULT 0,
+            fitbitConnected INTEGER NOT NULL DEFAULT 0,
+            stravaConnected INTEGER NOT NULL DEFAULT 0,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL,
+            FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
+          )
+        ''');
+      } catch (_) {
+        // Table may already exist
+      }
+    }
+
+    if (oldVersion < 7) {
+      try {
+        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN appleHealthConnected INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN googleFitConnected INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN garminConnected INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN fitbitConnected INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN stravaConnected INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 8) {
+      try {
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN workoutDurationMinutes INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN sleepMinutes INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN restingHeartRate INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN averageHeartRate INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN distanceMeters REAL');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN vo2Max REAL');
+      } catch (_) {}
     }
   }
 
@@ -299,6 +466,52 @@ class DatabaseService {
     );
   }
 
+  /// Clear health data for a specific date so it can be re-synced
+  Future<void> clearHealthDataForDate(int userId, DateTime date) async {
+    final db = await database;
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    await db.update(
+      'daily_logs',
+      {
+        'stepsCount': 0,
+        'runningSteps': 0,
+        'workoutCalories': 0,
+        'workoutType': '',
+        'workoutDurationMinutes': 0,
+        'sleepMinutes': 0,
+        'restingHeartRate': 0,
+        'averageHeartRate': 0,
+        'distanceMeters': 0,
+        'vo2Max': 0,
+      },
+      where: 'userId = ? AND date = ?',
+      whereArgs: [userId, dateOnly.toIso8601String().split('T')[0]],
+    );
+  }
+
+  /// Clear all health data (steps, calories, workouts) for a user
+  /// Allows complete re-sync from health source with corrected logic
+  Future<void> clearAllHealthDataForUser(int userId) async {
+    final db = await database;
+    await db.update(
+      'daily_logs',
+      {
+        'stepsCount': 0,
+        'runningSteps': 0,
+        'workoutCalories': 0,
+        'workoutType': '',
+        'workoutDurationMinutes': 0,
+        'sleepMinutes': 0,
+        'restingHeartRate': 0,
+        'averageHeartRate': 0,
+        'distanceMeters': 0,
+        'vo2Max': 0,
+      },
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+  }
+
   // Clear all data (for testing)
   Future<void> clearAllData() async {
     final db = await database;
@@ -356,16 +569,17 @@ class DatabaseService {
   ) async {
     try {
       final healthService = HealthService();
+      final dateOnly = DateTime(date.year, date.month, date.day);
 
       // Fetch health metrics for this date
-      final healthMetrics = await healthService.fetchHealthDataForDate(date);
+      final healthMetrics = await healthService.fetchHealthDataForDate(dateOnly);
       if (healthMetrics == null) {
         // Silent fail - health data not always available
         return null;
       }
 
       // Get existing daily log or create new one
-      var dailyLog = await getDailyLogByUserAndDate(userId, date);
+      var dailyLog = await getDailyLogByUserAndDate(userId, dateOnly);
 
       if (dailyLog != null) {
         // Update existing log with health data
@@ -374,18 +588,30 @@ class DatabaseService {
           runningSteps: healthMetrics.runningSteps,
           workoutCalories: healthMetrics.workoutCalories,
           workoutType: healthMetrics.workoutType,
+          workoutDurationMinutes: healthMetrics.workoutDurationMinutes,
+          sleepMinutes: healthMetrics.sleepMinutes,
+          restingHeartRate: healthMetrics.restingHeartRate,
+          averageHeartRate: healthMetrics.averageHeartRate,
+          distanceMeters: healthMetrics.distanceMeters,
+          vo2Max: healthMetrics.vo2Max,
         );
         await updateDailyLog(dailyLog);
       } else {
         // Create new daily log with health data
         dailyLog = DailyLog(
           userId: userId,
-          date: date,
+          date: dateOnly,
           caloriesConsumed: 0, // User must enter this manually
           stepsCount: healthMetrics.totalSteps,
           runningSteps: healthMetrics.runningSteps,
           workoutCalories: healthMetrics.workoutCalories,
           workoutType: healthMetrics.workoutType,
+          workoutDurationMinutes: healthMetrics.workoutDurationMinutes,
+          sleepMinutes: healthMetrics.sleepMinutes,
+          restingHeartRate: healthMetrics.restingHeartRate,
+          averageHeartRate: healthMetrics.averageHeartRate,
+          distanceMeters: healthMetrics.distanceMeters,
+          vo2Max: healthMetrics.vo2Max,
           waterIntake: 0,
           workoutActivities: [],
           protein: 0,
@@ -412,13 +638,64 @@ class DatabaseService {
   ) async {
     final syncedLogs = <DailyLog>[];
 
-    var currentDate = startDate;
-    while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
-      final log = await syncHealthDataToDailyLog(userId, currentDate);
-      if (log != null) {
-        syncedLogs.add(log);
+    try {
+      final healthService = HealthService();
+      final dateOnlyStart = DateTime(startDate.year, startDate.month, startDate.day);
+      final dateOnlyEnd = DateTime(endDate.year, endDate.month, endDate.day);
+      final metricsByDay = await healthService.fetchDailyMetricsRange(
+        dateOnlyStart,
+        dateOnlyEnd,
+      );
+
+      for (final entry in metricsByDay.entries) {
+        final day = entry.key;
+        final metrics = entry.value;
+        var dailyLog = await getDailyLogByUserAndDate(userId, day);
+
+        if (dailyLog != null) {
+          dailyLog = dailyLog.copyWith(
+            stepsCount: metrics.totalSteps,
+            runningSteps: metrics.runningSteps,
+            workoutCalories: metrics.workoutCalories,
+            workoutType: metrics.workoutType,
+            workoutDurationMinutes: metrics.workoutDurationMinutes,
+            sleepMinutes: metrics.sleepMinutes,
+            restingHeartRate: metrics.restingHeartRate,
+            averageHeartRate: metrics.averageHeartRate,
+            distanceMeters: metrics.distanceMeters,
+            vo2Max: metrics.vo2Max,
+          );
+          await updateDailyLog(dailyLog);
+        } else {
+          dailyLog = DailyLog(
+            userId: userId,
+            date: day,
+            caloriesConsumed: 0,
+            stepsCount: metrics.totalSteps,
+            runningSteps: metrics.runningSteps,
+            workoutCalories: metrics.workoutCalories,
+            workoutType: metrics.workoutType,
+            workoutDurationMinutes: metrics.workoutDurationMinutes,
+            sleepMinutes: metrics.sleepMinutes,
+            restingHeartRate: metrics.restingHeartRate,
+            averageHeartRate: metrics.averageHeartRate,
+            distanceMeters: metrics.distanceMeters,
+            vo2Max: metrics.vo2Max,
+            waterIntake: 0,
+            workoutActivities: [],
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+          await createDailyLog(dailyLog);
+        }
+
+        syncedLogs.add(dailyLog);
       }
-      currentDate = currentDate.add(const Duration(days: 1));
+    } catch (_) {
+      return syncedLogs;
     }
 
     return syncedLogs;
@@ -460,5 +737,118 @@ class DatabaseService {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // Data Inputs Settings Methods
+  Future<void> createOrUpdateDataInputsSettings(DataInputsSettings settings) async {
+    final db = await database;
+    await db.insert(
+      'data_inputs_settings',
+      settings.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<DataInputsSettings?> getDataInputsSettings(int userId) async {
+    final db = await database;
+    final maps = await db.query(
+      'data_inputs_settings',
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    if (maps.isEmpty) return null;
+    return DataInputsSettings.fromMap(maps.first);
+  }
+
+  Future<void> deleteDataInputsSettings(int userId) async {
+    final db = await database;
+    await db.delete(
+      'data_inputs_settings',
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  // Reentry Mode Methods
+  Future<void> createOrUpdateReentryMode(ReentryModeState state) async {
+    final db = await database;
+    await db.insert(
+      'reentry_mode',
+      state.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<ReentryModeState?> getReentryModeState(int userId) async {
+    final db = await database;
+    final maps = await db.query(
+      'reentry_mode',
+      where: 'userId = ?',
+      whereArgs: [userId.toString()],
+    );
+
+    if (maps.isEmpty) return null;
+    return ReentryModeState.fromMap(maps.first);
+  }
+
+  Future<void> deleteReentryMode(int userId) async {
+    final db = await database;
+    await db.delete(
+      'reentry_mode',
+      where: 'userId = ?',
+      whereArgs: [userId.toString()],
+    );
+  }
+
+  /// Check if a date is within any active reentry window (for excluding from goal evaluation)
+  Future<bool> isDateInReentryWindow(int userId, DateTime date) async {
+    final reentryState = await getReentryModeState(userId);
+    if (reentryState == null || !reentryState.isActive) {
+      return false;
+    }
+    return reentryState.isInReentryWindow(date);
+  }
+
+  /// Get all daily logs EXCLUDING reentry window dates
+  Future<List<DailyLog>> getDailyLogsExcludingReentry(
+    int userId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    final reentryState = await getReentryModeState(userId);
+
+    String whereClause = 'userId = ?';
+    List<dynamic> whereArgs = [userId];
+
+    if (startDate != null) {
+      whereClause += ' AND date >= ?';
+      whereArgs.add(startDate.toIso8601String().split('T').first);
+    }
+
+    if (endDate != null) {
+      whereClause += ' AND date <= ?';
+      whereArgs.add(endDate.toIso8601String().split('T').first);
+    }
+
+    final maps = await db.query(
+      'daily_logs',
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: 'date DESC',
+    );
+
+    // Filter out dates within reentry window
+    if (reentryState != null && reentryState.isActive) {
+      final activeState = reentryState;
+      final range = activeState.excludedRange;
+      return maps
+          .map((map) => DailyLog.fromMap(map))
+          .where((log) => !range.contains(log.date))
+          .toList();
+    }
+
+    return maps.map((map) => DailyLog.fromMap(map)).toList();
   }
 }

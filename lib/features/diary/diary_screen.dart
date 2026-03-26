@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../shared/palette.dart';
 import '../../providers/user_state.dart';
 import '../../models/diary_entry_food.dart';
+import '../../models/user_profile.dart';
+import '../../models/daily_log.dart';
+import '../../models/metabolic_settings.dart';
+import '../../models/data_inputs_settings.dart';
+import '../../services/calorie_calculation_service.dart';
 import '../food_search/food_search_screen.dart';
+import '../food_search/models.dart';
 
 class DiaryScreen extends StatefulWidget {
   final DateTime selectedDay;
@@ -18,6 +25,7 @@ class DiaryScreen extends StatefulWidget {
   final int fatGoal;
   final int stepsTaken;
   final int stepsGoal;
+  final int workoutCalories;
   final UserState? userState;
 
   const DiaryScreen({
@@ -35,6 +43,7 @@ class DiaryScreen extends StatefulWidget {
     required this.fatGoal,
     required this.stepsTaken,
     required this.stepsGoal,
+    required this.workoutCalories,
     this.userState,
   });
 
@@ -77,13 +86,26 @@ class _DiaryScreenState extends State<DiaryScreen> {
     widget.onEntriesChanged?.call();
   }
 
-  void _openAddFoodSearch() async {
+  DateTime _timestampForHour(int hour) {
+    return DateTime(
+      widget.selectedDay.year,
+      widget.selectedDay.month,
+      widget.selectedDay.day,
+      hour,
+      0,
+      0,
+    );
+  }
+
+  void _openAddFoodSearch({int? targetHour}) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FoodSearchScreen(
           returnOnSelect: false,
           autofocusSearch: true,
           userState: widget.userState,
+          targetTimestamp:
+              targetHour == null ? null : _timestampForHour(targetHour),
         ),
       ),
     );
@@ -101,6 +123,72 @@ class _DiaryScreenState extends State<DiaryScreen> {
         ),
       ),
     );
+  }
+
+  String _servingText(DiaryEntryFood entry) {
+    final direct = entry.serving?.trim();
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+
+    final assumptions = entry.assumptions ?? const [];
+    for (final assumption in assumptions) {
+      final trimmed = assumption.trim();
+      if (trimmed.isEmpty) continue;
+      if (RegExp(r'\d').hasMatch(trimmed)) {
+        return trimmed;
+      }
+    }
+
+    return 'Not specified';
+  }
+
+  Future<void> _addEntryFromTemplate(
+    DiaryEntryFood entry, {
+    DateTime? timestamp,
+  }) async {
+    final user = widget.userState?.currentUser;
+    if (user == null) return;
+
+    final newEntry = entry.copyWith(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: user.id!,
+      timestamp: timestamp ?? entry.timestamp,
+    );
+
+    await widget.userState!.db.addFoodEntry(newEntry);
+    _loadFoodEntries();
+  }
+
+  Future<void> _editEntry(DiaryEntryFood entry) async {
+    final selected = await Navigator.of(context).push<FoodItem>(
+      MaterialPageRoute(
+        builder: (_) => FoodSearchScreen(
+          returnOnSelect: true,
+          autofocusSearch: true,
+          userState: widget.userState,
+        ),
+      ),
+    );
+
+    if (selected == null || widget.userState?.currentUser == null) return;
+
+    final replacement = DiaryEntryFood(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: widget.userState!.currentUser!.id!,
+      timestamp: entry.timestamp,
+      name: selected.name,
+      calories: selected.calories,
+      proteinG: selected.protein.toInt(),
+      carbsG: selected.carbs.toInt(),
+      fatG: selected.fat.toInt(),
+      source: 'search',
+      serving: entry.serving,
+    );
+
+    await widget.userState!.db.deleteFoodEntry(entry.id);
+    await widget.userState!.db.addFoodEntry(replacement);
+    _loadFoodEntries();
   }
 
   String get _formattedHeaderDate {
@@ -194,7 +282,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Flexible(
-                                    child: Text('${widget.caloriesConsumed} cal', style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                                    child: Text('${widget.workoutCalories} cal', style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
                                   ),
                                 ],
                               ),
@@ -363,7 +451,9 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                 Expanded(
                                   child: entriesForHour.isEmpty
                                       ? GestureDetector(
-                                          onTap: _openAddFoodSearch,
+                                          onTap: () => _openAddFoodSearch(
+                                            targetHour: index,
+                                          ),
                                           child: Container(
                                             alignment: Alignment.centerLeft,
                                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -376,26 +466,105 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                           itemBuilder: (context, entryIndex) {
                                             final entry = entriesForHour[entryIndex];
                                             return Padding(
-                                              padding: const EdgeInsets.only(bottom: 4),
-                                              child: Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      '${entry.name} - ${entry.calories} kcal · P ${entry.proteinG}g · C ${entry.carbsG}g · F ${entry.fatG}g',
-                                                      style: const TextStyle(fontSize: 12),
-                                                      overflow: TextOverflow.ellipsis,
+                                              padding: const EdgeInsets.only(bottom: 8),
+                                              child: Slidable(
+                                                key: ValueKey(entry.id),
+                                                startActionPane: ActionPane(
+                                                  motion: const ScrollMotion(),
+                                                  extentRatio: 0.28,
+                                                  children: [
+                                                    SlidableAction(
+                                                      onPressed: (_) => _addEntryFromTemplate(
+                                                        entry,
+                                                        timestamp: DateTime.now(),
+                                                      ),
+                                                      backgroundColor: Palette.forestGreen,
+                                                      foregroundColor: Colors.white,
+                                                      icon: Icons.add_circle_outline,
+                                                      label: 'Add Again',
                                                     ),
+                                                  ],
+                                                ),
+                                                endActionPane: ActionPane(
+                                                  motion: const ScrollMotion(),
+                                                  extentRatio: 0.75,
+                                                  children: [
+                                                    SlidableAction(
+                                                      onPressed: (_) async {
+                                                        await widget.userState!.db.deleteFoodEntry(entry.id);
+                                                        _loadFoodEntries();
+                                                      },
+                                                      backgroundColor: Colors.redAccent,
+                                                      foregroundColor: Colors.white,
+                                                      icon: Icons.delete_outline,
+                                                      label: 'Delete',
+                                                    ),
+                                                    SlidableAction(
+                                                      onPressed: (_) => _editEntry(entry),
+                                                      backgroundColor: Palette.lightStone,
+                                                      foregroundColor: Colors.black87,
+                                                      icon: Icons.edit_outlined,
+                                                      label: 'Edit',
+                                                    ),
+                                                    SlidableAction(
+                                                      onPressed: (_) => _addEntryFromTemplate(entry),
+                                                      backgroundColor: Palette.lightStone,
+                                                      foregroundColor: Colors.black87,
+                                                      icon: Icons.copy_outlined,
+                                                      label: 'Duplicate',
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    color: Palette.lightStone,
+                                                    borderRadius: BorderRadius.circular(15),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.black.withValues(alpha: 0.08),
+                                                        blurRadius: 10,
+                                                        offset: const Offset(0, 3),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  IconButton(
-                                                    icon: const Icon(Icons.delete_outline, size: 16),
-                                                    padding: EdgeInsets.zero,
-                                                    constraints: const BoxConstraints(),
-                                                    onPressed: () async {
-                                                      await widget.userState!.db.deleteFoodEntry(entry.id);
-                                                      _loadFoodEntries();
-                                                    },
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 12,
                                                   ),
-                                                ],
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        entry.name,
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Colors.black87,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'P ${entry.proteinG}g • C ${entry.carbsG}g • F ${entry.fatG}g • ${entry.calories} kcal',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.black.withValues(alpha: 0.5),
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'Serving: ${_servingText(entry)}',
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          color: Colors.black.withValues(alpha: 0.45),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
                                             );
                                           },
@@ -412,9 +581,24 @@ class _DiaryScreenState extends State<DiaryScreen> {
         ),
       ),
       // Results modal overlay
-      if (_showResults)
-        _ResultsModal(
-          onDismiss: () => setState(() => _showResults = false),
+      if (_showResults && widget.userState != null && widget.userState!.currentUser != null)
+        FutureBuilder(
+          future: widget.userState!.db.getDailyLogByUserAndDate(
+            widget.userState!.currentUser!.id!,
+            widget.selectedDay,
+          ),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data == null) {
+              return Container(); // Don't show modal if no log data
+            }
+            return _ResultsModal(
+              onDismiss: () => setState(() => _showResults = false),
+              user: widget.userState!.currentUser!,
+              log: snapshot.data!,
+              settings: widget.userState!.metabolicSettings,
+              inputs: widget.userState!.dataInputsSettings,
+            );
+          },
         ),
     ],
   ),
@@ -550,8 +734,18 @@ String _monthName(int m) {
 }
 class _ResultsModal extends StatefulWidget {
   final VoidCallback onDismiss;
+  final UserProfile user;
+  final DailyLog log;
+  final MetabolicSettings settings;
+  final DataInputsSettings? inputs;
 
-  const _ResultsModal({required this.onDismiss});
+  const _ResultsModal({
+    required this.onDismiss,
+    required this.user,
+    required this.log,
+    required this.settings,
+    this.inputs,
+  });
 
   @override
   State<_ResultsModal> createState() => _ResultsModalState();
@@ -586,10 +780,16 @@ class _ResultsModalState extends State<_ResultsModal> with SingleTickerProviderS
 
   @override
   Widget build(BuildContext context) {
-    // Calculate values from real data instead of hardcoding
-    // These are placeholders - proper TDEE calculation will be implemented
-    final tdee = 2850; // Placeholder for user profile + activity.
-    final netCalories = -650; // Placeholder for caloriesConsumed - tdee.
+    // Calculate values from real data using CalorieCalculationService
+    final metrics = CalorieCalculationService.calculateDayMetrics(
+      user: widget.user,
+      log: widget.log,
+      settings: widget.settings,
+      inputs: widget.inputs,
+    );
+    
+    final tdee = metrics.tdee;
+    final netCalories = metrics.dailyDeficitSurplus;
     final fatChangeLb = netCalories / 3500.0; // Convert calorie deficit to fat pounds
     final metabolismTrend = netCalories < -500 ? 'down' : netCalories > 500 ? 'up' : 'flat';
 
@@ -641,11 +841,11 @@ class _ResultsModalState extends State<_ResultsModal> with SingleTickerProviderS
                     // Row 1: Daily Energy Expenditure
                     _ResultsRow(
                       label: 'Daily Energy Expendeture:',
-                      value: '$tdee kcal',
+                      value: '${tdee.round()} kcal',
                     ),
                     const SizedBox(height: 12),
                     // Row 2: Net Calories
-                    _NetCaloriesRow(netCalories: netCalories),
+                    _NetCaloriesRow(netCalories: netCalories.round()),
                     const SizedBox(height: 12),
                     // Row 3: Estimated Fat Change
                     _ResultsRow(

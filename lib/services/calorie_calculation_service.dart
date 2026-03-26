@@ -1,5 +1,8 @@
 import '../models/user_profile.dart';
 import '../models/daily_log.dart';
+import '../models/metabolic_settings.dart';
+import '../models/data_inputs_settings.dart';
+import 'adaptive_tdee_service.dart';
 
 class CalorieCalculationService {
   /// Calculate step calories per step based on body weight
@@ -19,23 +22,86 @@ class CalorieCalculationService {
     return walkingSteps * stepCalPerStep;
   }
 
-  /// Calculate workout calories with fallback logic
-  /// Primary: Use device reported calories with 0.8 multiplier
+  /// Calculate workout calories with fallback logic and accuracy multiplier
+  /// Primary: Use device reported calories with accuracy multiplier
   /// Fallback: Use running steps with 2.0x multiplier (6mph average pace)
   static double calculateWorkoutCalories({
     required double? deviceWorkoutCalories,
     required double runningSteps,
     required double weightLbs,
+    double accuracyMultiplier = 0.8, // From metabolic settings
+    String? accuracyLabel,
+    String? workoutType,
+    bool includeStrengthInExpenditure = true,
+    bool useTrackedWorkoutCalories = true,
   }) {
-    if (deviceWorkoutCalories != null && deviceWorkoutCalories > 0) {
-      // Primary: Device data available
-      return deviceWorkoutCalories * 0.8;
+    final type = (workoutType ?? '').toLowerCase();
+    final isStrength = type.contains('strength') || type.contains('weight') || type.contains('resistance');
+    final typeMultiplier = _workoutTypeAccuracyMultiplier(type, accuracyLabel) ?? accuracyMultiplier;
+
+    if (!includeStrengthInExpenditure && isStrength) {
+      return 0;
+    }
+
+    final effectiveDeviceCalories = useTrackedWorkoutCalories ? deviceWorkoutCalories : null;
+    final effectiveAccuracy = typeMultiplier;
+
+    if (effectiveDeviceCalories != null && effectiveDeviceCalories > 0) {
+      // Primary: Device data available - apply accuracy multiplier
+      return effectiveDeviceCalories * effectiveAccuracy;
     } else if (runningSteps > 0) {
       // Fallback: Estimate from running steps
       final stepCalPerStep = calculateStepCaloriePerStep(weightLbs);
-      return runningSteps * stepCalPerStep * 2.0; // 2.0x multiplier for ~6mph running
+      return runningSteps * stepCalPerStep * 2.0 * effectiveAccuracy;
     }
     return 0;
+  }
+
+  static double? _workoutTypeAccuracyMultiplier(String type, String? accuracyLabel) {
+    if (accuracyLabel == null || accuracyLabel.isEmpty) return null;
+
+    final label = accuracyLabel.toLowerCase();
+    final useLow = label.contains('strict') || label.contains('conservative');
+    final useHigh = label.contains('flexible') || label.contains('generous');
+
+    double low;
+    double high;
+
+    if (type.contains('running') || type.contains('marathon')) {
+      low = 0.80;
+      high = 1.00;
+    } else if (type.contains('cycling') || type.contains('bike')) {
+      low = 0.75;
+      high = 1.00;
+    } else if (type.contains('hiit') || type.contains('interval') || type.contains('cardio')) {
+      low = 0.70;
+      high = 0.95;
+    } else if (type.contains('strength') || type.contains('weight') || type.contains('resistance')) {
+      low = 0.60;
+      high = 0.90;
+    } else if (type.contains('swim')) {
+      low = 0.60;
+      high = 0.90;
+    } else {
+      low = 0.75;
+      high = 0.95;
+    }
+
+    if (useLow) return low;
+    if (useHigh) return high;
+    return (low + high) / 2.0; // Balanced
+  }
+
+  static double _mapWorkoutAccuracyMultiplier(String accuracy) {
+    switch (accuracy) {
+      case 'Conservative':
+        return 0.7;
+      case 'Generous':
+        return 1.0;
+      case 'Balanced':
+      default:
+        return 0.8;
+    }
   }
 
   /// Calculate TEF (Thermic Effect of Food) based on macronutrients
@@ -74,12 +140,22 @@ class CalorieCalculationService {
     required int proteinGrams,
     required int carbsGrams,
     required int fatGrams,
+    double workoutAccuracyMultiplier = 0.8, // From metabolic settings
+    String? workoutAccuracyLabel,
+    String? workoutType,
+    bool includeStrengthInExpenditure = true,
+    bool useTrackedWorkoutCalories = true,
   }) {
     final neat = calculateNEAT(walkingSteps: walkingSteps, weightLbs: weightLbs);
     final workoutCalories = calculateWorkoutCalories(
       deviceWorkoutCalories: deviceWorkoutCalories,
       runningSteps: runningSteps,
       weightLbs: weightLbs,
+      accuracyMultiplier: workoutAccuracyMultiplier,
+      accuracyLabel: workoutAccuracyLabel,
+      workoutType: workoutType,
+      includeStrengthInExpenditure: includeStrengthInExpenditure,
+      useTrackedWorkoutCalories: useTrackedWorkoutCalories,
     );
     final tef = calculateTEF(
       proteinGrams: proteinGrams,
@@ -128,7 +204,17 @@ class CalorieCalculationService {
   static DayEnergyMetrics calculateDayMetrics({
     required UserProfile user,
     required DailyLog log,
+    MetabolicSettings? settings,
+    DataInputsSettings? inputs,
   }) {
+    final metabolicSettings = settings ?? MetabolicSettings.defaults();
+    final workoutAccuracyMultiplier = inputs != null
+        ? _mapWorkoutAccuracyMultiplier(inputs.workoutAccuracy)
+        : metabolicSettings.workoutCalorieMultiplier;
+    final workoutAccuracyLabel = inputs?.workoutAccuracy ?? metabolicSettings.workoutAccuracy;
+    final includeStrength = inputs?.includeStrengthInExpenditure ?? true;
+    final useTrackedWorkoutCalories = inputs?.useTrackedWorkoutCalories ?? true;
+    
     final tdee = calculateTDEE(
       bmr: user.bmr,
       walkingSteps: (log.stepsCount - (log.runningSteps ?? 0)).toDouble(),
@@ -138,6 +224,11 @@ class CalorieCalculationService {
       proteinGrams: log.protein,
       carbsGrams: log.carbs,
       fatGrams: log.fat,
+      workoutAccuracyMultiplier: workoutAccuracyMultiplier,
+      workoutAccuracyLabel: workoutAccuracyLabel,
+      workoutType: log.workoutType,
+      includeStrengthInExpenditure: includeStrength,
+      useTrackedWorkoutCalories: useTrackedWorkoutCalories,
     );
 
     final dailyDeficit = calculateDailyDeficitSurplus(
@@ -164,6 +255,11 @@ class CalorieCalculationService {
         deviceWorkoutCalories: log.workoutCalories?.toDouble(),
         runningSteps: (log.runningSteps ?? 0).toDouble(),
         weightLbs: user.weight,
+        accuracyMultiplier: workoutAccuracyMultiplier,
+        accuracyLabel: workoutAccuracyLabel,
+        workoutType: log.workoutType,
+        includeStrengthInExpenditure: includeStrength,
+        useTrackedWorkoutCalories: useTrackedWorkoutCalories,
       ),
       tef: tef,
       tdee: tdee,
@@ -173,7 +269,140 @@ class CalorieCalculationService {
       weeklyFatChange: weeklyFatChange,
     );
   }
+
+  /// Calculate adaptive TDEE with weight history
+  /// Returns adjusted TDEE based on expected vs actual weight changes
+  static AdaptiveTDEEResult calculateAdaptiveTDEE({
+    required UserProfile user,
+    required DailyLog todayLog,
+    required List<DailyLog> recentLogs, // Last 3-7 days with weight data
+    required MetabolicSettings settings,
+  }) {
+    // Calculate formula-based TDEE
+    final formulaTDEE = calculateTDEE(
+      bmr: user.bmr,
+      walkingSteps: (todayLog.stepsCount - (todayLog.runningSteps ?? 0)).toDouble(),
+      deviceWorkoutCalories: todayLog.workoutCalories?.toDouble(),
+      runningSteps: (todayLog.runningSteps ?? 0).toDouble(),
+      weightLbs: user.weight,
+      proteinGrams: todayLog.protein,
+      carbsGrams: todayLog.carbs,
+      fatGrams: todayLog.fat,
+      workoutAccuracyMultiplier: settings.workoutCalorieMultiplier,
+      workoutAccuracyLabel: settings.workoutAccuracy,
+      workoutType: todayLog.workoutType,
+    );
+
+    // Static mode: no adaptive adjustment
+    if (settings.isStaticOnly) {
+      return AdaptiveTDEEResult(
+        formulaTDEE: formulaTDEE,
+        expectedFatDelta: 0.0,
+        actualWeightChange: 0.0,
+        tdeeAdjustment: 0.0,
+        adjustedTDEE: formulaTDEE,
+        adjustmentReason: 'Static mode - no adaptive adjustments',
+      );
+    }
+
+    // Need at least 2 days with weight data for comparison
+    final logsWithWeight = recentLogs.where((log) => log.weight != null).toList();
+    if (logsWithWeight.length < 2 || todayLog.weight == null) {
+      return AdaptiveTDEEResult(
+        formulaTDEE: formulaTDEE,
+        expectedFatDelta: 0.0,
+        actualWeightChange: 0.0,
+        tdeeAdjustment: 0.0,
+        adjustedTDEE: formulaTDEE,
+        adjustmentReason: 'Insufficient weight data for adaptive calculation',
+      );
+    }
+
+    // Get smoothed weights
+    final recentWeights = logsWithWeight.map((log) => log.weight!).toList();
+    final yesterdaySmoothed = AdaptiveTDEEService.calculateSmoothedWeight(
+      recentWeights.sublist(0, recentWeights.length - 1),
+    );
+    final todaySmoothed = AdaptiveTDEEService.calculateSmoothedWeight(recentWeights);
+    final actualWeightChange = todaySmoothed - yesterdaySmoothed;
+
+    // Calculate expected fat delta from yesterday's data
+    final yesterdayLog = logsWithWeight[logsWithWeight.length - 2];
+    final yesterdayTDEE = calculateTDEE(
+      bmr: user.bmr,
+      walkingSteps: (yesterdayLog.stepsCount - (yesterdayLog.runningSteps ?? 0)).toDouble(),
+      deviceWorkoutCalories: yesterdayLog.workoutCalories?.toDouble(),
+      runningSteps: (yesterdayLog.runningSteps ?? 0).toDouble(),
+      weightLbs: user.weight,
+      proteinGrams: yesterdayLog.protein,
+      carbsGrams: yesterdayLog.carbs,
+      fatGrams: yesterdayLog.fat,
+      workoutAccuracyMultiplier: settings.workoutCalorieMultiplier,
+      workoutAccuracyLabel: settings.workoutAccuracy,
+      workoutType: yesterdayLog.workoutType,
+    );
+
+    final expectedFatDelta = AdaptiveTDEEService.calculateExpectedFatDelta(
+      caloriesConsumed: yesterdayLog.caloriesConsumed,
+      tdee: yesterdayTDEE,
+    );
+
+    // Calculate today's TDEE adjustment
+    final todayAdjustment = AdaptiveTDEEService.calculateTDEEAdjustment(
+      expectedFatDelta: expectedFatDelta,
+      actualWeightChange: actualWeightChange,
+      settings: settings,
+    );
+
+    // Get previous cumulative adjustment
+    final previousAdjustment = yesterdayLog.tdeeAdjustment ?? 0.0;
+
+    // Calculate adjusted TDEE
+    final adjustedTDEE = AdaptiveTDEEService.calculateAdaptiveTDEE(
+      formulaTDEE: formulaTDEE,
+      previousAdjustment: previousAdjustment,
+      todayAdjustment: todayAdjustment,
+      settings: settings,
+    );
+
+    final adjustmentReason = _getAdjustmentReason(
+      expectedFatDelta: expectedFatDelta,
+      actualWeightChange: actualWeightChange,
+      adjustment: todayAdjustment,
+      energyModel: settings.energyModel,
+    );
+
+    return AdaptiveTDEEResult(
+      formulaTDEE: formulaTDEE,
+      expectedFatDelta: expectedFatDelta,
+      actualWeightChange: actualWeightChange,
+      tdeeAdjustment: previousAdjustment + todayAdjustment,
+      adjustedTDEE: adjustedTDEE,
+      adjustmentReason: adjustmentReason,
+    );
+  }
+
+  static String _getAdjustmentReason({
+    required double expectedFatDelta,
+    required double actualWeightChange,
+    required double adjustment,
+    required String energyModel,
+  }) {
+    if (adjustment.abs() < 10) {
+      return 'Weight change matches expectation - minimal adjustment';
+    }
+
+    final lostMore = actualWeightChange < expectedFatDelta;
+    final mode = energyModel == 'Hybrid (Recommended)' ? 'dampened' : 'full';
+
+    if (lostMore) {
+      return 'Lost more than expected → TDEE underestimated → $mode increase';
+    } else {
+      return 'Lost less than expected → TDEE overestimated → $mode decrease';
+    }
+  }
 }
+
 
 /// Data class for daily energy metrics
 class DayEnergyMetrics {

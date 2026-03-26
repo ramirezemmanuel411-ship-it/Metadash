@@ -9,6 +9,7 @@ class DiaryEntryFood {
   final int carbsG;
   final int fatG;
   final String source; // 'ai_chat', 'ai_camera', 'manual', 'barcode', 'search'
+  final String? serving;
   final double? confidence;
   final List<String>? assumptions;
   final String? rawInput; // Original user input for AI entries
@@ -23,6 +24,7 @@ class DiaryEntryFood {
     required this.carbsG,
     required this.fatG,
     required this.source,
+    this.serving,
     this.confidence,
     this.assumptions,
     this.rawInput,
@@ -39,6 +41,7 @@ class DiaryEntryFood {
     required int carbs,
     required int fat,
     required String source,
+    String? serving,
     double? confidence,
     List<String>? assumptions,
     String? rawInput,
@@ -53,6 +56,7 @@ class DiaryEntryFood {
       carbsG: carbs,
       fatG: fat,
       source: source,
+      serving: serving,
       confidence: confidence,
       assumptions: assumptions,
       rawInput: rawInput,
@@ -71,6 +75,7 @@ class DiaryEntryFood {
       'carbsG': carbsG,
       'fatG': fatG,
       'source': source,
+      'serving': serving,
       'confidence': confidence,
       'assumptions': assumptions?.join('|||'), // Store as delimited string
       'rawInput': rawInput,
@@ -89,6 +94,7 @@ class DiaryEntryFood {
       carbsG: map['carbsG'] as int,
       fatG: map['fatG'] as int,
       source: map['source'] as String,
+      serving: map['serving'] as String?,
       confidence: map['confidence'] as double?,
       assumptions: map['assumptions'] != null
           ? (map['assumptions'] as String).split('|||')
@@ -108,6 +114,7 @@ class DiaryEntryFood {
     int? carbsG,
     int? fatG,
     String? source,
+    String? serving,
     double? confidence,
     List<String>? assumptions,
     String? rawInput,
@@ -122,6 +129,7 @@ class DiaryEntryFood {
       carbsG: carbsG ?? this.carbsG,
       fatG: fatG ?? this.fatG,
       source: source ?? this.source,
+      serving: serving ?? this.serving,
       confidence: confidence ?? this.confidence,
       assumptions: assumptions ?? this.assumptions,
       rawInput: rawInput ?? this.rawInput,

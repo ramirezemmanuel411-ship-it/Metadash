@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../providers/user_state.dart';
 import '../../shared/palette.dart';
+import '../../services/health_service.dart';
 
 class CreateUserFlow extends StatefulWidget {
   final UserState userState;
@@ -45,6 +46,14 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   
   // Page 4 variables
   double _weeklyRate = 1.0; // lbs per week (0-5, increments of 0.5)
+  
+  // Page 5 variables (health permissions)
+  bool _healthPermissionsRequested = false;
+  bool _healthPermissionsGranted = false;
+
+  void _dismissKeyboard() {
+    FocusScope.of(context).unfocus();
+  }
 
   @override
   void dispose() {
@@ -62,7 +71,8 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   }
 
   void _nextPage() {
-    if (_currentPage < 3) {
+    _dismissKeyboard();
+    if (_currentPage < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -73,6 +83,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   }
 
   void _previousPage() {
+    _dismissKeyboard();
     _pageController.previousPage(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
@@ -200,7 +211,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
       height: 6,
       color: Colors.grey[200],
       child: Row(
-        children: List.generate(4, (index) {
+        children: List.generate(5, (index) {
           return Expanded(
             child: Container(
               color: index <= _currentPage ? Palette.forestGreen : Colors.transparent,
@@ -255,6 +266,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
   Widget _buildPage1() {
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,6 +326,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
   Widget _buildPage2() {
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,6 +412,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
   Widget _buildPage3() {
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,6 +517,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     final isAggressive = _weeklyRate > 2.0;
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,6 +691,209 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     );
   }
 
+  Future<void> _requestHealthPermissions() async {
+    try {
+      setState(() => _healthPermissionsRequested = true);
+      
+      final granted = await HealthService().requestPermissions();
+      
+      if (mounted) {
+        setState(() => _healthPermissionsGranted = granted);
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error requesting health permissions: $e');
+      if (mounted) {
+        setState(() => _healthPermissionsGranted = false);
+      }
+    }
+  }
+
+  Widget _buildPage5() {
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 40),
+          const Text(
+            'Health Data Access',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Connect HealthKit to track your activity',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 40),
+          
+          // Health icon
+          Center(
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Palette.forestGreen.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.favorite,
+                  size: 60,
+                  color: Palette.forestGreen,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
+          
+          // Description
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue, width: 1),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'MetaDash needs access to:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text('• Steps & Distance'),
+                Text('• Active Energy (Calories)'),
+                Text('• Workout Data'),
+                SizedBox(height: 12),
+                Text(
+                  'This data is used to calculate your daily TDEE and adjust your calorie goal.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 40),
+          
+          // Permission button
+          if (!_healthPermissionsRequested)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _requestHealthPermissions,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Palette.forestGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Grant Health Access',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_healthPermissionsGranted)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green, width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Access Granted!',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Your health data will sync automatically',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange, width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info, color: Colors.orange, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Access Denied',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'You can enable this later in Health app settings',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 24),
+          
+          // Skip button for denied
+          if (_healthPermissionsRequested && !_healthPermissionsGranted)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _requestHealthPermissions,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Palette.forestGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Try Again',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -689,27 +907,32 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: Column(
-        children: [
-          // Progress indicator
-          _buildProgressBar(),
-          // Page content
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (page) => setState(() => _currentPage = page),
-              children: [
-                _buildPage1(),
-                _buildPage2(),
-                _buildPage3(),
-                _buildPage4(),
-              ],
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: _dismissKeyboard,
+        child: Column(
+          children: [
+            // Progress indicator
+            _buildProgressBar(),
+            // Page content
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (page) => setState(() => _currentPage = page),
+                children: [
+                  _buildPage1(),
+                  _buildPage2(),
+                  _buildPage3(),
+                  _buildPage4(),
+                  _buildPage5(),
+                ],
+              ),
             ),
-          ),
-          // Navigation buttons
-          _buildNavigationButtons(),
-        ],
+            // Navigation buttons
+            _buildNavigationButtons(),
+          ],
+        ),
       ),
     );
   }

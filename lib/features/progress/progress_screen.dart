@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:provider/provider.dart';
 import '../../shared/palette.dart';
 import '../../shared/user_settings.dart';
+import '../../providers/user_state.dart';
+import '../../models/daily_log.dart';
+import '../../services/calorie_calculation_service.dart';
 // scale change helper is used by the summary card; imported in the card file
 import 'scale_change_summary_card.dart';
 // removed mini_summary_card.dart uses; ScaleChangeSummaryCard is now generic
@@ -56,44 +60,108 @@ class _ProgressScreenState extends State<ProgressScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeMockWeightData();
+    _loadWeightData();
   }
 
-  void _initializeMockWeightData() {
-    // Placeholder data; replace with real weight data from database.
-    // Will connect to UserState.db.getWeightByUserId() in future enhancement.
+  Future<void> _loadWeightData() async {
+    final userState = Provider.of<UserState>(context, listen: false);
+    final user = userState.currentUser;
+    
+    if (user == null) {
+      setState(() {
+        _weightEntries = [];
+      });
+      return;
+    }
+
+    // Load daily logs with weight data from last 90 days
     final now = DateTime.now();
-    _weightEntries = List.generate(15, (i) {
-      return WeightEntry(
-        id: 'weight_$i',
-        date: now.subtract(Duration(days: 14 - i)),
-        weight: 185.0 - (i * 0.3) + (math.Random().nextDouble() * 0.6 - 0.3),
-      );
-    });
+    final startDate = now.subtract(const Duration(days: 90));
+    final logs = await userState.db.getDailyLogsByUserAndDateRange(
+      user.id!,
+      startDate,
+      now,
+    );
+
+    // Convert logs with weight data to WeightEntry objects
+    final weightEntries = logs
+        .where((log) => log.weight != null && log.weight! > 0)
+        .map((log) => WeightEntry(
+              id: 'weight_${log.id ?? log.date.millisecondsSinceEpoch}',
+              date: log.date,
+              weight: log.weight!,
+            ))
+        .toList();
+
+    // Sort by date
+    weightEntries.sort((a, b) => a.date.compareTo(b.date));
+
+    if (mounted) {
+      setState(() {
+        _weightEntries = weightEntries;
+      });
+    }
   }
 
-  void _addOrUpdateWeight(DateTime date, double weight, {String? id}) {
-    setState(() {
-      // Remove any existing entry for the same day
-      final dayStart = DateTime(date.year, date.month, date.day);
-      _weightEntries.removeWhere((e) => DateTime(e.date.year, e.date.month, e.date.day).isAtSameMomentAs(dayStart));
+  Future<void> _addOrUpdateWeight(DateTime date, double weight, {String? id}) async {
+    final userState = Provider.of<UserState>(context, listen: false);
+    final user = userState.currentUser;
+    
+    if (user == null) return;
 
-      // Add new entry
-      _weightEntries.add(WeightEntry(
-        id: id ?? 'weight_${DateTime.now().millisecondsSinceEpoch}',
-        date: date,
+    // Update or create daily log with weight data
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    var log = await userState.db.getDailyLogByUserAndDate(user.id!, normalizedDate);
+    
+    if (log != null) {
+      // Update existing log
+      log = log.copyWith(weight: weight);
+      await userState.db.updateDailyLog(log);
+    } else {
+      // Create new log with just weight and default values for other fields
+      final now = DateTime.now();
+      final newLog = DailyLog(
+        userId: user.id!,
+        date: normalizedDate,
+        caloriesConsumed: 0,
+        stepsCount: 0,
+        waterIntake: 0.0,
+        workoutActivities: [],
+        protein: 0,
+        carbs: 0,
+        fat: 0,
         weight: weight,
-      ));
+        createdAt: now,
+        updatedAt: now,
+      );
+      await userState.db.createDailyLog(newLog);
+    }
 
-      // Sort by date ascending
-      _weightEntries.sort((a, b) => a.date.compareTo(b.date));
-    });
+    // Reload weight data from database
+    await _loadWeightData();
   }
 
-  void _deleteWeight(String id) {
-    setState(() {
-      _weightEntries.removeWhere((e) => e.id == id);
-    });
+  Future<void> _deleteWeight(String id) async {
+    final userState = Provider.of<UserState>(context, listen: false);
+    final user = userState.currentUser;
+    
+    if (user == null) return;
+
+    // Find the weight entry to get the date
+    final entry = _weightEntries.firstWhere((e) => e.id == id);
+    final normalizedDate = DateTime(entry.date.year, entry.date.month, entry.date.day);
+    
+    // Get the daily log and remove weight data
+    final log = await userState.db.getDailyLogByUserAndDate(user.id!, normalizedDate);
+    
+    if (log != null) {
+      // Set weight to null instead of deleting the entire log
+      final updatedLog = log.copyWith(weight: null);
+      await userState.db.updateDailyLog(updatedLog);
+      
+      // Reload weight data from database
+      await _loadWeightData();
+    }
   }
 
   @override
@@ -230,23 +298,78 @@ class _FatChangeSection extends StatefulWidget {
 class _FatChangeSectionState extends State<_FatChangeSection> {
   int? _selectedIndex;
   String _filterType = 'ALL';
-  late final List<DataPoint> _allData;
-
-  List<DataPoint> _generateFatChangeData() {
-    // Placeholder data; replace with real fat change from daily_log deficit/surplus.
-    // Planned mapping: daily_logs.map((log) => log.calorieDeficit / 3500).
-    final now = DateTime.now();
-    return List.generate(30, (i) {
-      final date = now.subtract(Duration(days: 29 - i));
-      final value = -5.0 + (i * -0.03) + (math.Random().nextDouble() * 0.3 - 0.15);
-      return DataPoint(id: 'fat_$i', date: date, value: value);
-    });
-  }
+  List<DataPoint> _allData = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _allData = _generateFatChangeData();
+    _loadFatChangeData();
+  }
+
+  Future<void> _loadFatChangeData() async {
+    final userState = Provider.of<UserState>(context, listen: false);
+    final user = userState.currentUser;
+    
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final settings = userState.metabolicSettings;
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 90));
+      
+      final logs = await userState.db.getDailyLogsByUserAndDateRange(
+        user.id!,
+        startDate,
+        now,
+      );
+
+      final dataPoints = <DataPoint>[];
+      double cumulativeFatChange = 0.0;
+      
+      for (final log in logs) {
+        final metrics = CalorieCalculationService.calculateDayMetrics(
+          user: user,
+          log: log,
+          settings: settings,
+          inputs: userState.dataInputsSettings,
+        );
+        // Convert daily deficit/surplus to fat change (3500 cal = 1 lb fat)
+        final dailyFatChange = metrics.dailyDeficitSurplus / 3500.0;
+        cumulativeFatChange += dailyFatChange;
+        
+        dataPoints.add(DataPoint(
+          id: 'fat_${log.date.millisecondsSinceEpoch}',
+          date: log.date,
+          value: cumulativeFatChange,
+        ));
+      }
+
+      // Sort by date
+      dataPoints.sort((a, b) => a.date.compareTo(b.date));
+
+      if (mounted) {
+        setState(() {
+          _allData = dataPoints;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   List<DataPoint> _filterData(List<DataPoint> data, String filter) {
@@ -279,6 +402,10 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
     final data = _allData;
     final filteredData = _filterData(data, _filterType);
     final last7Days = filteredData.length >= 7 ? filteredData.sublist(filteredData.length - 7) : filteredData;
@@ -324,24 +451,72 @@ class _TDEETrendSection extends StatefulWidget {
 class _TDEETrendSectionState extends State<_TDEETrendSection> {
   int? _selectedIndex;
   String _filterType = 'ALL';
-  
-  List<DataPoint> _generateTDEEData() {
-    // Placeholder data; replace with real TDEE from daily_log calories + activity.
-    // Will be replaced with actual TDEE calculations per day.
-    final now = DateTime.now();
-    return List.generate(30, (i) {
-      final date = now.subtract(Duration(days: 29 - i));
-      final value = 2600.0 + (i * 1.5) + (math.Random().nextDouble() * 80 - 40);
-      return DataPoint(id: 'tdee_$i', date: date, value: value);
-    });
-  }
-
-  late final List<DataPoint> _allData;
+  List<DataPoint> _allData = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _allData = _generateTDEEData();
+    _loadTDEEData();
+  }
+
+  Future<void> _loadTDEEData() async {
+    final userState = Provider.of<UserState>(context, listen: false);
+    final user = userState.currentUser;
+    
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final settings = userState.metabolicSettings;
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 90)); // Load 90 days of data
+      
+      final logs = await userState.db.getDailyLogsByUserAndDateRange(
+        user.id!,
+        startDate,
+        now,
+      );
+
+      final dataPoints = <DataPoint>[];
+      for (final log in logs) {
+        final metrics = CalorieCalculationService.calculateDayMetrics(
+          user: user,
+          log: log,
+          settings: settings,
+          inputs: userState.dataInputsSettings,
+        );
+        dataPoints.add(DataPoint(
+          id: 'tdee_${log.date.millisecondsSinceEpoch}',
+          date: log.date,
+          value: metrics.tdee,
+        ));
+      }
+
+      // Sort by date
+      dataPoints.sort((a, b) => a.date.compareTo(b.date));
+
+      if (mounted) {
+        setState(() {
+          _allData = dataPoints;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   List<DataPoint> _filterData(List<DataPoint> data, String filter) {
@@ -374,6 +549,10 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
     final data = _allData;
     final filteredData = _filterData(data, _filterType);
     final first = filteredData.isNotEmpty ? filteredData.first.value : 0.0;

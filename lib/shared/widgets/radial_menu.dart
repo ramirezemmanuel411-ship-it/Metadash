@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import '../palette.dart';
 import '../../features/food_search/food_search_screen.dart';
 import '../../features/progress/progress_screen.dart';
-import '../../features/profile/profile_screen.dart';
+import '../../features/control_center/control_center_screen.dart';
 import '../../presentation/screens/exercise_logging/exercise_main_screen.dart';
 import '../../providers/user_state.dart';
 
@@ -131,14 +131,14 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
   List<Widget> _buildMenuItems() {
     const arcStart = 0.0;
     const arcEnd = 90.0;
-    const radius = 140.0;
+    const radius = 180.0;
     const fabSize = 56.0;
     const fabBottom = 32.0;
     const fabRight = 32.0;
     const itemSize = 44.0;
 
     final items = [
-      (icon: Icons.person, label: 'Profile', index: 0),
+      (icon: Icons.settings, label: 'Control Center', index: 0),
       (icon: Icons.fitness_center, label: 'Workouts', index: 1),
       (icon: Icons.restaurant, label: 'Log Food', index: 2),
       (icon: Icons.scale, label: 'Progress', index: 3),
@@ -186,13 +186,10 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
             await Future.delayed(const Duration(milliseconds: 250));
             if (!mounted) return;
 
-            if (item.label == 'Profile') {
+            if (item.label == 'Control Center') {
               navigator.push(
                 MaterialPageRoute(
-                  builder: (_) => ProfileScreen(
-                    userState: widget.userState,
-                    onLogout: widget.onLogout,
-                  ),
+                  builder: (_) => const ControlCenterScreen(),
                 ),
               );
             } else if (item.label == 'Workouts') {

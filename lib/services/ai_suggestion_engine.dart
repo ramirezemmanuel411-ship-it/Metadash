@@ -208,7 +208,7 @@ class AiSuggestionEngine {
       final meals = _buildMealSuggestions(
         input,
         candidates,
-        calLeft: calLeft,
+        calLeft,
       );
       debugPrint('AI SUGGESTIONS: returned ${meals.length} meal options');
       return AiSuggestionResponse(
@@ -221,7 +221,7 @@ class AiSuggestionEngine {
     final groups = _buildSingleItemGroups(
       input,
       candidates,
-      calLeft: calLeft,
+      calLeft,
     );
     debugPrint(
       'AI SUGGESTIONS: returned ${groups.fold<int>(0, (sum, g) => sum + g.items.length)} items',
@@ -236,7 +236,7 @@ class AiSuggestionEngine {
   List<AiMealSuggestion> _buildMealSuggestions(
     AiSuggestionInput input,
     List<FoodModel> candidates,
-    {required int calLeft},
+    int calLeft,
   ) {
     if (candidates.isNotEmpty) {
       final filtered = candidates
@@ -292,7 +292,7 @@ class AiSuggestionEngine {
   List<AiSuggestionGroup> _buildSingleItemGroups(
     AiSuggestionInput input,
     List<FoodModel> candidates,
-    {required int calLeft},
+    int calLeft,
   ) {
     final foods = candidates
         .where((f) => f.calories > 0 && f.calories <= calLeft)
@@ -424,6 +424,7 @@ class AiSuggestionEngine {
         source: 'fatsecret',
         confidence: 0.7,
         notes: [serving],
+        serving: serving,
       ),
     );
   }
@@ -448,6 +449,7 @@ class AiSuggestionEngine {
         source: 'fatsecret',
         confidence: 0.7,
         notes: [_servingLine(food)],
+        serving: _servingLine(food),
       ),
     );
   }
@@ -479,6 +481,7 @@ class AiSuggestionEngine {
         source: 'ai_estimate',
         confidence: 0.5,
         notes: [serving],
+        serving: serving,
       ),
     );
   }
@@ -489,6 +492,7 @@ class AiSuggestionEngine {
     required String source,
     required double confidence,
     List<String>? notes,
+    String? serving,
   }) {
     return {
       'name': name,
@@ -498,6 +502,7 @@ class AiSuggestionEngine {
       'fatG': totals.fatG,
       'source': source,
       'confidence': confidence,
+      'serving': serving,
       'assumptions': notes ?? const [],
     };
   }

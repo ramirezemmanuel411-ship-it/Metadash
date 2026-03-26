@@ -9,7 +9,14 @@ class FoodDetailScreen extends StatefulWidget {
   final FoodItem item;
   final String? mealName;
   final UserState? userState;
-  const FoodDetailScreen({super.key, required this.item, this.mealName, this.userState});
+  final DateTime? targetTimestamp;
+  const FoodDetailScreen({
+    super.key,
+    required this.item,
+    this.mealName,
+    this.userState,
+    this.targetTimestamp,
+  });
 
   @override
   State<FoodDetailScreen> createState() => _FoodDetailScreenState();
@@ -113,7 +120,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     final entry = DiaryEntryFood(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       userId: user.id!,
-      timestamp: DateTime.now(),
+      timestamp: widget.targetTimestamp ?? DateTime.now(),
       name: widget.item.name,
       calories: totalCalories,
       proteinG: totalProtein.toInt(),

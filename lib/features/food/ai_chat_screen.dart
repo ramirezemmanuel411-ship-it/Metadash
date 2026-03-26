@@ -366,6 +366,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  String? _resolveServingFromAssumptions(List<String> assumptions) {
+    for (final assumption in assumptions) {
+      final trimmed = assumption.trim();
+      if (trimmed.isEmpty) continue;
+      if (RegExp(r'\d').hasMatch(trimmed)) {
+        return trimmed;
+      }
+    }
+    return null;
+  }
+
   Future<void> _addSuggestionToDiary(Map<String, dynamic> payload) async {
     final user = widget.userState.currentUser;
     if (user == null) return;
@@ -380,6 +391,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       carbsG: payload['carbsG'] as int,
       fatG: payload['fatG'] as int,
       source: payload['source'] as String,
+      serving: payload['serving'] as String?,
       confidence: payload['confidence'] as double?,
       assumptions: (payload['assumptions'] as List?)?.cast<String>(),
       rawInput: _controller.text.trim(),
@@ -419,6 +431,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         carbs: _currentEstimate!.carbsG,
         fat: _currentEstimate!.fatG,
         source: _capturedImage != null ? 'ai_camera' : 'ai_chat',
+        serving: _resolveServingFromAssumptions(_currentEstimate!.assumptions),
         confidence: _currentEstimate!.confidence,
         assumptions: _currentEstimate!.assumptions,
         rawInput: _currentEstimate!.rawInput,

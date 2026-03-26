@@ -20,6 +20,7 @@ class FoodSearchScreen extends StatefulWidget {
   final UserState? userState;
   final bool autofocusSearch;
   final FoodSearchTab? initialTab;
+  final DateTime? targetTimestamp;
 
   const FoodSearchScreen({
     super.key,
@@ -28,6 +29,7 @@ class FoodSearchScreen extends StatefulWidget {
     this.userState,
     this.autofocusSearch = false,
     this.initialTab,
+    this.targetTimestamp,
   });
 
   @override
@@ -64,7 +66,12 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FoodDetailScreen(item: item, mealName: null, userState: widget.userState),
+        builder: (_) => FoodDetailScreen(
+          item: item,
+          mealName: null,
+          userState: widget.userState,
+          targetTimestamp: widget.targetTimestamp,
+        ),
       ),
     );
   }
@@ -175,7 +182,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       case FoodSearchTab.search:
         return BlocProvider(
           create: (_) => FoodSearchBloc(
-            repository: SearchRepository(),
+            repository: SearchRepository.withFatSecret(),
           )..add(const LoadInitialData()),
           child: FastFoodSearchScreenLegacy(
             key: const ValueKey('search'),

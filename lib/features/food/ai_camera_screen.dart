@@ -171,6 +171,17 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
     }
   }
 
+  String? _resolveServingFromAssumptions(List<String> assumptions) {
+    for (final assumption in assumptions) {
+      final trimmed = assumption.trim();
+      if (trimmed.isEmpty) continue;
+      if (RegExp(r'\d').hasMatch(trimmed)) {
+        return trimmed;
+      }
+    }
+    return null;
+  }
+
   Future<void> _addToDiary() async {
     if (_currentEstimate == null || widget.userState.currentUser == null) return;
 
@@ -185,6 +196,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
         carbsG: _currentEstimate!.carbsG,
         fatG: _currentEstimate!.fatG,
         source: 'ai_camera',
+        serving: _resolveServingFromAssumptions(_currentEstimate!.assumptions),
         confidence: _currentEstimate!.confidence,
         assumptions: _currentEstimate!.assumptions,
         rawInput: _currentEstimate!.rawInput,

@@ -109,6 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     setState(() => _loadingWeekly = true);
 
+    final settings = userState.metabolicSettings;
     final endDate = DateUtils.dateOnly(_dashboardState.selectedDate);
     final startDate = endDate.subtract(const Duration(days: 6));
     final logs = await userState.db.getDailyLogsByUserAndDateRange(user.id!, startDate, endDate);
@@ -123,7 +124,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final date = startDate.add(Duration(days: i));
       final log = logByDate[DateUtils.dateOnly(date)];
       if (log != null) {
-        final metrics = CalorieCalculationService.calculateDayMetrics(user: user, log: log);
+        final metrics = CalorieCalculationService.calculateDayMetrics(
+          user: user,
+          log: log,
+          settings: settings,
+          inputs: userState.dataInputsSettings,
+        );
         deficitValues.add(metrics.dailyDeficitSurplus);
         tdeeValues.add(metrics.tdee);
       } else {

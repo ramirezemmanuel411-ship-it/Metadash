@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../shared/date_utils.dart';
 import '../../providers/user_state.dart';
+import '../../models/data_inputs_settings.dart';
 
 class DashboardDayData {
   final int caloriesConsumed;
@@ -71,6 +72,9 @@ class DashboardState extends ChangeNotifier {
     try {
       final log = await userState!.db.getDailyLogByUserAndDate(user.id!, _selectedDate);
       final foodEntryMaps = await userState!.db.getFoodEntriesForDay(user.id!, _selectedDate);
+        final settings = await userState!.db.getDataInputsSettings(user.id!) ??
+          DataInputsSettings.defaults(user.id!).copyWith(stepGoal: user.dailyStepsGoal);
+      await userState!.db.createOrUpdateDataInputsSettings(settings);
 
       int foodCalories = 0;
       int foodProtein = 0;
@@ -92,7 +96,7 @@ class DashboardState extends ChangeNotifier {
           carbsConsumed: log.carbs + foodCarbs,
           fatConsumed: log.fat + foodFat,
           stepsTaken: log.stepsCount,
-          stepsGoal: user.dailyStepsGoal,
+          stepsGoal: settings.stepGoal,
         );
       } else {
         _cachedData[_selectedDate] = DashboardDayData(
@@ -102,7 +106,7 @@ class DashboardState extends ChangeNotifier {
           carbsConsumed: foodCarbs,
           fatConsumed: foodFat,
           stepsTaken: 0,
-          stepsGoal: user.dailyStepsGoal,
+          stepsGoal: settings.stepGoal,
         );
       }
     } finally {
