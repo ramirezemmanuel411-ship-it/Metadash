@@ -363,7 +363,7 @@ class _RadialMenu extends StatelessWidget {
       ),
       _RadialMenuItem(
         icon: Icons.monitor_weight_outlined,
-        label: 'Weight',
+        label: 'Progress',
         onTap: onAddWeight,
       ),
       _RadialMenuItem(

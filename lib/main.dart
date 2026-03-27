@@ -15,29 +15,29 @@ import 'app_shell.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  bool _isReportingError = false;
-  void _safeRecordFlutterError(FlutterErrorDetails details) {
-    if (_isReportingError) return;
-    _isReportingError = true;
+  bool isReportingError = false;
+  void safeRecordFlutterError(FlutterErrorDetails details) {
+    if (isReportingError) return;
+    isReportingError = true;
     try {
       FirebaseCrashlytics.instance.recordFlutterFatalError(details);
     } catch (_) {
       // Crashlytics not available yet; ignore to avoid error loops.
     } finally {
-      _isReportingError = false;
+      isReportingError = false;
     }
   }
 
-  bool _isReportingPlatformError = false;
-  void _safeRecordPlatformError(Object error, StackTrace stack) {
-    if (_isReportingPlatformError) return;
-    _isReportingPlatformError = true;
+  bool isReportingPlatformError = false;
+  void safeRecordPlatformError(Object error, StackTrace stack) {
+    if (isReportingPlatformError) return;
+    isReportingPlatformError = true;
     try {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     } catch (_) {
       // Crashlytics not available yet; ignore to avoid error loops.
     } finally {
-      _isReportingPlatformError = false;
+      isReportingPlatformError = false;
     }
   }
   
@@ -50,13 +50,13 @@ void main() async {
       // ignore: avoid_print
       print('Platform error (likely debugger disconnect): ${details.exception}');
     } else {
-      _safeRecordFlutterError(details);
+      safeRecordFlutterError(details);
       FlutterError.dumpErrorToConsole(details);
     }
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
-    _safeRecordPlatformError(error, stack);
+    safeRecordPlatformError(error, stack);
     return true;
   };
   

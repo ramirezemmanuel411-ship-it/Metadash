@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
+import 'calorie_macro_goals_screen.dart';
 import 'reentry_mode_screen.dart';
 
 class GoalStrategyScreen extends StatefulWidget {
@@ -128,7 +129,7 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),
@@ -202,7 +203,26 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          // Section 3: Lifestyle Handling
+          // Section 3: Calorie & Macro Goals
+          _StrategySection(
+            title: 'Calorie & Macro Goals',
+            children: [
+              _StrategyNavigationRow(
+                label: 'Macro Strategy',
+                description: 'Set your daily calorie and macro goals manually.',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CalorieMacroGoalsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Section 4: Lifestyle Handling
           _StrategySection(
             title: 'Lifestyle Handling',
             children: [

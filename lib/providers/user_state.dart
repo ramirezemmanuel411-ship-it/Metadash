@@ -39,6 +39,7 @@ class UserState extends ChangeNotifier {
     required int dailyCaloricGoal,
     required String activityLevel,
     required int dailyStepsGoal,
+    Map<String, int>? macroTargets,
   }) async {
     final now = DateTime.now();
     final user = UserProfile(
@@ -56,6 +57,7 @@ class UserState extends ChangeNotifier {
       dailyStepsGoal: dailyStepsGoal,
       createdAt: now,
       updatedAt: now,
+      macroTargets: macroTargets,
     );
 
     final id = await _db.createUserProfile(user);
@@ -91,6 +93,7 @@ class UserState extends ChangeNotifier {
         'dailyCaloricGoal': createdUser.dailyCaloricGoal,
         'activityLevel': createdUser.activityLevel,
         'dailyStepsGoal': createdUser.dailyStepsGoal,
+        'macroTargets': createdUser.macroTargets,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));

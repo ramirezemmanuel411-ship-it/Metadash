@@ -43,6 +43,8 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   String _selectedGender = 'Male';
   String _selectedActivityLevel = 'Moderately Active';
   String _weightGoal = ''; // 'lose', 'gain', or 'maintain'
+  String _dietType = 'Balanced';
+  bool _autoSetCalories = true;
   
   // Page 4 variables
   double _weeklyRate = 1.0; // lbs per week (0-5, increments of 0.5)
@@ -72,7 +74,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
   void _nextPage() {
     _dismissKeyboard();
-    if (_currentPage < 4) {
+    if (_currentPage < 5) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -128,6 +130,56 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     final direction = _weightGoal == 'lose' ? -1 : 1;
     
     return (tdee + (direction * dailyDeficit)).toInt();
+  }
+
+  int _resolveCalorieGoal() {
+    final parsed = int.tryParse(_calorieGoalController.text.trim());
+    if (parsed != null && parsed > 0) return parsed;
+    return _calculateBaselineCalorie();
+  }
+
+  Map<String, int> _calculateMacroTargets(int calories, String dietType) {
+    double proteinPct;
+    double carbsPct;
+    double fatPct;
+
+    switch (dietType) {
+      case 'High Protein':
+        proteinPct = 0.40;
+        carbsPct = 0.35;
+        fatPct = 0.25;
+        break;
+      case 'Low Carb':
+        proteinPct = 0.35;
+        carbsPct = 0.25;
+        fatPct = 0.40;
+        break;
+      case 'Low Fat':
+        proteinPct = 0.30;
+        carbsPct = 0.50;
+        fatPct = 0.20;
+        break;
+      case 'Balanced':
+      default:
+        proteinPct = 0.30;
+        carbsPct = 0.40;
+        fatPct = 0.30;
+        break;
+    }
+
+    final proteinCalories = calories * proteinPct;
+    final carbsCalories = calories * carbsPct;
+    final fatCalories = calories * fatPct;
+
+    final proteinG = (proteinCalories / 4).round();
+    final carbsG = (carbsCalories / 4).round();
+    final fatG = (fatCalories / 9).round();
+
+    return {
+      'protein': proteinG,
+      'carbs': carbsG,
+      'fat': fatG,
+    };
   }
 
   double _getActivityMultiplier(String activity) {
@@ -190,9 +242,10 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
         dateOfBirth: _selectedDob,
         bmr: bmr,
         goalWeight: double.tryParse(_goalWeightController.text) ?? 175,
-        dailyCaloricGoal: int.tryParse(_calorieGoalController.text) ?? 2200,
+        dailyCaloricGoal: _resolveCalorieGoal(),
         activityLevel: _selectedActivityLevel,
         dailyStepsGoal: int.tryParse(_stepsGoalController.text) ?? 10000,
+        macroTargets: _calculateMacroTargets(_resolveCalorieGoal(), _dietType),
       );
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -211,7 +264,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
       height: 6,
       color: Colors.grey[200],
       child: Row(
-        children: List.generate(5, (index) {
+        children: List.generate(6, (index) {
           return Expanded(
             child: Container(
               color: index <= _currentPage ? Palette.forestGreen : Colors.transparent,
@@ -256,7 +309,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: Text(_currentPage < 4 ? 'Next' : 'Create Account'),
+              child: Text(_currentPage < 5 ? 'Next' : 'Create Account'),
             ),
           ),
         ],
@@ -691,6 +744,118 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     );
   }
 
+  Widget _buildPage5() {
+    final baselineCalorie = _calculateBaselineCalorie();
+    if (_autoSetCalories && _calorieGoalController.text.trim() == '2200') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _calorieGoalController.text = baselineCalorie.toString();
+          _autoSetCalories = false;
+        });
+      });
+    }
+
+    final calorieGoal = _resolveCalorieGoal();
+    final macros = _calculateMacroTargets(calorieGoal, _dietType);
+
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 40),
+          const Text(
+            'Calorie & Macro Goals',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose a diet style and review your recommended targets.',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _calorieGoalController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Daily Calorie Goal',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Diet Preference',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              'Balanced',
+              'High Protein',
+              'Low Carb',
+              'Low Fat',
+            ].map((option) {
+              final selected = option == _dietType;
+              return ChoiceChip(
+                label: Text(option),
+                selected: selected,
+                onSelected: (_) => setState(() => _dietType = option),
+                selectedColor: Palette.forestGreen.withValues(alpha: 0.15),
+                labelStyle: TextStyle(
+                  color: selected ? Palette.forestGreen : Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: selected ? Palette.forestGreen : Colors.grey.shade300,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Palette.lightStone,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recommended Macro Targets',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _MacroTargetTile(label: 'Protein', value: '${macros['protein']} g'),
+                    _MacroTargetTile(label: 'Carbs', value: '${macros['carbs']} g'),
+                    _MacroTargetTile(label: 'Fat', value: '${macros['fat']} g'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Based on $calorieGoal calories/day.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _requestHealthPermissions() async {
     try {
       setState(() => _healthPermissionsRequested = true);
@@ -709,7 +874,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     }
   }
 
-  Widget _buildPage5() {
+  Widget _buildPage6() {
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(24),
@@ -926,6 +1091,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                   _buildPage3(),
                   _buildPage4(),
                   _buildPage5(),
+                  _buildPage6(),
                 ],
               ),
             ),
@@ -934,6 +1100,37 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MacroTargetTile extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MacroTargetTile({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Palette.forestGreen,
+          ),
+        ),
+      ],
     );
   }
 }
