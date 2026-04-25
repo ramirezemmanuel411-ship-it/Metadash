@@ -325,12 +325,15 @@ class _StrategyRow extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                      Flexible(
+                        child: Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (showRecommendedBadge) ...[

@@ -15,7 +15,7 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
   final _proteinController = TextEditingController();
   final _carbsController = TextEditingController();
   final _fatController = TextEditingController();
-  bool _manualEntry = true;
+  bool _manualEntry = false;
 
   @override
   void initState() {
@@ -27,6 +27,8 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
       _proteinController.text = (user.macroTargets?['protein'] ?? 0).toString();
       _carbsController.text = (user.macroTargets?['carbs'] ?? 0).toString();
       _fatController.text = (user.macroTargets?['fat'] ?? 0).toString();
+      
+      _manualEntry = user.manualMacroEntry;
       setState(() {});
     });
   }
@@ -62,16 +64,21 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
     }
 
     if (calories != null && protein != null && carbs != null && fat != null) {
-      await userState.updateCurrentUser(
-        user.copyWith(
-          dailyCaloricGoal: calories,
-          macroTargets: {
-            'protein': protein,
-            'carbs': carbs,
-            'fat': fat,
-          },
-        ),
+      // Create a copy of the user with the new values
+      final updatedUser = user.copyWith(
+        dailyCaloricGoal: calories,
+        manualMacroEntry: _manualEntry,
+        macroTargets: {
+          'protein': protein,
+          'carbs': carbs,
+          'fat': fat,
+        },
       );
+
+      // Force a UI update first by broadcasting the change
+      await userState.updateCurrentUser(updatedUser);
+      
+      _showSnack('Goals saved successfully!');
     }
 
     if (mounted) {

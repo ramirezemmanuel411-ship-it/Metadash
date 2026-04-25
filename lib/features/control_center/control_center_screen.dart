@@ -3,12 +3,13 @@ import '../../shared/palette.dart';
 import 'metabolic_engine_screen.dart';
 import 'goal_strategy_screen.dart';
 import 'data_inputs_screen.dart';
-import 'insights_reporting_screen.dart';
+import 'dashboard_layout_screen.dart';
 import 'interface_workflow_screen.dart';
 import 'account_screen.dart';
 import 'notifications_screen.dart';
 import 'privacy_data_screen.dart';
 import 'subscription_screen.dart';
+import 'appearance_selector.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});
@@ -16,26 +17,24 @@ class ControlCenterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
-        elevation: 0,
         title: const Text('Control Center'),
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           children: [
-            const SizedBox(height: 16),
+            const AppearanceSelector(),
+            const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 14),
               child: Text(
                 'SYSTEM',
                 style: TextStyle(
                   fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black.withOpacity(0.4),
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                   letterSpacing: 0.8,
                 ),
               ),
@@ -72,11 +71,11 @@ class ControlCenterScreen extends StatelessWidget {
             _buildDivider(),
             _ControlRow(
               icon: Icons.bar_chart_outlined,
-              title: 'Insights & Reporting',
+              title: 'Dashboard Layout',
               subtitle: 'Control dashboards and modeling visibility.',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const InsightsReportingScreen()),
+                MaterialPageRoute(builder: (_) => const DashboardLayoutScreen()),
               ),
             ),
             _buildDivider(),

@@ -226,12 +226,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
     const rowHeight = 72.0;
 
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
       appBar: AppBar(
         title: const Text('Diary'),
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
-        elevation: 0,
       ),
       body: Stack(
         children: [
@@ -240,7 +236,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: Palette.lightStone,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(0),
                   ),
                   padding: const EdgeInsets.all(12),
@@ -278,7 +274,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                   Icon(Icons.fitness_center, color: Palette.forestGreen, size: 18),
                                   const SizedBox(width: 8),
                                   Flexible(
-                                    child: Text('Workout', style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis),
+                                    child: Text('Workout', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)), overflow: TextOverflow.ellipsis),
                                   ),
                                   const SizedBox(width: 8),
                                   Flexible(
@@ -501,15 +497,15 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                                     ),
                                                     SlidableAction(
                                                       onPressed: (_) => _editEntry(entry),
-                                                      backgroundColor: Palette.lightStone,
-                                                      foregroundColor: Colors.black87,
+                                                      backgroundColor: Theme.of(context).cardColor,
+                                                      foregroundColor: Theme.of(context).colorScheme.onSurface,
                                                       icon: Icons.edit_outlined,
                                                       label: 'Edit',
                                                     ),
                                                     SlidableAction(
                                                       onPressed: (_) => _addEntryFromTemplate(entry),
-                                                      backgroundColor: Palette.lightStone,
-                                                      foregroundColor: Colors.black87,
+                                                      backgroundColor: Theme.of(context).cardColor,
+                                                      foregroundColor: Theme.of(context).colorScheme.onSurface,
                                                       icon: Icons.copy_outlined,
                                                       label: 'Duplicate',
                                                     ),
@@ -517,7 +513,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                                 ),
                                                 child: Container(
                                                   decoration: BoxDecoration(
-                                                    color: Palette.lightStone,
+                                                    color: Theme.of(context).cardColor,
                                                     borderRadius: BorderRadius.circular(15),
                                                     boxShadow: [
                                                       BoxShadow(

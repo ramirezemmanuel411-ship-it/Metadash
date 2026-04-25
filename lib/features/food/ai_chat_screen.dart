@@ -471,17 +471,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     // Show main chat interface
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
       appBar: AppBar(
         title: const Text('AI Assistant'),
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
-        elevation: 0,
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Container(
-          color: Palette.warmNeutral,
           height: double.infinity,
           width: double.infinity,
           child: Column(
@@ -496,7 +491,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Palette.lightStone,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -506,7 +501,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               children: [
                                 Icon(
                                   Icons.auto_awesome,
-                                  color: Palette.forestGreen,
+                                  color: Theme.of(context).colorScheme.primary,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
@@ -525,7 +520,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               'AI will estimate the nutrition for you.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.black87,
                               ),
                             ),
                           ],
@@ -557,7 +551,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   24,
                 ), // Extra bottom padding for home indicator
                 decoration: BoxDecoration(
-                  color: Palette.lightStone,
+                  color: context.colors.surfaceVariant,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.05),
@@ -576,8 +570,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         onPressed: _isLoading ? null : _openCamera,
                         icon: Icon(
                           Icons.camera_alt,
-                          color:
-                              _isLoading ? Colors.grey : Palette.vibrantAction,
+                          color: _isLoading
+                              ? Colors.grey
+                              : context.colors.accent,
                           size: 28,
                         ),
                         tooltip: 'Take photo',
@@ -592,10 +587,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.grey.shade300,
+                            color: Theme.of(context).dividerColor,
                             width: 1,
                           ),
                         ),
@@ -670,7 +665,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Send button (forest green arrow)
+                    // Send button
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: GestureDetector(
@@ -681,7 +676,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                           decoration: BoxDecoration(
                             color: _isLoading
                                 ? Colors.grey
-                                : Palette.forestGreen,
+                                : context.colors.accent,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -985,7 +980,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             const SizedBox(height: 8),
             Text(
               response.message,
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
+              style: const TextStyle(fontSize: 13),
             ),
             const SizedBox(height: 12),
             if (response.mode == AiSuggestionMode.meal)
@@ -993,9 +988,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
             if (response.mode == AiSuggestionMode.singleItem)
               ...response.groups.map(_buildSingleItemGroup),
             if (response.mode == AiSuggestionMode.none)
-              const Text(
+              Text(
                 'You are at or over your target. Consider ultra-low add-ons only.',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
               ),
           ],
         ),
@@ -1008,9 +1003,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         padding: const EdgeInsets.all(12),
         child: Column(

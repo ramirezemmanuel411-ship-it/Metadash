@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../shared/palette.dart';
 
-class InsightsReportingScreen extends StatefulWidget {
-  const InsightsReportingScreen({super.key});
+class DashboardLayoutScreen extends StatefulWidget {
+  const DashboardLayoutScreen({super.key});
 
   @override
-  State<InsightsReportingScreen> createState() => _InsightsReportingScreenState();
+  State<DashboardLayoutScreen> createState() => _DashboardLayoutScreenState();
 }
 
-class _InsightsReportingScreenState extends State<InsightsReportingScreen> {
+class _DashboardLayoutScreenState extends State<DashboardLayoutScreen> {
   String _primaryFocus = 'Daily View';
 
   void _restoreDefaults() {

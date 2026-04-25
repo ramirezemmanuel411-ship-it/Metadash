@@ -181,8 +181,10 @@ class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
                                     : Palette.lightStone.withOpacity(0.75),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: Theme.of(context).colorScheme.outline.withOpacity(isCentered ? 0.28 : 0.18),
-                                  width: isCentered ? 1.2 : 1.0,
+                                  color: isCentered
+                                      ? Palette.forestGreen
+                                      : Theme.of(context).colorScheme.outline.withOpacity(0.18),
+                                  width: isCentered ? 1.8 : 1.0,
                                 ),
                               ),
                               child: _DateNode(

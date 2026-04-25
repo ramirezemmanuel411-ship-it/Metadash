@@ -179,18 +179,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
       }
     }
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Progress',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Progress'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -202,7 +192,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                  color: Palette.lightStone,
+                  color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
@@ -221,24 +211,31 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Current Weight', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                          Text('Current Weight',
+                              style: TextStyle(
+                                  fontSize: 14, color: context.colors.textSecondary)),
                           const SizedBox(height: 6),
                           Text(
-                            currentWeight != null ? '${currentWeight.toStringAsFixed(1)} lb' : '--',
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                            currentWeight != null
+                                ? '${currentWeight.toStringAsFixed(1)} lb'
+                                : '--',
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: context.colors.textPrimary),
                           ),
                         ],
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('Goal', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                          Text('Goal', style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.54))),
                           const SizedBox(height: 6),
                           ValueListenableBuilder<double?>(
                             valueListenable: UserSettings.goalWeight,
                             builder: (context, goal, _) => Text(
                               goal != null ? '${goal.toStringAsFixed(1)} lb' : 'Not set',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -255,13 +252,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         children: [
                           LinearProgressIndicator(
                             value: displayPct,
-                            color: Palette.forestGreen,
-                            backgroundColor: Colors.grey.shade400,
+                            color: Theme.of(context).colorScheme.primary,
+                            backgroundColor: Theme.of(context).dividerColor,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '${(displayPct * 100).toStringAsFixed(0)}% toward goal',
-                            style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            style: TextStyle(
+                                fontSize: 12, color: context.colors.textSecondary),
                           ),
                         ],
                       );

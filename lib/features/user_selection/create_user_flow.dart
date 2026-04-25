@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../providers/user_state.dart';
 import '../../shared/palette.dart';
 import '../../services/health_service.dart';
@@ -18,15 +19,9 @@ const _genderDropdownItems = [
   DropdownMenuItem(value: 'Other', child: Text('Other')),
 ];
 
-const _activityLevelItems = [
-  DropdownMenuItem(value: 'Sedentary', child: Text('Sedentary')),
-  DropdownMenuItem(value: 'Lightly Active', child: Text('Lightly Active')),
-  DropdownMenuItem(value: 'Moderately Active', child: Text('Moderately Active')),
-  DropdownMenuItem(value: 'Very Active', child: Text('Very Active')),
-];
-
 class _CreateUserFlowState extends State<CreateUserFlow> {
   final PageController _pageController = PageController();
+  final ExpansionTileController _activityController = ExpansionTileController();
   int _currentPage = 0;
 
   final _nameController = TextEditingController();
@@ -34,21 +29,21 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   final _weightController = TextEditingController();
   final _heightFeetController = TextEditingController();
   final _heightInchesController = TextEditingController();
-  final _ageController = TextEditingController();
   final _goalWeightController = TextEditingController();
   final _calorieGoalController = TextEditingController(text: '2200');
   final _stepsGoalController = TextEditingController(text: '10000');
 
-  final DateTime _selectedDob = DateTime.now();
-  String _selectedGender = 'Male';
+  DateTime _selectedDob = DateTime.now().subtract(
+    const Duration(days: 365 * 28),
+  );
+  String? _selectedGender;
   String _selectedActivityLevel = 'Moderately Active';
   String _weightGoal = ''; // 'lose', 'gain', or 'maintain'
   String _dietType = 'Balanced';
-  bool _autoSetCalories = true;
-  
+
   // Page 4 variables
   double _weeklyRate = 1.0; // lbs per week (0-5, increments of 0.5)
-  
+
   // Page 5 variables (health permissions)
   bool _healthPermissionsRequested = false;
   bool _healthPermissionsGranted = false;
@@ -65,15 +60,382 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     _weightController.dispose();
     _heightFeetController.dispose();
     _heightInchesController.dispose();
-    _ageController.dispose();
     _goalWeightController.dispose();
     _calorieGoalController.dispose();
     _stepsGoalController.dispose();
     super.dispose();
   }
 
+  int _calculateAgeFromDob(DateTime dob) {
+    final now = DateTime.now();
+    var age = now.year - dob.year;
+    final hasHadBirthday =
+        (now.month > dob.month) ||
+        (now.month == dob.month && now.day >= dob.day);
+    if (!hasHadBirthday) age--;
+    return age;
+  }
+
+  double _genderOffsetForCalculation() {
+    switch (_selectedGender) {
+      case 'Male':
+        return 5.0;
+      case 'Female':
+        return -161.0;
+      default:
+        // Neutral midpoint when gender is not selected or set to Other.
+        return -78.0;
+    }
+  }
+
+  String _formatDob(DateTime dob) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[dob.month - 1]} ${dob.day}, ${dob.year}';
+  }
+
+  Future<void> _showDobPicker() async {
+    _dismissKeyboard();
+    var tempDob = _selectedDob;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SizedBox(
+          height: 320,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedDob = DateTime(
+                            tempDob.year,
+                            tempDob.month,
+                            tempDob.day,
+                          );
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: _selectedDob,
+                  maximumDate: DateTime.now(),
+                  minimumDate: DateTime.now().subtract(
+                    const Duration(days: 365 * 120),
+                  ),
+                  onDateTimeChanged: (value) {
+                    tempDob = value;
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showWeightPicker() async {
+    _dismissKeyboard();
+    const minWeight = 80;
+    const maxWeight = 450;
+    var tempWeight = int.tryParse(_weightController.text) ?? 180;
+    tempWeight = tempWeight.clamp(minWeight, maxWeight);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final controller = FixedExtentScrollController(
+          initialItem: tempWeight - minWeight,
+        );
+
+        return SizedBox(
+          height: 320,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Select Weight',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _weightController.text = tempWeight.toString();
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  scrollController: controller,
+                  itemExtent: 36,
+                  magnification: 1.08,
+                  useMagnifier: true,
+                  onSelectedItemChanged: (index) {
+                    tempWeight = minWeight + index;
+                  },
+                  children: List.generate(
+                    maxWeight - minWeight + 1,
+                    (index) => Center(child: Text('${minWeight + index} lbs')),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showGoalWeightPicker() async {
+    _dismissKeyboard();
+    const minWeight = 80;
+    const maxWeight = 450;
+    var tempWeight = int.tryParse(_goalWeightController.text) ?? 175;
+    tempWeight = tempWeight.clamp(minWeight, maxWeight);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final controller = FixedExtentScrollController(
+          initialItem: tempWeight - minWeight,
+        );
+
+        return SizedBox(
+          height: 320,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Select Goal Weight',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _goalWeightController.text = tempWeight.toString();
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  scrollController: controller,
+                  itemExtent: 36,
+                  magnification: 1.08,
+                  useMagnifier: true,
+                  onSelectedItemChanged: (index) {
+                    tempWeight = minWeight + index;
+                  },
+                  children: List.generate(
+                    maxWeight - minWeight + 1,
+                    (index) => Center(child: Text('${minWeight + index} lbs')),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showHeightPicker() async {
+    _dismissKeyboard();
+    const minFeet = 3;
+    const maxFeet = 8;
+    const minInches = 0;
+    const maxInches = 11;
+
+    var tempFeet = int.tryParse(_heightFeetController.text) ?? 5;
+    var tempInches = int.tryParse(_heightInchesController.text) ?? 10;
+    tempFeet = tempFeet.clamp(minFeet, maxFeet);
+    tempInches = tempInches.clamp(minInches, maxInches);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final feetController = FixedExtentScrollController(
+          initialItem: tempFeet - minFeet,
+        );
+        final inchController = FixedExtentScrollController(
+          initialItem: tempInches,
+        );
+
+        return SizedBox(
+          height: 340,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _heightFeetController.text = tempFeet.toString();
+                          _heightInchesController.text = tempInches.toString();
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: feetController,
+                        itemExtent: 36,
+                        magnification: 1.08,
+                        useMagnifier: true,
+                        onSelectedItemChanged: (index) {
+                          tempFeet = minFeet + index;
+                        },
+                        children: List.generate(
+                          maxFeet - minFeet + 1,
+                          (index) =>
+                              Center(child: Text('${minFeet + index} ft')),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: CupertinoPicker(
+                        scrollController: inchController,
+                        itemExtent: 36,
+                        magnification: 1.08,
+                        useMagnifier: true,
+                        onSelectedItemChanged: (index) {
+                          tempInches = index;
+                        },
+                        children: List.generate(
+                          maxInches - minInches + 1,
+                          (index) => Center(child: Text('$index in')),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  bool _isPageValid() {
+    switch (_currentPage) {
+      case 0:
+        return _nameController.text.trim().isNotEmpty &&
+            _emailController.text.trim().isNotEmpty &&
+            _selectedGender != null;
+      case 1:
+        // Weight and Height have default values in the pickers, 
+        // but we should ensure controllers aren't empty if the user cleared them
+        return _weightController.text.isNotEmpty &&
+            _heightFeetController.text.isNotEmpty &&
+            _heightInchesController.text.isNotEmpty;
+      case 2:
+        return _weightGoal.isNotEmpty;
+      case 3:
+        return _goalWeightController.text.isNotEmpty &&
+            _selectedActivityLevel.isNotEmpty;
+      case 4:
+        return _calorieGoalController.text.isNotEmpty &&
+            _stepsGoalController.text.isNotEmpty;
+      case 5:
+        return true; // Health permissions page is optional
+      default:
+        return true;
+    }
+  }
+
   void _nextPage() {
     _dismissKeyboard();
+    if (!_isPageValid()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required information'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     if (_currentPage < 5) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -102,7 +464,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     final currentWeight = double.tryParse(_weightController.text) ?? 180;
     final goalWeight = double.tryParse(_goalWeightController.text) ?? 170;
     final weightDifference = (currentWeight - goalWeight).abs();
-    
+
     if (_weeklyRate == 0) return 0;
     return (weightDifference / _weeklyRate).ceil();
   }
@@ -112,24 +474,29 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     final weight = double.tryParse(_weightController.text) ?? 180;
     final feet = int.tryParse(_heightFeetController.text) ?? 5;
     final inches = int.tryParse(_heightInchesController.text) ?? 10;
-    final age = int.tryParse(_ageController.text) ?? 28;
-    
+    final age = _calculateAgeFromDob(_selectedDob);
+
     final totalHeightInInches = (feet * 12) + inches.toDouble();
     final weightInKg = weight * 0.453592;
     final heightInCm = totalHeightInInches * 2.54;
-    
-    final genderOffset = _selectedGender == 'Male' ? 5.0 : -161.0;
-    final bmr = (10 * weightInKg) + (6.25 * heightInCm) - (5 * age) + genderOffset;
-    
+
+    final genderOffset = _genderOffsetForCalculation();
+    final bmr =
+        (10 * weightInKg) + (6.25 * heightInCm) - (5 * age) + genderOffset;
+
     // Activity multipliers
     final activityMultiplier = _getActivityMultiplier(_selectedActivityLevel);
     final tdee = bmr * activityMultiplier;
-    
+
     // Apply deficit or surplus
     final dailyDeficit = _calculateDailyDeficit();
     final direction = _weightGoal == 'lose' ? -1 : 1;
-    
-    return (tdee + (direction * dailyDeficit)).toInt();
+
+    final calculated = (tdee + (direction * dailyDeficit)).toInt();
+
+    // Ensure we never return a dangerous or impossible calorie goal.
+    // 1200 is generally considered the absolute floor for safe weight loss.
+    return calculated.clamp(1200, 10000);
   }
 
   int _resolveCalorieGoal() {
@@ -175,11 +542,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     final carbsG = (carbsCalories / 4).round();
     final fatG = (fatCalories / 9).round();
 
-    return {
-      'protein': proteinG,
-      'carbs': carbsG,
-      'fat': fatG,
-    };
+    return {'protein': proteinG, 'carbs': carbsG, 'fat': fatG};
   }
 
   double _getActivityMultiplier(String activity) {
@@ -212,6 +575,13 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
       return;
     }
 
+    if (_selectedGender == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a gender')));
+      return;
+    }
+
     try {
       // Convert feet and inches to total inches
       final feet = int.tryParse(_heightFeetController.text) ?? 5;
@@ -220,7 +590,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
       // Get weight and age
       final weight = double.tryParse(_weightController.text) ?? 180;
-      final age = int.tryParse(_ageController.text) ?? 28;
+      final age = _calculateAgeFromDob(_selectedDob);
 
       // Calculate BMR using Mifflin-St Jeor equation
       // Convert weight (lbs) to kg and height (inches) to cm
@@ -229,8 +599,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
       // BMR = (10 × weight in kg) + (6.25 × height in cm) - (5 × age) + s
       // where s = +5 for males and -161 for females
-      final genderOffset = _selectedGender == 'Male' ? 5.0 : -161.0;
-      final bmr = (10 * weightInKg) + (6.25 * heightInCm) - (5 * age) + genderOffset;
+      final genderOffset = _genderOffsetForCalculation();
+      final bmr =
+          (10 * weightInKg) + (6.25 * heightInCm) - (5 * age) + genderOffset;
 
       await widget.userState.createUser(
         name: _nameController.text,
@@ -238,7 +609,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
         weight: weight,
         height: totalHeightInInches,
         age: age,
-        gender: _selectedGender,
+        gender: _selectedGender!,
         dateOfBirth: _selectedDob,
         bmr: bmr,
         goalWeight: double.tryParse(_goalWeightController.text) ?? 175,
@@ -252,32 +623,42 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating user: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error creating user: $e')));
       }
     }
   }
 
   Widget _buildProgressBar() {
     return Container(
-      height: 6,
-      color: Colors.grey[200],
-      child: Row(
-        children: List.generate(6, (index) {
-          return Expanded(
-            child: Container(
-              color: index <= _currentPage ? Palette.forestGreen : Colors.transparent,
-            ),
-          );
-        }),
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          height: 6,
+          color: Colors.grey[200],
+          child: Row(
+            children: List.generate(6, (index) {
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  color: index <= _currentPage
+                      ? Palette.forestGreen
+                      : Colors.transparent,
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildNavigationButtons() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -295,7 +676,12 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
               child: OutlinedButton(
                 onPressed: _previousPage,
                 style: OutlinedButton.styleFrom(
+                  foregroundColor: Palette.forestGreen,
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: Colors.grey[350]!),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
                 child: const Text('Back'),
               ),
@@ -305,9 +691,15 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             child: ElevatedButton(
               onPressed: _nextPage,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Palette.forestGreen,
+                backgroundColor: _isPageValid()
+                    ? Palette.forestGreen
+                    : Colors.grey[400],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
               child: Text(_currentPage < 5 ? 'Next' : 'Create Account'),
             ),
@@ -337,6 +729,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           const SizedBox(height: 40),
           TextField(
             controller: _nameController,
+            onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               hintText: 'John Doe',
               labelText: 'Full Name *',
@@ -346,6 +739,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           const SizedBox(height: 20),
           TextField(
             controller: _emailController,
+            onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               hintText: 'john@example.com',
               labelText: 'Email *',
@@ -354,12 +748,13 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           ),
           const SizedBox(height: 20),
           TextField(
-            controller: _ageController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              hintText: '28',
-              labelText: 'Age',
-              border: OutlineInputBorder(),
+            readOnly: true,
+            onTap: _showDobPicker,
+            decoration: InputDecoration(
+              labelText: 'Date of Birth',
+              border: const OutlineInputBorder(),
+              hintText:
+                  '${_formatDob(_selectedDob)} (${_calculateAgeFromDob(_selectedDob)} yrs)',
             ),
           ),
           const SizedBox(height: 20),
@@ -369,8 +764,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
               labelText: 'Gender',
               border: OutlineInputBorder(),
             ),
+            hint: const Text('Select gender'),
             items: _genderDropdownItems,
-            onChanged: (val) => setState(() => _selectedGender = val!),
+            onChanged: (val) => setState(() => _selectedGender = val),
           ),
         ],
       ),
@@ -396,46 +792,24 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           ),
           const SizedBox(height: 40),
           TextField(
-            controller: _weightController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              hintText: '180',
+            readOnly: true,
+            onTap: _showWeightPicker,
+            decoration: InputDecoration(
+              hintText: '${int.tryParse(_weightController.text) ?? 180} lbs',
               labelText: 'Current Weight (lbs)',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Height',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _heightFeetController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    hintText: '5',
-                    labelText: 'Feet',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextField(
-                  controller: _heightInchesController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    hintText: '10',
-                    labelText: 'Inches',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
+          TextField(
+            readOnly: true,
+            onTap: _showHeightPicker,
+            decoration: InputDecoration(
+              labelText: 'Height',
+              hintText:
+                  '${int.tryParse(_heightFeetController.text) ?? 5} ft ${int.tryParse(_heightInchesController.text) ?? 10} in',
+              border: const OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 20),
           Container(
@@ -443,7 +817,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             decoration: BoxDecoration(
               color: Palette.forestGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Palette.forestGreen.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: Palette.forestGreen.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               children: [
@@ -466,11 +842,10 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   Widget _buildPage3() {
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 40),
           const Text(
             'Weight Goal',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -480,33 +855,58 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             'What\'s your goal?',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 50),
-          // Lose Weight Box
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.flag_outlined, size: 18, color: Colors.grey[700]),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Choose the path that matches your current focus. You can adjust calories and macros afterward.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           _buildGoalBox(
             label: 'Lose Weight',
+            description:
+                'Create a calorie deficit and trend downward steadily.',
             icon: Icons.trending_down,
-            iconColor: const Color(0xFFE74C3C),
             isSelected: _weightGoal == 'lose',
             onTap: () => setState(() => _weightGoal = 'lose'),
           ),
-          const SizedBox(height: 20),
-          // Maintain Weight Box
+          const SizedBox(height: 16),
           _buildGoalBox(
             label: 'Maintain Weight',
+            description: 'Hold your current weight while dialing in habits.',
             icon: Icons.balance,
-            iconColor: const Color(0xFF3498DB),
             isSelected: _weightGoal == 'maintain',
             onTap: () => setState(() => _weightGoal = 'maintain'),
           ),
-          const SizedBox(height: 20),
-          // Gain Weight Box
+          const SizedBox(height: 16),
           _buildGoalBox(
             label: 'Gain Weight',
+            description:
+                'Add calories gradually to support muscle or mass gain.',
             icon: Icons.trending_up,
-            iconColor: const Color(0xFF27AE60),
             isSelected: _weightGoal == 'gain',
             onTap: () => setState(() => _weightGoal = 'gain'),
           ),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -514,48 +914,83 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
   Widget _buildGoalBox({
     required String label,
+    required String description,
     required IconData icon,
-    required Color iconColor,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    const selectedColor = Palette.forestGreen;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 140,
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: isSelected ? iconColor.withValues(alpha: 0.15) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? iconColor : Colors.grey[300]!,
-            width: isSelected ? 3 : 1.5,
+            color: isSelected ? selectedColor : Colors.grey[300]!,
+            width: isSelected ? 2.4 : 1.2,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: iconColor.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 48,
-              color: iconColor,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? iconColor : Colors.black87,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isSelected ? selectedColor : Colors.grey[300]!,
+                ),
               ),
+              child: Icon(icon, size: 34, color: selectedColor),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? selectedColor : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? selectedColor : Colors.grey[400]!,
+                  width: 2,
+                ),
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 18, color: selectedColor)
+                  : null,
             ),
           ],
         ),
@@ -571,11 +1006,10 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 40),
           const Text(
             'Your Goals',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -585,156 +1019,291 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             'Set your target and pace',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 40),
-          // Goal Weight
-          TextField(
-            controller: _goalWeightController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              hintText: '175',
-              labelText: 'Goal Weight (lbs)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 30),
-          // Weekly Rate Slider
-          Text(
-            'Weekly ${_weightGoal == 'maintain' ? 'Target' : (_weightGoal == 'lose' ? 'Loss' : 'Gain')} Rate',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
           const SizedBox(height: 16),
-          if (_weightGoal == 'maintain')
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Maintain Current Weight',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your calorie target will balance with your activity',
-                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          else
-            Column(
-              children: [
-                Slider(
-                  value: _weeklyRate,
-                  min: 0,
-                  max: 5,
-                  divisions: 10, // 0.5 increments
-                  label: '${_weeklyRate.toStringAsFixed(1)} lbs/week',
-                  onChanged: (val) => setState(() => _weeklyRate = val),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${_weeklyRate.toStringAsFixed(1)} lbs per week',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                if (isAggressive)
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEAEE),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE74C3C).withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber, color: Color(0xFFE74C3C), size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'We do not recommend rates above 2 lbs/week as this is very aggressive and may lead to health complications.',
-                            style: TextStyle(fontSize: 12, color: Colors.red[900]),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          const SizedBox(height: 24),
-          // Display calculations
-          if (_weightGoal != 'maintain')
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Palette.forestGreen.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Palette.forestGreen.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Daily ${_weightGoal == 'lose' ? 'Deficit' : 'Surplus'} Needed',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${dailyDeficit.toStringAsFixed(0)} calories/day',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF27AE60)),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Estimated Timeline',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '~$weeksToGoal weeks to reach your goal',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 24),
-          // Activity Level
-          DropdownButtonFormField<String>(
-            initialValue: _selectedActivityLevel,
-            decoration: const InputDecoration(
-              labelText: 'Activity Level',
-              border: OutlineInputBorder(),
-            ),
-            items: _activityLevelItems,
-            onChanged: (val) => setState(() => _selectedActivityLevel = val!),
-          ),
-          const SizedBox(height: 24),
-          // Baseline Calorie Goal
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              color: Colors.white.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.grey[300]!),
             ),
+            child: Row(
+              children: [
+                Icon(Icons.track_changes_outlined, color: Palette.forestGreen),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _weightGoal == 'maintain'
+                        ? 'We’ll set a steady maintenance target based on your current stats and activity level.'
+                        : 'Pick a realistic target and pace. You can always refine these later from Macro Strategy.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildOnboardingSection(
+            title: 'Target Weight',
+            child: GestureDetector(
+              onTap: _showGoalWeightPicker,
+              child: AbsorbPointer(
+                child: TextField(
+                  controller: _goalWeightController,
+                  decoration: const InputDecoration(
+                    suffixText: 'lbs',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildOnboardingSection(
+            title: 'Pace',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Your Baseline Daily Calorie Goal',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blue[900]),
+                  'Weekly ${_weightGoal == 'maintain' ? 'Target' : (_weightGoal == 'lose' ? 'Loss' : 'Gain')} Rate',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '$baselineCalorie calories',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF3498DB)),
+                const SizedBox(height: 16),
+                if (_weightGoal == 'maintain')
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Maintain Current Weight',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your calorie target will balance with your activity',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Slider(
+                        value: _weeklyRate,
+                        min: 0,
+                        max: 5,
+                        divisions: 10, // 0.5 increments
+                        label: '${_weeklyRate.toStringAsFixed(1)} lbs/week',
+                        onChanged: (val) => setState(() => _weeklyRate = val),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_weeklyRate.toStringAsFixed(1)} lbs per week',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (isAggressive)
+                        Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEAEE),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFE74C3C,
+                              ).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.warning_amber,
+                                color: Color(0xFFE74C3C),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'We do not recommend rates above 2 lbs/week as this is very aggressive and may lead to health complications.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.red[900],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (_weightGoal != 'maintain')
+            Row(
+              children: [
+                Expanded(
+                  child: _GoalSummaryCard(
+                    title: _weightGoal == 'lose'
+                        ? 'Daily Deficit'
+                        : 'Daily Surplus',
+                    value: '${dailyDeficit.toStringAsFixed(0)} cal',
+                    accentColor: Palette.forestGreen,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _GoalSummaryCard(
+                    title: 'Timeline',
+                    value: '~$weeksToGoal wks',
+                    accentColor: const Color(0xFF3498DB),
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 20),
+          _buildOnboardingSection(
+            title: 'Activity Level',
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: ExpansionTile(
+                  controller: _activityController,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  collapsedShape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  title: Text(
+                    _selectedActivityLevel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                      child: Column(
+                        children: [
+                          _buildActivityLevelOption(
+                            'Sedentary',
+                            '0–1 workouts/week or under 5k steps/day',
+                          ),
+                          const SizedBox(height: 8),
+                          _buildActivityLevelOption(
+                            'Lightly Active',
+                            '1–2 workouts/week or 5k–8k steps/day',
+                          ),
+                          const SizedBox(height: 8),
+                          _buildActivityLevelOption(
+                            'Moderately Active',
+                            '3–4 workouts/week or 8k–12k steps/day',
+                          ),
+                          const SizedBox(height: 8),
+                          _buildActivityLevelOption(
+                            'Very Active',
+                            '5–6 workouts/week or 12k+ steps/day',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF3498DB).withValues(alpha: 0.22),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3498DB).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.local_fire_department_outlined,
+                        color: Color(0xFF3498DB),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Baseline Daily Calories',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue[900],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$baselineCalorie calories',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF3498DB),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Based on your ${_selectedActivityLevel.toLowerCase()} activity level. Your actual daily target will adjust based on your real activity from HealthKit.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  'Based on your ${_selectedActivityLevel.toLowerCase()} activity level. Your daily target can still adjust later using HealthKit activity and macro strategy settings.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: Colors.grey[700],
+                  ),
                 ),
               ],
             ),
@@ -744,17 +1313,98 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     );
   }
 
+  Widget _buildActivityLevelOption(String title, String subtitle) {
+    final bool isSelected = _selectedActivityLevel == title;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedActivityLevel = title);
+        _activityController.collapse();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Palette.vibrantAction : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isSelected ? Palette.vibrantAction : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isSelected ? Palette.vibrantAction.withValues(alpha: 0.8) : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.check_circle,
+                color: Palette.vibrantAction,
+                size: 20,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOnboardingSection({
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
   Widget _buildPage5() {
     final baselineCalorie = _calculateBaselineCalorie();
-    if (_autoSetCalories && _calorieGoalController.text.trim() == '2200') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
+    
+    // Always sync the calorie goal if it hasn't been manually adjusted or if we want to default to baseline
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_calorieGoalController.text != baselineCalorie.toString()) {
         setState(() {
           _calorieGoalController.text = baselineCalorie.toString();
-          _autoSetCalories = false;
         });
-      });
-    }
+      }
+    });
 
     final calorieGoal = _resolveCalorieGoal();
     final macros = _calculateMacroTargets(calorieGoal, _dietType);
@@ -794,12 +1444,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: [
-              'Balanced',
-              'High Protein',
-              'Low Carb',
-              'Low Fat',
-            ].map((option) {
+            children: ['Balanced', 'High Protein', 'Low Carb', 'Low Fat'].map((
+              option,
+            ) {
               final selected = option == _dietType;
               return ChoiceChip(
                 label: Text(option),
@@ -813,7 +1460,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                   side: BorderSide(
-                    color: selected ? Palette.forestGreen : Colors.grey.shade300,
+                    color: selected
+                        ? Palette.forestGreen
+                        : Colors.grey.shade300,
                   ),
                 ),
               );
@@ -838,8 +1487,14 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _MacroTargetTile(label: 'Protein', value: '${macros['protein']} g'),
-                    _MacroTargetTile(label: 'Carbs', value: '${macros['carbs']} g'),
+                    _MacroTargetTile(
+                      label: 'Protein',
+                      value: '${macros['protein']} g',
+                    ),
+                    _MacroTargetTile(
+                      label: 'Carbs',
+                      value: '${macros['carbs']} g',
+                    ),
                     _MacroTargetTile(label: 'Fat', value: '${macros['fat']} g'),
                   ],
                 ),
@@ -859,9 +1514,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   Future<void> _requestHealthPermissions() async {
     try {
       setState(() => _healthPermissionsRequested = true);
-      
+
       final granted = await HealthService().requestPermissions();
-      
+
       if (mounted) {
         setState(() => _healthPermissionsGranted = granted);
       }
@@ -892,7 +1547,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
           const SizedBox(height: 40),
-          
+
           // Health icon
           Center(
             child: Container(
@@ -912,7 +1567,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             ),
           ),
           const SizedBox(height: 40),
-          
+
           // Description
           Container(
             padding: const EdgeInsets.all(16),
@@ -926,10 +1581,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
               children: [
                 Text(
                   'MetaDash needs access to:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 SizedBox(height: 12),
                 Text('• Steps & Distance'),
@@ -944,7 +1596,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             ),
           ),
           const SizedBox(height: 40),
-          
+
           // Permission button
           if (!_healthPermissionsRequested)
             SizedBox(
@@ -965,7 +1617,10 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                     SizedBox(width: 8),
                     Text(
                       'Grant Health Access',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -994,7 +1649,10 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                         ),
                         Text(
                           'Your health data will sync automatically',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
@@ -1025,7 +1683,10 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                         ),
                         Text(
                           'You can enable this later in Health app settings',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
@@ -1034,7 +1695,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
               ),
             ),
           const SizedBox(height: 24),
-          
+
           // Skip button for denied
           if (_healthPermissionsRequested && !_healthPermissionsGranted)
             SizedBox(
@@ -1064,6 +1725,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     return Scaffold(
       backgroundColor: Palette.lightStone,
       appBar: AppBar(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         backgroundColor: Palette.forestGreen,
         foregroundColor: Colors.white,
         title: const Text('Create Account'),
@@ -1108,10 +1772,7 @@ class _MacroTargetTile extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MacroTargetTile({
-    required this.label,
-    required this.value,
-  });
+  const _MacroTargetTile({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -1131,6 +1792,52 @@ class _MacroTargetTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GoalSummaryCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color accentColor;
+
+  const _GoalSummaryCard({
+    required this.title,
+    required this.value,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accentColor.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: accentColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

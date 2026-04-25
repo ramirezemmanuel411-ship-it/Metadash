@@ -17,6 +17,7 @@ class UserProfile {
   final DateTime createdAt;
   final DateTime updatedAt;
   final Map<String, int>? macroTargets; // {protein, carbs, fat} in grams
+  final bool manualMacroEntry;
 
   UserProfile({
     this.id,
@@ -35,6 +36,7 @@ class UserProfile {
     required this.createdAt,
     required this.updatedAt,
     this.macroTargets,
+    this.manualMacroEntry = false,
   });
 
   // Convert UserProfile to Map for database storage
@@ -56,6 +58,7 @@ class UserProfile {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'macroTargets': macroTargets != null ? jsonEncode(macroTargets) : null,
+      'manualMacroEntry': manualMacroEntry ? 1 : 0,
     };
   }
 
@@ -78,6 +81,7 @@ class UserProfile {
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
       macroTargets: map['macroTargets'] != null ? Map<String, int>.from(jsonDecode(map['macroTargets'])) : null,
+      manualMacroEntry: map['manualMacroEntry'] == 1,
     );
   }
 
@@ -99,6 +103,7 @@ class UserProfile {
     DateTime? createdAt,
     DateTime? updatedAt,
     Map<String, int>? macroTargets,
+    bool? manualMacroEntry,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -117,6 +122,7 @@ class UserProfile {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       macroTargets: macroTargets ?? this.macroTargets,
+      manualMacroEntry: manualMacroEntry ?? this.manualMacroEntry,
     );
   }
 }

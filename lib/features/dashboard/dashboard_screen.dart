@@ -151,12 +151,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ChangeNotifierProvider.value(
       value: _dashboardState,
       child: Scaffold(
-        backgroundColor: Palette.warmNeutral,
         appBar: AppBar(
           title: const Text('Dashboard'),
-          backgroundColor: Palette.warmNeutral,
-          foregroundColor: Colors.black87,
-          elevation: 0,
         ),
         body: Stack(
           children: [
@@ -177,15 +173,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     final data = state.selectedData;
                     return GestureDetector(
                       onTap: widget.onOpenDiary,
-                      child: _CardSection(
-                        title: 'Today\'s Summary',
-                        child: _SummaryRow(
-                          calories: data.caloriesConsumed,
-                          goal: data.caloriesGoal,
-                          protein: data.proteinConsumed,
-                          carbs: data.carbsConsumed,
-                          fat: data.fatConsumed,
-                        ),
+                      child: _CardRowSummary(
+                        calories: data.caloriesConsumed,
+                        goal: data.caloriesGoal,
+                        protein: data.proteinConsumed,
+                        carbs: data.carbsConsumed,
+                        fat: data.fatConsumed,
                       ),
                     );
                   },
@@ -231,6 +224,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+class _CardRowSummary extends StatelessWidget {
+  final int calories;
+  final int goal;
+  final int protein;
+  final int carbs;
+  final int fat;
+
+  const _CardRowSummary({
+    required this.calories,
+    required this.goal,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      child: Column(
+        children: [
+          _SummaryRow(
+            calories: calories,
+            goal: goal,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CardSection extends StatelessWidget {
   final String title;
   final Widget child;
@@ -240,15 +271,23 @@ class _CardSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Palette.lightStone,
-        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title.toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 16),
           child,
         ],
       ),
@@ -665,7 +704,7 @@ class _ActionChip extends StatelessWidget {
         ],
       ),
       selectedColor: Palette.forestGreen,
-      backgroundColor: Palette.lightStone,
+      backgroundColor: Theme.of(context).cardColor,
       labelStyle: const TextStyle(fontWeight: FontWeight.w600),
     );
   }

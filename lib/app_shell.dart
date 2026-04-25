@@ -148,6 +148,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     
     setState(() {
       _stepsGoal = settings.stepGoal;
+      _caloriesGoal = user.dailyCaloricGoal;
+      _proteinGoal = user.macroTargets?['protein'] ?? 150;
+      _carbsGoal = user.macroTargets?['carbs'] ?? 250;
+      _fatGoal = user.macroTargets?['fat'] ?? 73;
+
       if (log != null) {
         final metrics = CalorieCalculationService.calculateDayMetrics(
           user: user,

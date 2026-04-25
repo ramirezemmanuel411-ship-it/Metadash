@@ -89,17 +89,17 @@ class _CalorieProgressRingState extends State<CalorieProgressRing>
                       children: [
                         Text(
                           '${widget.consumed}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           'of ${widget.target} kcal',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
                       ],
@@ -134,9 +134,9 @@ class _RingPainter extends CustomPainter {
 
     // Background ring
     final backgroundPaint = Paint()
-      ..color = Colors.grey.shade200
+      ..color = color.withOpacity(0.1)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8;
+      ..strokeWidth = 10;
 
     canvas.drawCircle(center, radius, backgroundPaint);
 
@@ -144,7 +144,7 @@ class _RingPainter extends CustomPainter {
     final progressPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
+      ..strokeWidth = 10
       ..strokeCap = StrokeCap.round;
 
     const startAngle = -math.pi / 2;

@@ -5,6 +5,7 @@ import '../models/user_profile.dart';
 import '../models/daily_log.dart';
 import '../models/reentry_mode_state.dart';
 import '../models/data_inputs_settings.dart';
+import '../models/user_food_item.dart';
 import 'health_service.dart';
 
 class DatabaseService {
@@ -40,7 +41,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 8, // Incremented version to add additional health fields
+      version: 10, // Incremented version to add user_food_library table
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -69,9 +70,30 @@ class DatabaseService {
         dailyStepsGoal INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
-        macroTargets TEXT
+        macroTargets TEXT,
+        manualMacroEntry INTEGER NOT NULL DEFAULT 0
       )
     ''');
+
+    // Create UserFoodLibrary table for custom foods
+    await db.execute('''
+      CREATE TABLE user_food_library (
+        id TEXT PRIMARY KEY,
+        userId INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        brand TEXT,
+        calories REAL NOT NULL,
+        protein REAL NOT NULL,
+        carbs REAL NOT NULL,
+        fat REAL NOT NULL,
+        servingSize REAL,
+        servingUnit TEXT,
+        lastUsed TEXT,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_user_food_library_userId_name ON user_food_library(userId, name)');
 
     // Create DailyLog table
     await db.execute('''
@@ -336,6 +358,35 @@ class DatabaseService {
       } catch (_) {}
       try {
         await db.execute('ALTER TABLE daily_logs ADD COLUMN vo2Max REAL');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 9) {
+      try {
+        await db.execute('ALTER TABLE user_profiles ADD COLUMN manualMacroEntry INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 10) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS user_food_library (
+            id TEXT PRIMARY KEY,
+            userId INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            brand TEXT,
+            calories REAL NOT NULL,
+            protein REAL NOT NULL,
+            carbs REAL NOT NULL,
+            fat REAL NOT NULL,
+            servingSize REAL,
+            servingUnit TEXT,
+            lastUsed TEXT,
+            createdAt TEXT NOT NULL,
+            FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
+          )
+        ''');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_user_food_library_userId_name ON user_food_library(userId, name)');
       } catch (_) {}
     }
   }
@@ -734,6 +785,37 @@ class DatabaseService {
     final db = await database;
     await db.delete(
       'food_entries',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // User Food Library Methods (Custom Foods)
+  Future<void> saveUserFood(UserFoodItem food) async {
+    final db = await database;
+    await db.insert(
+      'user_food_library',
+      food.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<UserFoodItem>> searchUserFoodLibrary(int userId, String query) async {
+    final db = await database;
+    final results = await db.query(
+      'user_food_library',
+      where: 'userId = ? AND name LIKE ?',
+      whereArgs: [userId, '%$query%'],
+      orderBy: 'lastUsed DESC, name ASC',
+    );
+    return results.map((m) => UserFoodItem.fromMap(m)).toList();
+  }
+
+  Future<void> updateFoodLastUsed(String id) async {
+    final db = await database;
+    await db.update(
+      'user_food_library',
+      {'lastUsed': DateTime.now().toIso8601String()},
       where: 'id = ?',
       whereArgs: [id],
     );

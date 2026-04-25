@@ -107,20 +107,34 @@ class _FloatingActionHubState extends State<FloatingActionHub>
   void _snapToEdge() {
     final size = MediaQuery.of(context).size;
     final safeArea = MediaQuery.of(context).padding;
-    
-    // Snap to nearest horizontal edge
+
     final centerX = _position.dx + _fabSize / 2;
+    final centerY = _position.dy + _fabSize / 2;
     final isLeft = centerX < size.width / 2;
-    
+
+    // Snap to vertical edge too when near top/bottom (corner snap),
+    // using the same 25% thresholds as _calculatePositions().
+    final isNearBottom = centerY > size.height * 3 / 4;
+    final isNearTop = centerY < size.height / 4;
+
+    double newY;
+    if (isNearBottom) {
+      newY = size.height - _fabSize - _edgePadding - safeArea.bottom;
+    } else if (isNearTop) {
+      newY = safeArea.top + _edgePadding;
+    } else {
+      newY = _position.dy.clamp(
+        safeArea.top + _edgePadding,
+        size.height - _fabSize - _edgePadding - safeArea.bottom,
+      );
+    }
+
     setState(() {
       _position = Offset(
-        isLeft 
-          ? _edgePadding + safeArea.left
-          : size.width - _fabSize - _edgePadding - safeArea.right,
-        _position.dy.clamp(
-          safeArea.top + _edgePadding,
-          size.height - _fabSize - _edgePadding - safeArea.bottom,
-        ),
+        isLeft
+            ? _edgePadding + safeArea.left
+            : size.width - _fabSize - _edgePadding - safeArea.right,
+        newY,
       );
     });
     _savePosition();
@@ -229,7 +243,7 @@ class _FloatingActionHubState extends State<FloatingActionHub>
           width: _fabSize,
           height: _fabSize,
           decoration: BoxDecoration(
-            color: widget.fabColor ?? const Color(0xFF4A6741),
+            color: widget.fabColor ?? Theme.of(context).colorScheme.primary,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
@@ -486,7 +500,7 @@ class _RadialMenu extends StatelessWidget {
                   width: _itemSize,
                   height: _itemSize,
                   decoration: BoxDecoration(
-                    color: fabColor ?? const Color(0xFF4A6741),
+                    color: fabColor ?? Theme.of(context).colorScheme.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -557,6 +571,9 @@ class _RadialItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -569,7 +586,7 @@ class _RadialItemWidget extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: backgroundColor ?? const Color(0xFFF5F1E8),
+              color: backgroundColor ?? (isDark ? Palette.nightSecondary : Palette.daySecondary),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -581,7 +598,7 @@ class _RadialItemWidget extends StatelessWidget {
             ),
             child: Icon(
               item.icon,
-              color: Palette.forestGreen,
+              color: isDark ? Colors.white : Theme.of(context).colorScheme.primary,
               size: 24,
             ),
           ),
@@ -591,7 +608,7 @@ class _RadialItemWidget extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: theme.colorScheme.onSurface,
               decoration: TextDecoration.none,
             ),
           ),

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import '../../shared/palette.dart';
 import '../../services/food_service.dart';
 import '../../data/repositories/search_repository.dart';
 import '../../presentation/bloc/food_search_bloc.dart';
 import '../../presentation/screens/fast_food_search_screen.dart';
 import '../../providers/user_state.dart';
+import '../../models/user_food_item.dart';
+import '../../models/diary_entry_food.dart';
+import '../../services/cloud_food_service.dart';
 import '../food/barcode_scanner_screen.dart';
 import '../food/food_detail_page.dart';
 import 'models.dart';
@@ -176,7 +180,12 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   Widget _buildTab() {
     switch (_selected) {
       case FoodSearchTab.saved:
-        return const _SavedLibraryStub(key: ValueKey('saved'));
+        return _SavedLibraryTab(
+          key: const ValueKey('saved'),
+          userState: widget.userState ?? context.read<UserState>(),
+          mealName: widget.targetMeal,
+          targetTimestamp: widget.targetTimestamp,
+        );
       case FoodSearchTab.barcode:
         return const _ScannerStub(key: ValueKey('barcode'));
       case FoodSearchTab.search:
@@ -200,35 +209,267 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
           ),
         );
       case FoodSearchTab.manual:
-        return const FoodManualEntry(key: ValueKey('manual'), mealName: null);
+        return FoodManualEntry(
+          key: const ValueKey('manual'),
+          mealName: widget.targetMeal,
+          userState: widget.userState,
+          targetTimestamp: widget.targetTimestamp,
+        );
     }
   }
 }
 
-class _SavedLibraryStub extends StatelessWidget {
-  const _SavedLibraryStub({super.key});
+class _SavedLibraryTab extends StatefulWidget {
+  final UserState userState;
+  final MealName? mealName;
+  final DateTime? targetTimestamp;
+
+  const _SavedLibraryTab({
+    super.key,
+    required this.userState,
+    this.mealName,
+    this.targetTimestamp,
+  });
+
+  @override
+  State<_SavedLibraryTab> createState() => _SavedLibraryTabState();
+}
+
+class _SavedLibraryTabState extends State<_SavedLibraryTab> {
+  final _searchController = TextEditingController();
+  List<UserFoodItem> _libraryFoods = [];
+  List<UserFoodItem> _globalFoods = [];
+  bool _isLoading = true;
+  bool _isSearchingGlobal = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLibrary();
+  }
+
+  Future<void> _loadLibrary() async {
+    final user = widget.userState.currentUser;
+    if (user == null) return;
+
+    final query = _searchController.text.trim();
+    final results = await widget.userState.db.searchUserFoodLibrary(
+      user.id!,
+      query,
+    );
+
+    if (mounted) {
+      setState(() {
+        _libraryFoods = results;
+        _isLoading = false;
+      });
+    }
+
+    if (query.isNotEmpty) {
+      _searchGlobal(query);
+    } else {
+      setState(() => _globalFoods = []);
+    }
+  }
+
+  Future<void> _searchGlobal(String query) async {
+    setState(() => _isSearchingGlobal = true);
+    try {
+      final results = await CloudFoodService().searchGlobalLibrary(query);
+      if (mounted) {
+        setState(() {
+          _globalFoods = results;
+          _isSearchingGlobal = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isSearchingGlobal = false);
+    }
+  }
+
+  Future<void> _logFood(UserFoodItem food) async {
+    final user = widget.userState.currentUser;
+    if (user == null) return;
+
+    // If global food, save to user library for next time
+    // items from cloud will have a String ID (normalized name_brand)
+    // while locally new items might be UUIDs. 
+    // We check if it's already in our local matching list.
+    final existsLocally = _libraryFoods.any((f) => f.name == food.name && f.brand == food.brand);
+    if (!existsLocally) {
+      await widget.userState.db.saveUserFood(food.copyWith(userId: user.id!));
+    }
+
+    final entry = DiaryEntryFood(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      userId: user.id!,
+      timestamp: widget.targetTimestamp ?? DateTime.now(),
+      name: food.name,
+      calories: food.calories.toInt(),
+      proteinG: food.protein.toInt(),
+      carbsG: food.carbs.toInt(),
+      fatG: food.fat.toInt(),
+      source: 'manual',
+      serving: food.brand,
+    );
+
+    await widget.userState.db.addFoodEntry(entry);
+    await widget.userState.db.updateFoodLastUsed(food.id);
+
+    if (mounted) {
+      Navigator.of(context).pop(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added ${food.name} to your log')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final totalItemCount = _libraryFoods.length +
+        (_globalFoods.isEmpty ? 0 : _globalFoods.length + 1);
+
     return Container(
       color: Palette.warmNeutral,
       padding: const EdgeInsets.all(12),
-      child: ListView(
+      child: Column(
         children: [
-          _sectionCard(
-            title: 'Saved Foods',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text('Chicken Breast'),
-                SizedBox(height: 6),
-                Text('Greek Yogurt'),
-                SizedBox(height: 6),
-                Text('Oats'),
-              ],
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search my library...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: Palette.lightStone,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
+            onChanged: (_) => _loadLibrary(),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : totalItemCount == 0
+                    ? Center(
+                        child: Text(
+                          _searchController.text.isEmpty
+                              ? 'Your library is empty.\nGo to Quick Add to create a custom food!'
+                              : 'No matching foods found.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: totalItemCount,
+                        itemBuilder: (context, index) {
+                          // Local Library Section
+                          if (index < _libraryFoods.length) {
+                            final food = _libraryFoods[index];
+                            return _buildFoodItem(food);
+                          }
+
+                          // Community Header
+                          final adjustedIndex = index - _libraryFoods.length;
+                          if (adjustedIndex == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.public,
+                                      size: 18, color: Palette.forestGreen),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Community Results',
+                                    style: TextStyle(
+                                      color: Palette.forestGreen,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  if (_isSearchingGlobal)
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 12),
+                                      child: SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // Global Library Section
+                          final globalFood = _globalFoods[adjustedIndex - 1];
+                          return _buildFoodItem(globalFood, isGlobal: true);
+                        },
+                      ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFoodItem(UserFoodItem food, {bool isGlobal = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () => _logFood(food),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Palette.lightStone,
+            borderRadius: BorderRadius.circular(12),
+            border: isGlobal
+                ? Border.all(color: Palette.forestGreen.withOpacity(0.1))
+                : null,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      food.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    if (food.brand != null)
+                      Text(
+                        food.brand!,
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${food.calories.toInt()} kcal',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Palette.forestGreen,
+                    ),
+                  ),
+                  Text(
+                    'P: ${food.protein.toInt()}g C: ${food.carbs.toInt()}g F: ${food.fat.toInt()}g',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -294,27 +535,3 @@ class _ScannerStubState extends State<_ScannerStub> {
   }
 }
 
-Widget _sectionCard({required String title, required Widget child}) {
-  return Container(
-    decoration: BoxDecoration(
-      color: Palette.lightStone,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    padding: const EdgeInsets.all(12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 6),
-        child,
-      ],
-    ),
-  );
-}
