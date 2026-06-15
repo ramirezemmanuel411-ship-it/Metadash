@@ -226,7 +226,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
                     value: saveToLibrary,
                     onChanged: (v) =>
                         setState(() => saveToLibrary = v),
-                    activeColor: context.accent,
+                    activeThumbColor: context.accent,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 4),
                   ),
@@ -253,7 +253,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
                         value: shareGlobally,
                         onChanged: (v) =>
                             setState(() => shareGlobally = v),
-                        activeColor: context.accent,
+                        activeThumbColor: context.accent,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 4),
                       ),

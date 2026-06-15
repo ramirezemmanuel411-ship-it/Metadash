@@ -1562,10 +1562,15 @@ class _EntryMoveSheetState extends State<_EntryMoveSheet> {
     super.initState();
     // Pre-select meal based on current time
     final h = TimeOfDay.now().hour;
-    if (h >= 5 && h <= 10)       _mealIndex = 0; // Breakfast
-    else if (h >= 11 && h <= 15) _mealIndex = 1; // Lunch
-    else if (h >= 16 && h <= 20) _mealIndex = 2; // Dinner
-    else                          _mealIndex = 3; // Snack
+    if (h >= 5 && h <= 10) {
+      _mealIndex = 0; // Breakfast
+    } else if (h >= 11 && h <= 15) {
+      _mealIndex = 1; // Lunch
+    } else if (h >= 16 && h <= 20) {
+      _mealIndex = 2; // Dinner
+    } else {
+      _mealIndex = 3; // Snack
+    }
 
     _mealCtrl = FixedExtentScrollController(initialItem: _mealIndex);
     _dateCtrl = FixedExtentScrollController(initialItem: _dateIndex);
@@ -1636,7 +1641,11 @@ class _EntryMoveSheetState extends State<_EntryMoveSheet> {
     void confirm(bool isMove) {
       final ts = _buildTimestamp();
       Navigator.of(context).pop();
-      if (isMove) widget.onMove(ts); else widget.onCopy(ts);
+      if (isMove) {
+        widget.onMove(ts);
+      } else {
+        widget.onCopy(ts);
+      }
     }
 
     return Container(

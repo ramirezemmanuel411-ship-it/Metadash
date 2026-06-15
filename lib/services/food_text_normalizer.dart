@@ -107,13 +107,13 @@ class FoodTextNormalizer {
     final stripped = _stripCorporateSuffixesFinal(normalized);
 
     // Words that should never appear as a standalone brand subtitle.
-    const _invalidBrands = {
+    const invalidBrands = {
       'inc', 'inc.', 'llc', 'corp', 'corp.', 'ltd', 'ltd.', 'co', 'co.',
       'rotisserie', 'grilled', 'roasted', 'baked', 'fried', 'smoked',
       'boiled', 'steamed', 'raw', 'cooked', 'fresh', 'frozen', 'dried',
     };
     if (stripped.isEmpty ||
-        _invalidBrands.contains(stripped.toLowerCase())) {
+        invalidBrands.contains(stripped.toLowerCase())) {
       return '';
     }
     return stripped;

@@ -604,7 +604,7 @@ class _ServingNumpadState extends State<_ServingNumpad> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: widget.units.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final u = widget.units[i];
                   final active = u == _unit;

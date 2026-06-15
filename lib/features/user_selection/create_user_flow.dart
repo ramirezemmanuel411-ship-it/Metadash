@@ -561,6 +561,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     if (_weightGoal.isEmpty) return;
     if (_selectedGender == null) return;
 
+    // Capture platform before any async gap (used after awaits below).
+    final platform = Theme.of(context).platform;
+
     try {
       // Guard: if this email already exists, log in instead of failing with UNIQUE constraint
       final existingUser = await widget.userState.db
@@ -612,9 +615,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
         if (user != null) {
           final settings = DataInputsSettings.defaults(user.id!).copyWith(
             appleHealthConnected: _healthPermissionsGranted &&
-                Theme.of(context).platform == TargetPlatform.iOS,
+                platform == TargetPlatform.iOS,
             googleFitConnected: _healthPermissionsGranted &&
-                Theme.of(context).platform == TargetPlatform.android,
+                platform == TargetPlatform.android,
             wearableFamily: _selectedWearableFamily,
           );
           await widget.userState.db.createOrUpdateDataInputsSettings(settings);
