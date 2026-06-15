@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/food_model.dart';
 import '../models/food_search_result_raw.dart';
 import '../../services/raw_search_debug_store.dart';
@@ -15,7 +16,7 @@ class FoodRemoteDatasource {
   // API endpoints
   static const String _offBaseUrl = 'https://world.openfoodfacts.org';
   static const String _usdaBaseUrl = 'https://api.nal.usda.gov/fdc/v1';
-  static const String _usdaApiKey = 'eLHyw1HDnNnuWOPVff5Oj99XcPcRWX06Bylqr2Mu';
+  static String get _usdaApiKey => dotenv.env['USDA_API_KEY'] ?? '';
 
   factory FoodRemoteDatasource() => _instance;
 
