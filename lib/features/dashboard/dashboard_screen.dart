@@ -235,6 +235,13 @@ class _DashboardBody extends StatelessWidget {
     // Build ordered rows, pairing compact widgets side-by-side
     final rows = <Widget>[];
     final buf = <String>[];
+    final seenWidgetIds = <String>{};
+
+    String _normalizeWidgetId(String id) {
+      if (id == 'calories') return 'calorie_balance';
+      if (id == 'weight_trend') return 'weight';
+      return id;
+    }
 
     Widget fullCard(String id) {
       switch (id) {
@@ -668,7 +675,10 @@ class _DashboardBody extends StatelessWidget {
       buf.clear();
     }
 
-    for (final id in layout.activeIds) {
+    for (final rawId in layout.activeIds) {
+      final id = _normalizeWidgetId(rawId);
+      if (!seenWidgetIds.add(id)) continue;
+
       final sz = layout.sizeOf(id);
       if (sz == DashWidgetSize.compact) {
         buf.add(id);

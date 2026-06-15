@@ -116,13 +116,6 @@ class DashboardLayoutProvider extends ChangeNotifier {
       description: '7-day cumulative calorie deficit or surplus.',
       category: DashWidgetCategory.performance,
     ),
-    DashWidgetInfo(
-      id: 'weight_trend',
-      name: 'Weight Trend',
-      icon: Icons.show_chart_outlined,
-      description: 'Rolling weight plot with directional momentum indicator.',
-      category: DashWidgetCategory.performance,
-    ),
     // ── Nutrition ─────────────────────────────────────────────────────────────
     DashWidgetInfo(
 
@@ -247,6 +240,8 @@ class DashboardLayoutProvider extends ChangeNotifier {
   /// are dropped entirely. Applied to persisted layouts on load so existing
   /// users never see a blank tile for a retired widget.
   static const Map<String, String?> _migratedIds = {
+    'calories': 'calorie_balance',
+    'weight_trend': 'weight',
     'active_calories': 'workout_performance',
     'goal_pace': 'weekly_deficit',
     'metabolic_trend': 'tdee',
@@ -327,7 +322,7 @@ class DashboardLayoutProvider extends ChangeNotifier {
   }
 
   Future<void> commit(List<String> newIds) async {
-    _activeIds = List.from(newIds);
+    _activeIds = _migrateIds(List.from(newIds));
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, jsonEncode(_activeIds));
