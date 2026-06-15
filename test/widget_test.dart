@@ -1,21 +1,28 @@
-// This is a basic Flutter widget test.
+// Smoke test for the launch UI.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// MyApp's startup runs async platform/DB init (and a splash delay timer) that
+// can't complete in a plain widget test, so we test the SplashScreen — the
+// first thing the app shows on launch — directly.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:metadash/main.dart';
+import 'package:metadash/splash_screen.dart';
+import 'package:metadash/shared/palette.dart';
 
 void main() {
-  testWidgets('App shows dashboard screen', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-    await tester.pump(const Duration(milliseconds: 200));
+  testWidgets('Splash screen shows the MetaDash wordmark', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(extensions: const [MetaDashColors.day]),
+        home: const SplashScreen(),
+      ),
+    );
+    // Let the intro animations and the wordmark delay timer complete.
+    await tester.pumpAndSettle();
 
-    // Verify that the initial screen is user selection (no logged-in user).
-    expect(find.text('Select User'), findsWidgets);
+    expect(find.text('MetaDash'), findsOneWidget);
   });
 }
