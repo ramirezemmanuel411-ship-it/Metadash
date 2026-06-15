@@ -94,13 +94,6 @@ class DashboardLayoutProvider extends ChangeNotifier {
   static const List<DashWidgetInfo> catalog = [
     // ── Performance ───────────────────────────────────────────────────────────
     DashWidgetInfo(
-      id: 'today_summary',
-      name: "Today's Summary",
-      icon: Icons.dashboard_outlined,
-      description: 'High-level overview of all key metrics for today.',
-      category: DashWidgetCategory.performance,
-    ),
-    DashWidgetInfo(
       id: 'calorie_balance',
       name: 'Calorie Balance',
       icon: Icons.bolt_outlined,
@@ -112,7 +105,8 @@ class DashboardLayoutProvider extends ChangeNotifier {
       id: 'tdee',
       name: 'Energy Output (TDEE)',
       icon: Icons.local_fire_department_outlined,
-      description: 'Your estimated total daily energy expenditure.',
+      description:
+          'Total daily energy expenditure with its 7-day average and trend.',
       category: DashWidgetCategory.performance,
     ),
     DashWidgetInfo(
@@ -127,21 +121,6 @@ class DashboardLayoutProvider extends ChangeNotifier {
       name: 'Weight Trend',
       icon: Icons.show_chart_outlined,
       description: 'Rolling weight plot with directional momentum indicator.',
-      category: DashWidgetCategory.performance,
-    ),
-    DashWidgetInfo(
-      id: 'goal_pace',
-      name: 'Goal Pace',
-      icon: Icons.flag_outlined,
-      description:
-          'Whether your current trajectory reaches your target on time.',
-      category: DashWidgetCategory.performance,
-    ),
-    DashWidgetInfo(
-      id: 'metabolic_trend',
-      name: 'Metabolic Trend',
-      icon: Icons.auto_graph_outlined,
-      description: 'Long-range adaptive metabolic rate shift over time.',
       category: DashWidgetCategory.performance,
     ),
     // ── Nutrition ─────────────────────────────────────────────────────────────
@@ -246,14 +225,6 @@ class DashboardLayoutProvider extends ChangeNotifier {
       category: DashWidgetCategory.activity,
     ),
     DashWidgetInfo(
-      id: 'active_calories',
-      name: 'Active Calories',
-      icon: Icons.whatshot_outlined,
-      description:
-          'Calories burned through intentional movement and exercise.',
-      category: DashWidgetCategory.activity,
-    ),
-    DashWidgetInfo(
       id: 'workout_performance',
       name: 'Workout Performance',
       icon: Icons.fitness_center_outlined,
@@ -265,17 +236,34 @@ class DashboardLayoutProvider extends ChangeNotifier {
       id: 'workout_consistency',
       name: 'Workout Consistency',
       icon: Icons.event_available_outlined,
-      description: 'Training frequency vs. your scheduled program.',
-      category: DashWidgetCategory.activity,
-    ),
-    DashWidgetInfo(
-      id: 'movement_streak',
-      name: 'Movement Streak',
-      icon: Icons.local_fire_department,
-      description: 'Consecutive active days above your movement threshold.',
+      description:
+          'Active days this week plus your current consecutive-day streak.',
       category: DashWidgetCategory.activity,
     ),
   ];
+
+  /// Maps widget IDs that were removed/merged in the de-duplication pass to the
+  /// surviving widget that now covers their information. IDs mapping to `null`
+  /// are dropped entirely. Applied to persisted layouts on load so existing
+  /// users never see a blank tile for a retired widget.
+  static const Map<String, String?> _migratedIds = {
+    'active_calories': 'workout_performance',
+    'goal_pace': 'weekly_deficit',
+    'metabolic_trend': 'tdee',
+    'movement_streak': 'workout_consistency',
+    'today_summary': null,
+  };
+
+  /// Rewrites a persisted ID list through [_migratedIds], dropping nulls and
+  /// de-duplicating while preserving order.
+  static List<String> _migrateIds(List<String> ids) {
+    final result = <String>[];
+    for (final id in ids) {
+      final mapped = _migratedIds.containsKey(id) ? _migratedIds[id] : id;
+      if (mapped != null && !result.contains(mapped)) result.add(mapped);
+    }
+    return result;
+  }
 
   List<String> _activeIds = List.from(kDefaultActiveIds);
 
@@ -318,16 +306,21 @@ class DashboardLayoutProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final json = prefs.getString(_prefsKey);
       if (json != null) {
-        final list = (jsonDecode(json) as List).cast<String>();
+        final list = _migrateIds((jsonDecode(json) as List).cast<String>());
         if (list.isNotEmpty) _activeIds = list;
       }
       final sizesJson = prefs.getString(_sizesKey);
       if (sizesJson != null) {
         final map = jsonDecode(sizesJson) as Map<String, dynamic>;
-        _widgetSizes = {
-          for (final e in map.entries)
-            e.key: e.value == 'compact' ? DashWidgetSize.compact : DashWidgetSize.full,
-        };
+        final migrated = <String, DashWidgetSize>{};
+        for (final e in map.entries) {
+          final key =
+              _migratedIds.containsKey(e.key) ? _migratedIds[e.key] : e.key;
+          if (key == null) continue;
+          migrated[key] =
+              e.value == 'compact' ? DashWidgetSize.compact : DashWidgetSize.full;
+        }
+        _widgetSizes = migrated;
       }
       notifyListeners();
     } catch (_) {}

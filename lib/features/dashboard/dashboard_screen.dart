@@ -9,7 +9,6 @@ import '../../shared/date_utils.dart';
 import 'dashboard_state.dart';
 import 'horizontal_date_wheel_picker.dart';
 import 'calorie_progress_ring.dart';
-import 'macro_progress_bars.dart';
 import '../../providers/dashboard_layout_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -256,23 +255,17 @@ class _DashboardBody extends StatelessWidget {
                   ? Palette.widgetActivityDay
                   : const Color(0xFFB03030),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _CardRowSummary(
-                    calories: data.caloriesConsumed,
-                    goal: data.caloriesGoal,
-                    proteinConsumed: data.proteinConsumed,
-                    proteinGoal: data.proteinGoal,
-                    carbsConsumed: data.carbsConsumed,
-                    carbsGoal: data.carbsGoal,
-                    fatConsumed: data.fatConsumed,
-                    fatGoal: data.fatGoal,
+                  CalorieProgressRing(
+                    consumed: data.caloriesConsumed,
+                    target: data.caloriesGoal,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Text(
                     statusText,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       color: inDeficit
                           ? Palette.widgetActivityDay
                           : const Color(0xFFB03030),
@@ -410,79 +403,34 @@ class _DashboardBody extends StatelessWidget {
                 : context.colors.textMuted,
             child: _WeightCard(currentWeight: userWeight),
           );
-        case 'today_summary':
-          return _CardSection(
-            title: "Today's Summary",
-            tintColor: Palette.widgetActivityDay,
-            child: _TodaySummaryCard(
-              calories: data.caloriesConsumed,
-              steps: data.stepsTaken,
-            ),
-          );
-        case 'tdee':
+        case 'tdee': {
+          final lastTDEE = weeklyTDEE.lastWhere((v) => v > 0, orElse: () => 0);
+          final delta = avgWeeklyTDEE > 0 ? lastTDEE - avgWeeklyTDEE : 0;
+          final hasTrend = avgWeeklyTDEE > 0 && lastTDEE > 0;
+          final trendBadge = !hasTrend
+              ? (data.tdee != null && data.tdee! > 0 ? 'Active' : 'No data')
+              : delta > 50
+                  ? 'Rising'
+                  : delta < -50
+                      ? 'Trending down'
+                      : 'Stable';
           return _CardSection(
             title: 'Metabolism',
             tintColor: Palette.widgetTDEEDay,
-            statusBadge: data.tdee != null && data.tdee! > 0 ? 'Active' : 'No data',
+            statusBadge: trendBadge,
             statusColor: Palette.widgetTDEEDay,
-            child: _TDEECard(tdee: data.tdee),
-          );
-        case 'active_calories':
-          return _CardSection(
-            title: 'Active Calories',
-            child: _ActiveCaloriesCard(
-              calories: data.workoutCalories ?? 0,
-              durationMinutes: data.workoutDurationMinutes,
-              workoutType: data.workoutType,
+            child: _TDEECard(
+              tdee: data.tdee,
+              avgTDEE: avgWeeklyTDEE,
+              weeklyTDEE: weeklyTDEE,
             ),
           );
+        }
         case 'resting_hr':
           return _CardSection(
             title: 'Resting Heart Rate',
             child: _RestingHRCard(bpm: data.restingHR),
           );
-        case 'goal_pace': {
-          final hasData = weeklyDeficit.any((v) => v != 0);
-          final lbPerWk = weekTotalDeficit / 3500;
-          final paceStatus = !hasData
-              ? 'No data'
-              : lbPerWk <= -0.5
-              ? 'On Pace'
-              : lbPerWk <= -0.1
-              ? 'Slightly behind'
-              : 'Off track';
-          return _CardSection(
-            title: 'Goal Pace',
-            tintColor: Palette.widgetFatChangeDay,
-            statusBadge: paceStatus,
-            statusColor: paceStatus == 'On Pace'
-                ? Palette.widgetActivityDay
-                : Palette.widgetFatChangeDay,
-            child: _GoalPaceCard(
-              weeklyDeficit: weeklyDeficit,
-              weekTotalDeficit: weekTotalDeficit,
-            ),
-          );
-        }
-        case 'metabolic_trend': {
-          final lastTDEE = weeklyTDEE.lastWhere((v) => v > 0, orElse: () => 0);
-          final delta = lastTDEE - avgWeeklyTDEE;
-          final trendStatus = delta > 50
-              ? 'Rising'
-              : delta < -50
-              ? 'Trending down'
-              : 'Stable';
-          return _CardSection(
-            title: 'Metabolic Trend',
-            tintColor: Palette.widgetEnergyDay,
-            statusBadge: trendStatus,
-            statusColor: Palette.widgetEnergyDay,
-            child: _MetabolicTrendCard(
-              weeklyTDEE: weeklyTDEE,
-              avgTDEE: avgWeeklyTDEE,
-            ),
-          );
-        }
         case 'body_composition':
           return _CardSection(
             title: 'Body Composition',
@@ -505,21 +453,12 @@ class _DashboardBody extends StatelessWidget {
             statusColor: activeDaysCount >= 4
                 ? Palette.widgetActivityDay
                 : Palette.widgetConsistDay,
-            child: _WorkoutConsistencyCard(weeklyTDEE: weeklyTDEE),
+            child: _WorkoutConsistencyCard(
+              weeklyTDEE: weeklyTDEE,
+              streakDays: movementStreakDays,
+            ),
           );
         }
-        case 'movement_streak':
-          return _CardSection(
-            title: 'Movement Streak',
-            tintColor: const Color(0xFFB56020),
-            statusBadge: movementStreakDays > 0
-                ? '$movementStreakDays day${movementStreakDays == 1 ? '' : 's'}'
-                : 'Start today',
-            statusColor: movementStreakDays >= 3
-                ? Palette.widgetActivityDay
-                : const Color(0xFFB56020),
-            child: _MovementStreakCard(streakDays: movementStreakDays),
-          );
         case 'meal_timing':
           return _CardSection(
             title: 'Meal Timing',
@@ -650,14 +589,6 @@ class _DashboardBody extends StatelessWidget {
             value: userWeight > 0 ? userWeight.toStringAsFixed(1) : '—',
             subtitle: 'lbs',
           );
-        case 'today_summary':
-          return _CompactCard(
-            title: 'Today',
-            icon: Icons.dashboard_outlined,
-            color: colors.accent,
-            value: '${data.caloriesConsumed}',
-            subtitle: 'kcal today',
-          );
         case 'tdee':
           return _CompactCard(
             title: 'TDEE',
@@ -665,14 +596,6 @@ class _DashboardBody extends StatelessWidget {
             color: const Color(0xFF4C7FA8),
             value: data.tdee != null ? '${data.tdee!.round()}' : '—',
             subtitle: 'kcal/day',
-          );
-        case 'active_calories':
-          return _CompactCard(
-            title: 'Active',
-            icon: Icons.whatshot_outlined,
-            color: const Color(0xFFEF8C2E),
-            value: '${data.workoutCalories ?? 0}',
-            subtitle: 'kcal burned',
           );
         case 'resting_hr':
           return _CompactCard(
@@ -690,24 +613,6 @@ class _DashboardBody extends StatelessWidget {
             value: profileBMI != null ? profileBMI.toStringAsFixed(1) : '—',
             subtitle: 'Body Mass Index',
           );
-        case 'goal_pace':
-          return _CompactCard(
-            title: 'Pace',
-            icon: Icons.flag_outlined,
-            color: const Color(0xFF4C7FA8),
-            value: weeklyDeficit.any((v) => v != 0)
-                ? '${((weekTotalDeficit / -3500).clamp(0.0, 2.0) * 100).round()}%'
-                : '—',
-            subtitle: 'of goal pace',
-          );
-        case 'metabolic_trend':
-          return _CompactCard(
-            title: 'TDEE Avg',
-            icon: Icons.auto_graph_outlined,
-            color: const Color(0xFF4C7FA8),
-            value: avgWeeklyTDEE > 0 ? '${avgWeeklyTDEE.round()}' : '—',
-            subtitle: 'kcal/day avg',
-          );
         case 'workout_consistency':
           return _CompactCard(
             title: 'Consistency',
@@ -716,14 +621,6 @@ class _DashboardBody extends StatelessWidget {
             value: '${weeklyTDEE.where((v) => v > 0).length}/7',
             subtitle: 'active days',
             progress: weeklyTDEE.where((v) => v > 0).length / 7,
-          );
-        case 'movement_streak':
-          return _CompactCard(
-            title: 'Streak',
-            icon: Icons.local_fire_department,
-            color: const Color(0xFFEF8C2E),
-            value: '$movementStreakDays',
-            subtitle: 'day${movementStreakDays == 1 ? '' : 's'}',
           );
         default:
           final info = DashboardLayoutProvider.catalog.firstWhere(
@@ -887,6 +784,7 @@ class _CompactCard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
                 color: context.colors.textPrimary,
                 height: 1.0,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
             const SizedBox(height: 1),
@@ -929,42 +827,6 @@ class _CompactCard extends StatelessWidget {
   }
 }
 
-
-class _CardRowSummary extends StatelessWidget {
-  final int calories;
-  final int goal;
-  final int proteinConsumed;
-  final int proteinGoal;
-  final int carbsConsumed;
-  final int carbsGoal;
-  final int fatConsumed;
-  final int fatGoal;
-
-  const _CardRowSummary({
-    required this.calories,
-    required this.goal,
-    required this.proteinConsumed,
-    required this.proteinGoal,
-    required this.carbsConsumed,
-    required this.carbsGoal,
-    required this.fatConsumed,
-    required this.fatGoal,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _SummaryRow(
-      calories: calories,
-      goal: goal,
-      proteinConsumed: proteinConsumed,
-      proteinGoal: proteinGoal,
-      carbsConsumed: carbsConsumed,
-      carbsGoal: carbsGoal,
-      fatConsumed: fatConsumed,
-      fatGoal: fatGoal,
-    );
-  }
-}
 
 // ── Tinted full-width card section ───────────────────────────────────────────
 // Used for all named full-width dashboard widgets.
@@ -1049,48 +911,6 @@ class _CardSection extends StatelessWidget {
   }
 }
 
-class _SummaryRow extends StatelessWidget {
-  final int calories;
-  final int goal;
-  final int proteinConsumed;
-  final int proteinGoal;
-  final int carbsConsumed;
-  final int carbsGoal;
-  final int fatConsumed;
-  final int fatGoal;
-
-  const _SummaryRow({
-    required this.calories,
-    required this.goal,
-    required this.proteinConsumed,
-    required this.proteinGoal,
-    required this.carbsConsumed,
-    required this.carbsGoal,
-    required this.fatConsumed,
-    required this.fatGoal,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          CalorieProgressRing(consumed: calories, target: goal),
-          const SizedBox(height: 24),
-          MacroProgressBars(
-            proteinConsumed: proteinConsumed,
-            proteinTarget: proteinGoal,
-            carbsConsumed: carbsConsumed,
-            carbsTarget: carbsGoal,
-            fatConsumed: fatConsumed,
-            fatTarget: fatGoal,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StepsCard extends StatelessWidget {
   final int stepsTaken;
   final int stepsGoal;
@@ -1141,6 +961,7 @@ class _StepsCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: context.colors.textPrimary,
                         height: 1.0,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                     TextSpan(
@@ -1676,7 +1497,6 @@ class _MacrosCard extends StatelessWidget {
           consumed: proteinConsumed,
           goal: proteinGoal,
           color: Palette.macroProtein,
-          emoji: '🥩',
         ),
         const SizedBox(height: 12),
         _MacroRow(
@@ -1684,7 +1504,6 @@ class _MacrosCard extends StatelessWidget {
           consumed: carbsConsumed,
           goal: carbsGoal,
           color: Palette.macroCarbs,
-          emoji: '🌾',
         ),
         const SizedBox(height: 12),
         _MacroRow(
@@ -1692,7 +1511,6 @@ class _MacrosCard extends StatelessWidget {
           consumed: fatConsumed,
           goal: fatGoal,
           color: Palette.macroFat,
-          emoji: '🥑',
         ),
       ],
     );
@@ -1704,14 +1522,12 @@ class _MacroRow extends StatelessWidget {
   final int consumed;
   final int goal;
   final Color color;
-  final String emoji;
 
   const _MacroRow({
     required this.label,
     required this.consumed,
     required this.goal,
     required this.color,
-    required this.emoji,
   });
 
   @override
@@ -1723,8 +1539,15 @@ class _MacroRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 13)),
-            const SizedBox(width: 6),
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
@@ -1894,7 +1717,8 @@ class _SleepCard extends StatelessWidget {
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: context.colors.textPrimary,
-                    height: 1.1)),
+                    height: 1.1,
+                    fontFeatures: const [FontFeature.tabularFigures()])),
             Text(quality,
                 style: TextStyle(
                     fontSize: 12,
@@ -2009,6 +1833,7 @@ class _WeightCard extends StatelessWidget {
                             fontWeight: FontWeight.w800,
                             color: context.colors.textPrimary,
                             height: 1.0,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
                         TextSpan(
@@ -2054,78 +1879,17 @@ class _WeightCard extends StatelessWidget {
   }
 }
 
-class _TodaySummaryCard extends StatelessWidget {
-  final int calories;
-  final int steps;
-  const _TodaySummaryCard({required this.calories, required this.steps});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _SummaryTile(
-          icon: Icons.bolt,
-          label: 'Calories',
-          value: calories.toString(),
-          color: context.colors.accent,
-        ),
-        const SizedBox(width: 8),
-        _SummaryTile(
-          icon: Icons.directions_walk,
-          label: 'Steps',
-          value: steps >= 1000
-              ? '${(steps / 1000).toStringAsFixed(1)}k'
-              : steps.toString(),
-          color: const Color(0xFFEF8C2E),
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-  const _SummaryTile(
-      {required this.icon,
-      required this.label,
-      required this.value,
-      required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(height: 4),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: context.colors.textPrimary)),
-            Text(label,
-                style: TextStyle(fontSize: 10, color: context.colors.textMuted)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── New health widget cards ───────────────────────────────────────────────────
 
 class _TDEECard extends StatelessWidget {
   final double? tdee;
-  const _TDEECard({this.tdee});
+  final double avgTDEE;
+  final List<double> weeklyTDEE;
+  const _TDEECard({
+    this.tdee,
+    this.avgTDEE = 0,
+    this.weeklyTDEE = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2145,140 +1909,149 @@ class _TDEECard extends StatelessWidget {
         : tdeeVal >= 1800
         ? 'Moderate'
         : 'Low output';
+    final hasTrend = avgTDEE > 0 && weeklyTDEE.any((v) => v > 0);
+    final delta = avgTDEE > 0 ? tdeeVal - avgTDEE : 0;
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: tint.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(Icons.local_fire_department_rounded,
-              size: 24, color: tint),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(children: [
-                  TextSpan(
-                    text: '$tdeeVal',
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      color: context.colors.textPrimary,
-                      height: 1.0,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' kcal/day',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: context.colors.textMuted,
-                    ),
-                  ),
-                ]),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: tint.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(14),
               ),
-              const SizedBox(height: 3),
-              Row(
+              child: const Icon(Icons.local_fire_department_rounded,
+                  size: 24, color: tint),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: tint.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      category,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: tint,
+                  RichText(
+                    text: TextSpan(children: [
+                      TextSpan(
+                        text: '$tdeeVal',
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          color: context.colors.textPrimary,
+                          height: 1.0,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
-                    ),
+                      TextSpan(
+                        text: ' kcal/day',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: context.colors.textMuted,
+                        ),
+                      ),
+                    ]),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Current TDEE',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: context.colors.textMuted,
-                    ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: tint.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          category,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: tint,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Current TDEE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.textMuted,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActiveCaloriesCard extends StatelessWidget {
-  final int calories;
-  final int? durationMinutes;
-  final String? workoutType;
-  const _ActiveCaloriesCard(
-      {required this.calories, this.durationMinutes, this.workoutType});
-
-  @override
-  Widget build(BuildContext context) {
-    if (calories == 0) {
-      return const _ComingSoonCard(
-        label: 'Active Calories — Sync Apple Health',
-        icon: Icons.whatshot_outlined,
-        color: Color(0xFFEF8C2E),
-      );
-    }
-    final label = workoutType ?? 'Active';
-    final duration = durationMinutes != null ? ' · ${durationMinutes}min' : '';
-    return Row(
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEF8C2E).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(Icons.whatshot_rounded,
-              size: 26, color: Color(0xFFEF8C2E)),
-        ),
-        const SizedBox(width: 14),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                  text: '$calories',
-                  style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: context.colors.textPrimary,
-                      height: 1.0),
-                ),
-                TextSpan(
-                  text: ' kcal',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: context.colors.textMuted),
-                ),
-              ]),
             ),
-            Text('$label$duration',
-                style: TextStyle(fontSize: 12, color: context.colors.textMuted)),
           ],
         ),
+        if (hasTrend) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text(
+                '${avgTDEE.round()} kcal/day',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '7-day avg',
+                style: TextStyle(fontSize: 11, color: context.colors.textMuted),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: tint.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${delta >= 0 ? '+' : '−'}${delta.abs().round()} vs avg',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: tint,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(weeklyTDEE.length, (i) {
+                final v = weeklyTDEE[i];
+                final maxVal = weeklyTDEE.fold(0.0, (a, b) => math.max(a, b));
+                final h = maxVal > 0 ? (v / maxVal).clamp(0.0, 1.0) : 0.0;
+                final isLatest = i == weeklyTDEE.length - 1;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Container(
+                      height: 40 * h,
+                      decoration: BoxDecoration(
+                        color: isLatest ? tint : tint.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -2349,167 +2122,6 @@ class _RestingHRCard extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 12, color: hrColor, fontWeight: FontWeight.w600)),
           ],
-        ),
-      ],
-    );
-  }
-}
-
-class _GoalPaceCard extends StatelessWidget {
-  final List<double> weeklyDeficit;
-  final double weekTotalDeficit;
-  const _GoalPaceCard(
-      {required this.weeklyDeficit, required this.weekTotalDeficit});
-
-  @override
-  Widget build(BuildContext context) {
-    final hasData = weeklyDeficit.any((v) => v != 0);
-    if (!hasData) {
-      return const _ComingSoonCard(
-        label: 'Log food & activity to measure pace',
-        icon: Icons.flag_outlined,
-        color: Color(0xFF4C7FA8),
-      );
-    }
-    const targetWeeklyDeficit = -3500.0;
-    final pace = (weekTotalDeficit / targetWeeklyDeficit).clamp(0.0, 2.0);
-    final paceLabel = pace < 0.5
-        ? 'Behind'
-        : pace < 0.85
-        ? 'On Track'
-        : pace <= 1.15
-        ? 'On Target'
-        : 'Ahead';
-    final paceColor = pace < 0.5
-        ? const Color(0xFFD0021B)
-        : pace < 0.85
-        ? const Color(0xFFEF8C2E)
-        : const Color(0xFF2E8B57);
-    final lbPerWeek = weekTotalDeficit / 3500;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: paceColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(paceLabel,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: paceColor,
-                      fontWeight: FontWeight.w700)),
-            ),
-            const Spacer(),
-            Text(
-              '${lbPerWeek <= 0 ? '−' : '+'}${lbPerWeek.abs().toStringAsFixed(2)} lb/wk',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: context.colors.textPrimary),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: pace.clamp(0.0, 1.0),
-            minHeight: 8,
-            backgroundColor: paceColor.withValues(alpha: 0.12),
-            valueColor: AlwaysStoppedAnimation(paceColor),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text('Based on your 7-day calorie deficit/surplus',
-            style: TextStyle(fontSize: 11, color: context.colors.textMuted)),
-      ],
-    );
-  }
-}
-
-class _MetabolicTrendCard extends StatelessWidget {
-  final List<double> weeklyTDEE;
-  final double avgTDEE;
-  const _MetabolicTrendCard({required this.weeklyTDEE, required this.avgTDEE});
-
-  @override
-  Widget build(BuildContext context) {
-    if (avgTDEE == 0) {
-      return const _ComingSoonCard(
-        label: 'Log for 3+ days to see your trend',
-        icon: Icons.auto_graph_outlined,
-        color: Color(0xFF4C7FA8),
-      );
-    }
-    const color = Color(0xFF4C7FA8);
-    final currentTDEE =
-        weeklyTDEE.lastWhere((v) => v > 0, orElse: () => 0);
-    final delta = currentTDEE - avgTDEE;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${avgTDEE.round()} kcal/day',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: context.colors.textPrimary)),
-                Text('7-day average',
-                    style:
-                        TextStyle(fontSize: 11, color: context.colors.textMuted)),
-              ],
-            ),
-            const Spacer(),
-            if (currentTDEE > 0)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(8)),
-                child: Text(
-                  '${delta >= 0 ? '+' : ''}${delta.round()} today',
-                  style: const TextStyle(
-                      fontSize: 11, color: color, fontWeight: FontWeight.w600),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 44,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(weeklyTDEE.length, (i) {
-              final v = weeklyTDEE[i];
-              final maxVal =
-                  weeklyTDEE.fold(0.0, (a, b) => math.max(a, b));
-              final h = maxVal > 0 ? (v / maxVal).clamp(0.0, 1.0) : 0.0;
-              final isLatest = i == weeklyTDEE.length - 1;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Container(
-                    height: 44 * h,
-                    decoration: BoxDecoration(
-                      color: isLatest
-                          ? color
-                          : color.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
         ),
       ],
     );
@@ -2590,7 +2202,11 @@ class _BodyCompositionCard extends StatelessWidget {
 
 class _WorkoutConsistencyCard extends StatelessWidget {
   final List<double> weeklyTDEE;
-  const _WorkoutConsistencyCard({required this.weeklyTDEE});
+  final int streakDays;
+  const _WorkoutConsistencyCard({
+    required this.weeklyTDEE,
+    this.streakDays = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2622,6 +2238,7 @@ class _WorkoutConsistencyCard extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     color: context.colors.textPrimary,
                     height: 1.0,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 TextSpan(
@@ -2645,6 +2262,35 @@ class _WorkoutConsistencyCard extends StatelessWidget {
                 ),
               ),
             ),
+            const Spacer(),
+            if (streakDays > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: tint.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.local_fire_department_rounded,
+                          size: 13, color: tint),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$streakDays day${streakDays == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: tint,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 4),
@@ -2703,61 +2349,3 @@ class _WorkoutConsistencyCard extends StatelessWidget {
   }
 }
 
-class _MovementStreakCard extends StatelessWidget {
-  final int streakDays;
-  const _MovementStreakCard({required this.streakDays});
-
-  @override
-  Widget build(BuildContext context) {
-    if (streakDays == 0) {
-      return const _ComingSoonCard(
-        label: 'Log activity to build your streak',
-        icon: Icons.local_fire_department,
-        color: Color(0xFFEF8C2E),
-      );
-    }
-    const color = Color(0xFFEF8C2E);
-    return Row(
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(Icons.local_fire_department_rounded,
-              size: 28, color: color),
-        ),
-        const SizedBox(width: 14),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                  text: '$streakDays',
-                  style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: color,
-                      height: 1.0),
-                ),
-                TextSpan(
-                  text: ' day${streakDays == 1 ? '' : 's'}',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: context.colors.textMuted),
-                ),
-              ]),
-            ),
-            Text('Active movement streak',
-                style:
-                    TextStyle(fontSize: 12, color: context.colors.textMuted)),
-          ],
-        ),
-      ],
-    );
-  }
-}
