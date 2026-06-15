@@ -4,18 +4,17 @@ import '../data/models/food_model.dart';
 import 'food_text_normalizer.dart';
 
 /// Complete food search pipeline: normalization → grouping → scoring → deduplication
-/// 
+///
 /// Solves:
 /// - Duplicate items (language variants, serving size duplicates)
 /// - Poor ranking (obscure items before obvious ones)
 /// - Excessive noise (translations, database artifacts)
 /// - Inconsistent display names
-/// 
+///
 /// Works for ALL brands and food categories (Coke, Pepsi, Reese's, Pizza Hut, etc.)
 class FoodSearchPipeline {
-  
   /// Main entry point: Process raw search results into clean, ranked output
-  /// 
+  ///
   /// Returns up to 12 results, ranked by relevance and user-friendliness
   static List<FoodModel> process({
     required List<FoodModel> rawResults,
@@ -29,7 +28,9 @@ class FoodSearchPipeline {
     final normalizedQuery = FoodTextNormalizer.normalize(query);
 
     // STAGE 1: Normalize and extract metadata
-    final enriched = rawResults.map((item) => _enrichItem(item, normalizedQuery)).toList();
+    final enriched = rawResults
+        .map((item) => _enrichItem(item, normalizedQuery))
+        .toList();
 
     // STAGE 2: Score each item
     final scored = enriched.map((item) {
@@ -47,7 +48,8 @@ class FoodSearchPipeline {
     deduplicated.sort((a, b) {
       final scoreDiff = b.score - a.score;
       if (scoreDiff != 0) return scoreDiff.sign.toInt();
-      return a.enriched.nameLength - b.enriched.nameLength; // Shorter names first
+      return a.enriched.nameLength -
+          b.enriched.nameLength; // Shorter names first
     });
 
     if (debug) {
@@ -82,10 +84,10 @@ class FoodSearchPipeline {
   }
 
   static bool _isGenericBrand(String normalizedBrand) {
-    return normalizedBrand.isEmpty || 
-           normalizedBrand == 'generic' ||
-           normalizedBrand == 'usda' ||
-           normalizedBrand == 'unknown';
+    return normalizedBrand.isEmpty ||
+        normalizedBrand == 'generic' ||
+        normalizedBrand == 'usda' ||
+        normalizedBrand == 'unknown';
   }
 
   static bool _isForeignLanguageOnly(String name, String query) {
@@ -140,7 +142,7 @@ class FoodSearchPipeline {
     };
 
     final brandLower = brand.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
-    
+
     // Check brand first
     for (final entry in brandMap.entries) {
       if (brandLower.contains(entry.key.replaceAll(RegExp(r'[^\w\s]'), ''))) {
@@ -190,10 +192,11 @@ class FoodSearchPipeline {
 
     // === BRAND RECOGNITION ===
     // Known brand family gets boost
-    if (item.brandFamily != 'generic' && item.brandFamily != item.normalizedBrand) {
+    if (item.brandFamily != 'generic' &&
+        item.brandFamily != item.normalizedBrand) {
       score += 15; // Recognized brand (Coke, Pepsi, etc.)
     }
-    
+
     // Brand matches query (e.g., searching "Coke" and brand is "Coca-Cola")
     if (_brandMatchesQuery(query, item.normalizedBrand, item.brandFamily)) {
       score += 20;
@@ -248,10 +251,14 @@ class FoodSearchPipeline {
     return words.contains(query);
   }
 
-  static bool _brandMatchesQuery(String query, String brand, String brandFamily) {
+  static bool _brandMatchesQuery(
+    String query,
+    String brand,
+    String brandFamily,
+  ) {
     if (brand.contains(query)) return true;
     if (brandFamily.contains(query)) return true;
-    
+
     // Brand synonym matching
     if (query.contains('coke') || query.contains('cola')) {
       return brandFamily == 'cocacola';
@@ -262,7 +269,7 @@ class FoodSearchPipeline {
     if (query.contains('reese')) {
       return brandFamily == 'reeses';
     }
-    
+
     return false;
   }
 
@@ -300,13 +307,16 @@ class FoodSearchPipeline {
 
     return result;
   }
-  
+
   /// Build simple canonical key for exact duplicate detection
   /// Only collapses items with IDENTICAL name and nutrition
   static String _buildSimpleCanonicalKey(_EnrichedItem item) {
-    final namePart = item.normalizedName.replaceAll(RegExp(r'[^\w]'), '').toLowerCase();
+    final namePart = item.normalizedName
+        .replaceAll(RegExp(r'[^\w]'), '')
+        .toLowerCase();
     final caloriesPart = item.original.calories.toString();
-    final servingPart = '${item.original.servingSize}${item.original.servingUnit}';
+    final servingPart =
+        '${item.original.servingSize}${item.original.servingUnit}';
     return '$namePart|$caloriesPart|$servingPart';
   }
 
@@ -342,7 +352,7 @@ class FoodSearchPipeline {
   }
 
   /// Build family key: brand|productType|dietVariant|flavor|variant
-  /// 
+  ///
   /// Examples:
   /// - "cocacola|soda|regular|none|none" (Original Coke)
   /// - "cocacola|soda|diet|none|none" (Diet Coke)
@@ -352,11 +362,15 @@ class FoodSearchPipeline {
   static String _buildFamilyKey(_EnrichedItem item) {
     final brand = item.brandFamily;
     final name = item.normalizedName.toLowerCase();
-    final brandTokens = item.normalizedBrand.toLowerCase().split(RegExp(r'\s+'));
-    
+    final brandTokens = item.normalizedBrand.toLowerCase().split(
+      RegExp(r'\s+'),
+    );
+
     // Infer product type
     String productType = 'unknown';
-    if (name.contains('soda') || name.contains('cola') || name.contains('pop')) {
+    if (name.contains('soda') ||
+        name.contains('cola') ||
+        name.contains('pop')) {
       productType = 'soda';
     } else if (name.contains('yogurt') || name.contains('yoghurt')) {
       productType = 'yogurt';
@@ -390,8 +404,17 @@ class FoodSearchPipeline {
 
     // Extract flavor
     const flavors = [
-      'cherry', 'vanilla', 'lime', 'lemon', 'orange', 'strawberry',
-      'chocolate', 'caramel', 'mint', 'peanut', 'almond',
+      'cherry',
+      'vanilla',
+      'lime',
+      'lemon',
+      'orange',
+      'strawberry',
+      'chocolate',
+      'caramel',
+      'mint',
+      'peanut',
+      'almond',
     ];
     String flavor = 'none';
     for (final f in flavors) {
@@ -404,14 +427,52 @@ class FoodSearchPipeline {
     // Extract variant tokens to avoid collapsing distinct products
     final stopTokens = <String>{
       ...brandTokens,
-      'brand', 'company', 'co', 'inc', 'ltd',
-      'food', 'foods', 'drink', 'beverage',
-      'soda', 'cola', 'pop', 'pizza', 'burger', 'sandwich', 'chips',
-      'crisps', 'candy', 'chocolate', 'milk', 'cheese', 'chicken', 'yogurt',
-      'diet', 'zero', 'light', 'lite', 'sugar', 'free', 'sugarfree',
-      'original', 'classic', 'taste', 'gout', 'sabor', 'gusto',
-      'flavor', 'flavour', 'flavored', 'flavoured',
-      'and', 'with', 'the', 'of', 'a', 'an',
+      'brand',
+      'company',
+      'co',
+      'inc',
+      'ltd',
+      'food',
+      'foods',
+      'drink',
+      'beverage',
+      'soda',
+      'cola',
+      'pop',
+      'pizza',
+      'burger',
+      'sandwich',
+      'chips',
+      'crisps',
+      'candy',
+      'chocolate',
+      'milk',
+      'cheese',
+      'chicken',
+      'yogurt',
+      'diet',
+      'zero',
+      'light',
+      'lite',
+      'sugar',
+      'free',
+      'sugarfree',
+      'original',
+      'classic',
+      'taste',
+      'gout',
+      'sabor',
+      'gusto',
+      'flavor',
+      'flavour',
+      'flavored',
+      'flavoured',
+      'and',
+      'with',
+      'the',
+      'of',
+      'a',
+      'an',
       ...flavors,
     };
 
@@ -465,9 +526,11 @@ class FoodSearchPipeline {
     for (final item in results.take(limit)) {
       count++;
       print('   ${count.toString().padLeft(2)}. ${item.item.displayTitle}');
-      print('       Score: ${item.score.toStringAsFixed(1)} | '
-            'Brand: ${item.enriched.brandFamily} | '
-            'Calories: ${item.item.calories}cal/${item.item.servingSize}${item.item.servingUnit}');
+      print(
+        '       Score: ${item.score.toStringAsFixed(1)} | '
+        'Brand: ${item.enriched.brandFamily} | '
+        'Calories: ${item.item.calories}cal/${item.item.servingSize}${item.item.servingUnit}',
+      );
       if (item.enriched.isForeignLanguage) {
         print('       ⚠️  Foreign language detected');
       }

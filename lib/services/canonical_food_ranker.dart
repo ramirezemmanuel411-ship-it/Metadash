@@ -28,33 +28,43 @@ class CanonicalFoodRanker {
     double score = 0.0;
     final raw = group.representative!;
 
-    // Boost: Brand match
+    // PRIMARY: food NAME matches user query — this is what the user is searching for.
+    final foodName = (raw.foodName ?? raw.foodNameRaw ?? '').toLowerCase();
+    if (foodName == query) {
+      score += 150.0; // Exact food name match
+    } else if (foodName.startsWith(query)) {
+      score += 100.0; // Name starts with query
+    } else if (foodName.contains(query)) {
+      score += 60.0;  // Query appears anywhere in name
+    }
+
+    // SECONDARY: brand contains query (e.g. user typed "kirkland chicken")
     if (group.brand.toLowerCase().contains(query)) {
-      score += 100.0;
+      score += 30.0;
     }
 
-    // Boost: Variant match
+    // TERTIARY: variant contains query (e.g. "diet" for "diet coke")
     if (group.variant != null && group.variant!.toLowerCase().contains(query)) {
-      score += 75.0;
-    }
-
-    // Boost: Branded products
-    if (raw.isBranded == true) {
       score += 25.0;
     }
 
-    // Boost: Has per-serving nutrition
+    // Boost: Branded product (real brand attribution)
+    if (raw.isBranded == true) {
+      score += 15.0;
+    }
+
+    // Boost: Per-serving nutrition — far more useful for meal logging
     final basis = raw.nutritionBasis ?? '';
     if (basis != 'per_100g' && basis != 'per_100ml' && raw.calories != null) {
-      score += 20.0;
+      score += 40.0;
     }
 
-    // Penalize: Per 100g/ml (less user-friendly)
+    // Penalize: Per 100g/ml (requires manual math; less user-friendly)
     if (basis == 'per_100g' || basis == 'per_100ml') {
-      score -= 15.0;
+      score -= 30.0;
     }
 
-    // Penalize: Generic USDA without brand
+    // Penalize: Generic entry without brand
     if (raw.isGeneric == true) {
       score -= 10.0;
     }
@@ -64,7 +74,7 @@ class CanonicalFoodRanker {
       score -= 20.0;
     }
 
-    // Use provider score if available
+    // Provider confidence score (minor signal)
     if (raw.providerScore != null) {
       score += raw.providerScore! * 0.1;
     }

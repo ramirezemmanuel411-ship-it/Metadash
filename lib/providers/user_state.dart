@@ -25,6 +25,22 @@ class UserState extends ChangeNotifier {
 
   bool get isLoggedIn => _currentUser != null;
 
+  static const _lastUserIdKey = 'last_user_id';
+
+  /// Silently logs in the last active user. Returns true on success.
+  Future<bool> autoLoginLastUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt(_lastUserIdKey);
+      if (userId != null) {
+        return await loginUser(userId);
+      }
+    } catch (e) {
+      debugPrint('Auto-login failed: $e');
+    }
+    return false;
+  }
+
   // Create a new user
   Future<UserProfile> createUser({
     required String name,
@@ -111,6 +127,9 @@ class UserState extends ChangeNotifier {
       _currentUser = user;
       await _loadMetabolicSettings();
       await _loadDataInputsSettings();
+      // Persist so next launch auto-logs in
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_lastUserIdKey, userId);
       notifyListeners();
       return true;
     }
@@ -121,6 +140,9 @@ class UserState extends ChangeNotifier {
   void logout() {
     _currentUser = null;
     _currentDayLog = null;
+    SharedPreferences.getInstance()
+        .then((p) => p.remove(_lastUserIdKey))
+        .ignore();
     notifyListeners();
   }
 
@@ -150,7 +172,8 @@ class UserState extends ChangeNotifier {
     if (_currentUser == null) return;
     try {
       final defaults = DataInputsSettings.defaults(_currentUser!.id!);
-      final resolved = (await _db.getDataInputsSettings(_currentUser!.id!)) ?? defaults;
+      final resolved =
+          (await _db.getDataInputsSettings(_currentUser!.id!)) ?? defaults;
       await _db.createOrUpdateDataInputsSettings(resolved);
       _dataInputsSettings = resolved;
     } catch (_) {
@@ -184,7 +207,10 @@ class UserState extends ChangeNotifier {
   // Load daily log for a specific date
   Future<void> loadDailyLog(DateTime date) async {
     if (_currentUser == null) return;
-    _currentDayLog = await _db.getDailyLogByUserAndDate(_currentUser!.id!, date);
+    _currentDayLog = await _db.getDailyLogByUserAndDate(
+      _currentUser!.id!,
+      date,
+    );
     notifyListeners();
   }
 
@@ -232,10 +258,7 @@ class UserState extends ChangeNotifier {
     try {
       await FirebaseAnalytics.instance.logEvent(
         name: 'save_daily_log',
-        parameters: {
-          'calories': caloriesConsumed,
-          'steps': stepsCount,
-        },
+        parameters: {'calories': caloriesConsumed, 'steps': stepsCount},
       );
 
       var uid = FirebaseAuth.instance.currentUser?.uid;
@@ -291,16 +314,16 @@ class UserState extends ChangeNotifier {
   // Get recent daily logs with weight data for adaptive TDEE
   Future<List<DailyLog>> getRecentLogsWithWeight(int days) async {
     if (_currentUser == null) return [];
-    
+
     final endDate = DateTime.now();
     final startDate = endDate.subtract(Duration(days: days));
-    
+
     final allLogs = await _db.getDailyLogsByUserAndDateRange(
       _currentUser!.id!,
       startDate,
       endDate,
     );
-    
+
     // Filter to only logs with weight data
     return allLogs.where((log) => log.weight != null).toList();
   }

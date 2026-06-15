@@ -17,37 +17,59 @@ class FoodTextNormalizer {
 
     // Step 1: Trim whitespace
     String normalized = text.trim();
-    if (debug) print('  [normalize] Step 1 (trim): "$normalized"');
+    if (debug) {
+      print('  [normalize] Step 1 (trim): "$normalized"');
+    }
 
     // Step 2: Handle casing - BOTH all-caps AND mostly-lowercase
     // This catches both "COCA COLA" and "diet coke" and "PET 1.25L C.cola"
     final isUppercase = _isMostlyUppercase(normalized);
     final isLowercase = _isMostlyLowercase(normalized);
-    
-    if (debug) print('  [normalize] isUppercase: $isUppercase, isLowercase: $isLowercase');
-    
+
+    if (debug) {
+      print(
+        '  [normalize] isUppercase: $isUppercase, isLowercase: $isLowercase',
+      );
+    }
+
     if (isUppercase) {
       normalized = _toTitleCasePreservingAcronyms(normalized);
-      if (debug) print('  [normalize] Step 2 (uppercase→title): "$normalized"');
+      if (debug) {
+        print('  [normalize] Step 2 (uppercase→title): "$normalized"');
+      }
     } else if (isLowercase) {
       // Convert mostly-lowercase to Title Case too
       normalized = _toTitleCasePreservingAcronyms(normalized);
-      if (debug) print('  [normalize] Step 2 (lowercase→title): "$normalized"');
+      if (debug) {
+        print('  [normalize] Step 2 (lowercase→title): "$normalized"');
+      }
     }
 
     // Step 3: Standardize spacing and separators
-    normalized = normalized.replaceAll(RegExp(r'\s+'), ' '); // Multiple spaces → single
+    normalized = normalized.replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    ); // Multiple spaces → single
     normalized = normalized.replaceAll('_', ' '); // Underscores → spaces
-    normalized = normalized.replaceAll('-', ' '); // Dashes → spaces (keep hyphens in compounds)
-    if (debug) print('  [normalize] Step 3 (spacing): "$normalized"');
+    normalized = normalized.replaceAll(
+      '-',
+      ' ',
+    ); // Dashes → spaces (keep hyphens in compounds)
+    if (debug) {
+      print('  [normalize] Step 3 (spacing): "$normalized"');
+    }
 
     // Step 4: Remove packaging info noise (e.g., "500ml", "PET", "1.25L")
     normalized = _removePackagingNoise(normalized);
-    if (debug) print('  [normalize] Step 4 (packaging): "$normalized"');
+    if (debug) {
+      print('  [normalize] Step 4 (packaging): "$normalized"');
+    }
 
     // Step 5: Remove duplicate brand terms
     normalized = _removeDuplicateBrandTerms(normalized);
-    if (debug) print('  [normalize] Step 5 (dedup): "$normalized"');
+    if (debug) {
+      print('  [normalize] Step 5 (dedup): "$normalized"');
+    }
 
     return normalized;
   }
@@ -62,19 +84,68 @@ class FoodTextNormalizer {
 
     // Split by comma and take first meaningful term
     final parts = brand.split(',').map((s) => s.trim()).toList();
-    
-    // Filter out noise and generic markers
-    final noisePatterns = ['restaurant', 'supermarket', 'generic', 'store', 'brand', 'food service'];
+
+    // Filter out noise, generic markers, and preparation descriptors
+    // that leak into the brand field from USDA/FatSecret data issues.
+    const noisePatterns = [
+      'restaurant', 'supermarket', 'generic', 'store', 'brand', 'food service',
+      // Cooking/preparation methods that appear as brand in stale data
+      'rotisserie', 'grilled', 'roasted', 'baked', 'fried', 'smoked',
+      'boiled', 'steamed', 'raw', 'cooked', 'fresh', 'frozen', 'dried',
+    ];
     final cleaned = parts.where((part) {
       final lower = part.toLowerCase();
-      return part.isNotEmpty && 
-             !noisePatterns.any((noise) => lower.contains(noise));
+      return part.isNotEmpty &&
+          !noisePatterns.any((noise) => lower == noise);
     }).toList();
 
     if (cleaned.isEmpty) return '';
 
-    // Normalize the best brand option
-    return normalize(cleaned.first);
+    // Normalise, strip corp suffixes, then guard against any remaining
+    // standalone corp word or cooking descriptor slipping through.
+    final normalized = normalize(cleaned.first);
+    final stripped = _stripCorporateSuffixesFinal(normalized);
+
+    // Words that should never appear as a standalone brand subtitle.
+    const _invalidBrands = {
+      'inc', 'inc.', 'llc', 'corp', 'corp.', 'ltd', 'ltd.', 'co', 'co.',
+      'rotisserie', 'grilled', 'roasted', 'baked', 'fried', 'smoked',
+      'boiled', 'steamed', 'raw', 'cooked', 'fresh', 'frozen', 'dried',
+    };
+    if (stripped.isEmpty ||
+        _invalidBrands.contains(stripped.toLowerCase())) {
+      return '';
+    }
+    return stripped;
+  }
+
+  /// Strip corporate legal suffixes from a brand display string.
+  /// Single source of truth used by all brand display paths.
+  /// Examples: "Tony Downs Foods Co" → "Tony Downs"
+  ///           "Oscar Mayer Foods Corp." → "Oscar Mayer"
+  static String _stripCorporateSuffixesFinal(String s) {
+    const suffixes = [
+      ', Inc.', ', Inc', ' Inc.', ' Inc',
+      ' LLC', ', LLC',
+      ', Ltd.', ', Ltd', ' Ltd.', ' Ltd',
+      ', Corp.', ', Corp', ' Corp.', ' Corp',
+      ', Co.', ' Co.',
+      ' Corporation', ' Company',
+      ' Brands', ' Foods Co', ' Foods Company',
+      ' International', ' Enterprises', ' S Corp',
+    ];
+    var result = s;
+    bool changed = true;
+    while (changed) {
+      changed = false;
+      for (final suffix in suffixes) {
+        if (result.toLowerCase().endsWith(suffix.toLowerCase())) {
+          result = result.substring(0, result.length - suffix.length).trim();
+          changed = true;
+        }
+      }
+    }
+    return result.replaceAll(RegExp(r'[,\.]+$'), '').trim();
   }
 
   /// Check if text is mostly uppercase (likely needs conversion)
@@ -82,8 +153,12 @@ class FoodTextNormalizer {
     final lettersOnly = text.replaceAll(RegExp(r'[^a-zA-Z]'), '');
     if (lettersOnly.isEmpty) return false;
 
-    final uppercaseCount = lettersOnly.split('').where((c) => c == c.toUpperCase()).length;
-    return uppercaseCount / lettersOnly.length > 0.75; // 75% uppercase threshold
+    final uppercaseCount = lettersOnly
+        .split('')
+        .where((c) => c == c.toUpperCase())
+        .length;
+    return uppercaseCount / lettersOnly.length >
+        0.75; // 75% uppercase threshold
   }
 
   /// Check if text is mostly lowercase (database entries often are)
@@ -91,8 +166,12 @@ class FoodTextNormalizer {
     final lettersOnly = text.replaceAll(RegExp(r'[^a-zA-Z]'), '');
     if (lettersOnly.isEmpty) return false;
 
-    final lowercaseCount = lettersOnly.split('').where((c) => c == c.toLowerCase()).length;
-    return lowercaseCount / lettersOnly.length > 0.75; // 75% lowercase threshold
+    final lowercaseCount = lettersOnly
+        .split('')
+        .where((c) => c == c.toLowerCase())
+        .length;
+    return lowercaseCount / lettersOnly.length >
+        0.75; // 75% lowercase threshold
   }
 
   /// Remove packaging noise like "500ml", "1.25L", "PET", "12 oz", etc.
@@ -119,17 +198,19 @@ class FoodTextNormalizer {
   ///   "CHERRY FLAVORED COKE" → "Cherry Flavored Coke"
   static String _toTitleCasePreservingAcronyms(String text) {
     final words = text.split(' ');
-    final result = words.map((word) {
-      if (word.isEmpty) return word;
+    final result = words
+        .map((word) {
+          if (word.isEmpty) return word;
 
-      // If word is 1-3 uppercase letters, treat as acronym
-      if (word.length <= 3 && word == word.toUpperCase()) {
-        return word; // Keep: USA, FDA, GM
-      }
+          // If word is 1-3 uppercase letters, treat as acronym
+          if (word.length <= 3 && word == word.toUpperCase()) {
+            return word; // Keep: USA, FDA, GM
+          }
 
-      // Otherwise: first letter uppercase, rest lowercase
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+          // Otherwise: first letter uppercase, rest lowercase
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
 
     return result;
   }
@@ -156,21 +237,25 @@ class FoodTextNormalizer {
   /// Example: "coke" → "coca-cola"
   static String getCanonicalBrand(String query) {
     final queryLower = query.toLowerCase().trim();
-    
+
     for (final entry in _brandSynonyms.entries) {
       final canonical = entry.key;
       final synonyms = entry.value;
-      if (synonyms.any((s) => s.contains(queryLower) || queryLower.contains(s))) {
+      if (synonyms.any(
+        (s) => s.contains(queryLower) || queryLower.contains(s),
+      )) {
         return canonical;
       }
     }
-    
+
     return queryLower;
   }
 
   /// Fuzzy match: does normalized query appear in normalized text?
   static bool fuzzyMatch(String query, String text) {
-    return normalize(text).toLowerCase().contains(normalize(query).toLowerCase());
+    return normalize(
+      text,
+    ).toLowerCase().contains(normalize(query).toLowerCase());
   }
 
   /// Whole word match (better for exact category matching)
@@ -183,24 +268,26 @@ class FoodTextNormalizer {
 
   /// Prefix match (starts with query)
   static bool prefixMatch(String query, String text) {
-    return normalize(text).toLowerCase().startsWith(normalize(query).toLowerCase());
+    return normalize(
+      text,
+    ).toLowerCase().startsWith(normalize(query).toLowerCase());
   }
 
   /// Check if brand matches query (using synonyms)
   static bool isBrandMatch(String query, String? brand) {
     if (brand == null || brand.isEmpty) return false;
-    
+
     final canonical = getCanonicalBrand(query);
     final brandLower = brand.toLowerCase();
-    
+
     // Direct match
     if (brandLower.contains(canonical)) return true;
-    
+
     // Check if any synonym matches
     if (_brandSynonyms.containsKey(canonical)) {
       return _brandSynonyms[canonical]!.any((syn) => brandLower.contains(syn));
     }
-    
+
     return false;
   }
 }

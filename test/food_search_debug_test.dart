@@ -85,13 +85,20 @@ void main() {
 
     // Verify we got all 4 variants
     expect(results.length, equals(4), reason: 'Should keep all Pepsi variants');
-    
+
     // Verify they're all different
     final ids = results.map((r) => r.id).toSet();
     expect(ids.length, equals(4), reason: 'All should have different IDs');
-    
+
     // Verify they're properly named
-    expect(results.map((r) => r.displayTitle).toList(), 
-      containsAll(['Pepsi', 'Diet Pepsi', 'Pepsi Zero Sugar', 'Pepsi Wild Cherry']));
+    expect(
+      results.map((r) => r.displayTitle).toList(),
+      containsAll([
+        'Pepsi',
+        'Diet Pepsi',
+        'Pepsi Zero Sugar',
+        'Pepsi Wild Cherry',
+      ]),
+    );
   });
 }

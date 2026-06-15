@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
+import '../../../shared/palette.dart';
 import 'package:provider/provider.dart';
 import '../../../models/exercise_model.dart';
 import '../../../data/repositories/exercise_repository.dart';
@@ -25,7 +26,8 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
   void _fillWithAIExample() {
     // Fill with example text to demonstrate AI parsing
     setState(() {
-      _controller.text = 'HIIT for 20 mins, 5/10 intensity - alternating sprints and walking recovery';
+      _controller.text =
+          'HIIT for 20 mins, 5/10 intensity - alternating sprints and walking recovery';
     });
   }
 
@@ -41,17 +43,19 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
 
     try {
       Exercise exercise;
-      
+
       // Try AI parsing if API key is configured
       if (_aiService.hasAnyKey) {
         try {
-          final parsed = await _aiService.parseExerciseDescription(_controller.text.trim());
-          
+          final parsed = await _aiService.parseExerciseDescription(
+            _controller.text.trim(),
+          );
+
           // Create exercise from AI-parsed data
           final exerciseType = _mapExerciseType(parsed['type'] ?? 'run');
           final intensity = _mapIntensity(parsed['intensity'] ?? 'medium');
           final duration = parsed['duration_minutes'] ?? 30;
-          
+
           if (exerciseType == ExerciseType.run && intensity != null) {
             // Create run exercise with parsed values
             exercise = Exercise.run(
@@ -60,19 +64,19 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
             );
           } else {
             // Create described exercise (fallback)
-            exercise = Exercise.described(
-              description: _controller.text.trim(),
-            );
+            exercise = Exercise.described(description: _controller.text.trim());
           }
-          
+
           if (!mounted) return;
-          
+
           // Show AI confidence if available
           final confidence = parsed['confidence'] ?? 0.8;
           if (confidence < 0.7) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('AI estimate (${(confidence * 100).toInt()}% confident). You can edit if needed.'),
+                content: Text(
+                  'AI estimate (${(confidence * 100).toInt()}% confident). You can edit if needed.',
+                ),
                 duration: const Duration(seconds: 2),
               ),
             );
@@ -93,21 +97,21 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
 
       if (!mounted) return;
       setState(() => _isParsingWithAi = false);
-      
+
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Workout logged'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: const Text('Workout logged'),
+          backgroundColor: context.colors.accent,
         ),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isParsingWithAi = false);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -158,8 +162,8 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
       appBar: AppBar(
         title: const Text('Describe Exercise'),
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
+        backgroundColor: context.colors.surface.withValues(alpha: 0),
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
       ),
       body: Column(
         children: [
@@ -186,24 +190,24 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.amber[50],
+                      color: context.colors.cta.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber, width: 1),
+                      border: Border.all(color: context.colors.cta, width: 1),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Example:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.amber,
+                            color: context.colors.cta,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'HIIT for 20 mins, 5/10 intensity',
-                          style: TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 14),
                         ),
                       ],
                     ),
@@ -215,8 +219,10 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
                     child: ElevatedButton(
                       onPressed: _fillWithAIExample,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber[100],
-                        foregroundColor: Colors.amber[900],
+                        backgroundColor: context.colors.cta.withValues(
+                          alpha: 0.12,
+                        ),
+                        foregroundColor: context.colors.onPrimary,
                       ),
                       child: const Text('✨ Created by AI'),
                     ),
@@ -231,26 +237,28 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_hasContent && !_isParsingWithAi) ? _onAddExercise : null,
+                onPressed: (_hasContent && !_isParsingWithAi)
+                    ? _onAddExercise
+                    : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
-                  disabledBackgroundColor: Colors.grey[300],
+                  backgroundColor: context.colors.accent,
+                  disabledBackgroundColor: context.colors.surfaceVariant,
                 ),
                 child: _isParsingWithAi
-                    ? const Row(
+                    ? Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: context.colors.onPrimary,
                               strokeWidth: 2,
                             ),
                           ),
-                          SizedBox(width: 12),
-                          Text(
+                          const SizedBox(width: 12),
+                          const Text(
                             'Analyzing with AI...',
                             style: TextStyle(
                               fontSize: 16,

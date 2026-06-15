@@ -7,10 +7,10 @@ class PermissionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Data Permissions'),
       ),
@@ -21,27 +21,18 @@ class PermissionsScreen extends StatelessWidget {
             'Review what MetaDash can read and update.',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withOpacity(0.5),
+              color: context.colors.textSecondary,
               height: 1.4,
             ),
           ),
           const SizedBox(height: 20),
           _SectionCard(
-            children: const [
-              _StatusRow(
-                title: 'Steps',
-                subtitle: 'Allowed',
-              ),
-              _SectionDivider(),
-              _StatusRow(
-                title: 'Workouts',
-                subtitle: 'Allowed',
-              ),
-              _SectionDivider(),
-              _StatusRow(
-                title: 'Nutrition',
-                subtitle: 'Allowed',
-              ),
+            children: [
+              _StatusRow(title: 'Steps', subtitle: 'Allowed'),
+              const _SectionDivider(),
+              _StatusRow(title: 'Workouts', subtitle: 'Allowed'),
+              const _SectionDivider(),
+              _StatusRow(title: 'Nutrition', subtitle: 'Allowed'),
             ],
           ),
         ],
@@ -63,7 +54,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: context.colors.textMuted.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -82,7 +73,7 @@ class _SectionDivider extends StatelessWidget {
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      color: Colors.black.withOpacity(0.06),
+      color: context.colors.textMuted.withValues(alpha: 0.06),
     );
   }
 }
@@ -105,10 +96,10 @@ class _StatusRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: context.colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -116,7 +107,7 @@ class _StatusRow extends StatelessWidget {
                   subtitle,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.black.withOpacity(0.55),
+                    color: context.colors.textPrimary.withValues(alpha: 0.55),
                   ),
                 ),
               ],
@@ -125,7 +116,7 @@ class _StatusRow extends StatelessWidget {
           Icon(
             Icons.chevron_right,
             size: 20,
-            color: Colors.black.withOpacity(0.25),
+            color: context.colors.textMuted,
           ),
         ],
       ),

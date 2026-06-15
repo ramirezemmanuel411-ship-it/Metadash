@@ -157,23 +157,25 @@ class FoodRemoteDatasource {
       List<FoodModel> usdaResults = [];
 
       // Run both in parallel, but don't block on OFF if it's slow
-      final offFuture = searchOpenFoodFacts(
-        query,
-        pageSize: pageSize ~/ 2,
-        cancelToken: cancelToken,
-      ).then((results) => offResults = results).catchError((e) {
-        print('OFF search failed: $e');
-        return <FoodModel>[];
-      });
+      final offFuture =
+          searchOpenFoodFacts(
+            query,
+            pageSize: pageSize ~/ 2,
+            cancelToken: cancelToken,
+          ).then((results) => offResults = results).catchError((e) {
+            print('OFF search failed: $e');
+            return <FoodModel>[];
+          });
 
-      final usdaFuture = searchUSDA(
-        query,
-        pageSize: pageSize ~/ 2,
-        cancelToken: cancelToken,
-      ).then((results) => usdaResults = results).catchError((e) {
-        print('USDA search failed: $e');
-        return <FoodModel>[];
-      });
+      final usdaFuture =
+          searchUSDA(
+            query,
+            pageSize: pageSize ~/ 2,
+            cancelToken: cancelToken,
+          ).then((results) => usdaResults = results).catchError((e) {
+            print('USDA search failed: $e');
+            return <FoodModel>[];
+          });
 
       // Wait for both but give OFF 15s and USDA 10s
       await Future.any([
@@ -253,7 +255,11 @@ class FoodRemoteDatasource {
       final fat = _safeToDouble(nutrients['fat_100g'] ?? 0);
 
       // Skip if no nutritional data
-      if (caloriesPer100 == 0 && caloriesPerServing == 0 && protein == 0 && carbs == 0 && fat == 0) {
+      if (caloriesPer100 == 0 &&
+          caloriesPerServing == 0 &&
+          protein == 0 &&
+          carbs == 0 &&
+          fat == 0) {
         return null;
       }
 
@@ -267,8 +273,12 @@ class FoodRemoteDatasource {
       final servingUnit =
           product['serving_quantity_unit']?.toString() ?? servingInfo.unit;
 
-      final nutritionBasis = caloriesPerServing > 0 ? 'per_serving' : 'per_100g';
-      final calories = caloriesPerServing > 0 ? caloriesPerServing : caloriesPer100;
+      final nutritionBasis = caloriesPerServing > 0
+          ? 'per_serving'
+          : 'per_100g';
+      final calories = caloriesPerServing > 0
+          ? caloriesPerServing
+          : caloriesPer100;
 
       final raw = FoodSearchResultRaw(
         id: 'off_${product['code'] ?? DateTime.now().millisecondsSinceEpoch}',
@@ -304,7 +314,9 @@ class FoodRemoteDatasource {
         dataType: 'branded',
         popularity: null,
         isGeneric: (brand?.toString().toLowerCase() ?? '') == 'generic',
-        isBranded: (brand?.toString().isNotEmpty ?? false) && (brand?.toString().toLowerCase() != 'generic'),
+        isBranded:
+            (brand?.toString().isNotEmpty ?? false) &&
+            (brand?.toString().toLowerCase() != 'generic'),
       );
 
       return FoodModel.fromRaw(raw);
@@ -318,7 +330,8 @@ class FoodRemoteDatasource {
   FoodModel? _parseUSDAFood(Map<String, dynamic> food) {
     try {
       final rawDescription = food['description'] ?? 'Unknown';
-      final parsed = _parseUSDABrandAndName(rawDescription);
+      final dataType = food['dataType']?.toString();
+      final parsed = _parseUSDABrandAndName(rawDescription, dataType: dataType);
       final productName = parsed['name'] ?? 'Unknown';
       final brandName = parsed['brand'];
 
@@ -352,7 +365,6 @@ class FoodRemoteDatasource {
 
       final servingSize = _safeToDouble(food['servingSize'] ?? 0);
       final servingUnit = food['servingSizeUnit']?.toString();
-      final dataType = food['dataType']?.toString();
 
       final portions = (food['foodPortions'] as List? ?? [])
           .whereType<Map<String, dynamic>>()
@@ -402,9 +414,11 @@ class FoodRemoteDatasource {
         lastUpdated: null,
         dataType: dataType,
         popularity: null,
-        isGeneric: (dataType ?? '').toLowerCase().contains('survey') ||
+        isGeneric:
+            (dataType ?? '').toLowerCase().contains('survey') ||
             (brandName ?? '').isEmpty,
-        isBranded: (dataType ?? '').toLowerCase().contains('branded') ||
+        isBranded:
+            (dataType ?? '').toLowerCase().contains('branded') ||
             (brandName ?? '').isNotEmpty,
       );
 
@@ -446,9 +460,11 @@ class FoodRemoteDatasource {
         final servingInfo = _parseServingInfo(servingSizeRaw);
 
         // Extract nutrition from nutriments (or null if missing)
-        final nutriments = (product['nutriments'] as Map<String, dynamic>?) ?? {};
-        final calories =
-            _safeToDouble(nutriments['energy-kcal'] ?? nutriments['energy']);
+        final nutriments =
+            (product['nutriments'] as Map<String, dynamic>?) ?? {};
+        final calories = _safeToDouble(
+          nutriments['energy-kcal'] ?? nutriments['energy'],
+        );
         final proteinG = _safeToDouble(nutriments['proteins']);
         final carbsG = _safeToDouble(nutriments['carbohydrates']);
         final fatG = _safeToDouble(nutriments['fat']);
@@ -532,9 +548,13 @@ class FoodRemoteDatasource {
 
         // Extract all fields as-is (no cleaning/inference)
         final rawDescription = food['description']?.toString();
+        final dataType = food['dataType']?.toString() ?? 'survey';
 
-        // Parse brand and name from description
-        final parsed = _parseUSDABrandAndName(rawDescription ?? 'Unknown');
+        // Parse brand and name — dataType determines branded vs qualifier format
+        final parsed = _parseUSDABrandAndName(
+          rawDescription ?? 'Unknown',
+          dataType: dataType,
+        );
         final brandName = parsed['brand'];
         final displayName = parsed['name'];
 
@@ -589,7 +609,6 @@ class FoodRemoteDatasource {
         final isGeneric = (brandName ?? '').isEmpty;
         final isBranded =
             (brandName ?? '').isNotEmpty && (brandName != 'Unknown');
-        final dataType = food['dataType']?.toString() ?? 'survey';
         final gtinUpc = food['gtinUpc']?.toString();
 
         raw.add(
@@ -645,8 +664,9 @@ class FoodRemoteDatasource {
       return const _ServingInfo();
     }
 
-    final match = RegExp(r'(\d+(?:\.\d+)?)\s*([a-zA-Z]+)')
-        .firstMatch(servingSizeRaw);
+    final match = RegExp(
+      r'(\d+(?:\.\d+)?)\s*([a-zA-Z]+)',
+    ).firstMatch(servingSizeRaw);
     if (match == null) return const _ServingInfo();
 
     final qty = double.tryParse(match.group(1) ?? '');
@@ -689,32 +709,66 @@ class FoodRemoteDatasource {
     return 0.0;
   }
 
-  /// Parse USDA brand and name
-  Map<String, String?> _parseUSDABrandAndName(String rawName) {
-    String? brand;
-    String productName = rawName;
+  /// Parse USDA brand and name.
+  ///
+  /// USDA FoodData Central uses two distinct formats:
+  ///   Branded      → "FOOD NAME, BRAND NAME"   (rest after first comma = brand)
+  ///   Foundation / SR Legacy / Survey
+  ///                → "FOOD NAME, QUALIFIER1, QUALIFIER2"
+  ///                  (commas are preparation qualifiers, not brand)
+  ///
+  /// Junk qualifier tokens (NFS = Not Further Specified, etc.) are dropped.
+  Map<String, String?> _parseUSDABrandAndName(
+    String rawName, {
+    String? dataType,
+  }) {
+    const junkQualifiers = {'nfs', 'ns', 'varied', 'nr', 'nsp'};
+    final isBranded = dataType?.toLowerCase().contains('branded') == true;
 
-    // Extract brand (usually before comma or in parentheses)
     if (rawName.contains(',')) {
-      final parts = rawName.split(',');
-      brand = parts[0].trim();
-      productName = parts.skip(1).join(',').trim();
-    } else if (rawName.contains('(') && rawName.contains(')')) {
+      final parts = rawName
+          .split(',')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
+      if (parts.isEmpty) return {'name': rawName, 'brand': null};
+
+      final foodName = parts[0]; // Food descriptor is ALWAYS first.
+      if (parts.length == 1) return {'name': foodName, 'brand': null};
+
+      if (isBranded) {
+        // Branded: "CHICKEN BREAST, TYSON FOODS INC" → food + brand
+        return {'name': foodName, 'brand': parts.skip(1).join(', ')};
+      }
+
+      // Foundation / SR Legacy / Survey: commas are preparation qualifiers.
+      // Include meaningful ones so users see "Chicken Breast, Boneless, Cooked".
+      final qualifiers = parts
+          .skip(1)
+          .where((q) => !junkQualifiers.contains(q.toLowerCase()))
+          .toList();
+      final displayName = qualifiers.isEmpty
+          ? foodName
+          : '$foodName, ${qualifiers.join(', ')}';
+      return {'name': displayName, 'brand': null};
+    }
+
+    // Parenthetical format: "FOOD (QUALIFIER)" or branded "PRODUCT (BRAND)"
+    if (rawName.contains('(') && rawName.contains(')')) {
       final match = RegExp(r'\(([^)]+)\)').firstMatch(rawName);
-      if (match != null) {
-        brand = match.group(1);
-        productName = rawName.replaceAll(match.group(0)!, '').trim();
+      if (match != null && isBranded) {
+        return {
+          'name': rawName.replaceAll(match.group(0)!, '').trim(),
+          'brand': match.group(1),
+        };
       }
     }
 
-    return {'name': productName, 'brand': brand};
+    return {'name': rawName, 'brand': null};
   }
 
   /// Filter and rank results by relevance
-  List<FoodModel> _filterAndRankResults(
-    List<FoodModel> results,
-    String query,
-  ) {
+  List<FoodModel> _filterAndRankResults(List<FoodModel> results, String query) {
     if (results.isEmpty) return results;
 
     final queryLower = query.toLowerCase().trim();

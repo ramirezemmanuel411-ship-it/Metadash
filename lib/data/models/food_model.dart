@@ -86,18 +86,42 @@ class FoodModel extends Equatable {
     this.isBranded,
   }) : nameNormalized = nameNormalized ?? '';
 
-  /// Display title: clean, readable product name
-  /// Keep brand in title for clarity, just normalize and clean
+  /// Display title: clean, readable food name
   String get displayTitle {
     String title = name;
-    
+
     // Remove trademark symbols
     title = title.replaceAll('®', '').replaceAll('™', '').replaceAll('©', '');
-    
-    // Normalize text (lowercase, accents, punctuation, whitespace)
+
+    // Strip corporate suffixes that leak through
+    const corpSuffixes = [
+      ', Inc.', ', Inc', ' Inc.', ' Inc',
+      ', LLC', ' LLC', ', Corp.', ', Corp', ' Corp.', ' Corp',
+      ', Ltd.', ', Ltd', ' Ltd.', ' Ltd', ', Co.', ' Co.',
+      ' Corporation', ' Company', ' Brands', ' International', ' Enterprises',
+      ' S Corp', ' S. Corp',
+    ];
+    bool changed = true;
+    while (changed) {
+      changed = false;
+      for (final s in corpSuffixes) {
+        if (title.toLowerCase().endsWith(s.toLowerCase())) {
+          title = title.substring(0, title.length - s.length).trim();
+          changed = true;
+        }
+      }
+    }
+    title = title.replaceAll(RegExp(r'[,\.]+$'), '').trim();
+
+    // Normalize text (casing, accents, punctuation, whitespace)
     title = FoodTextNormalizer.normalize(title);
-    
-    // Remove repeated words (e.g., "coke coke" -> "coke")
+
+    // Remove comma-separated duplicates ("Giant Eagle, Giant Eagle" → "Giant Eagle")
+    final commaMatch =
+        RegExp(r'^(.+),\s*\1$', caseSensitive: false).firstMatch(title);
+    if (commaMatch != null) title = commaMatch.group(1)!.trim();
+
+    // Remove consecutive duplicate words ("Coke Coke" → "Coke")
     final words = title.split(RegExp(r'\s+'));
     final uniqueWords = <String>[];
     String? lastWord;
@@ -108,19 +132,19 @@ class FoodModel extends Equatable {
       lastWord = word;
     }
     title = uniqueWords.join(' ').trim();
-    
-    // If title is empty, use brand as fallback
+
+    // Fallback to brand if title is empty
     if (title.isEmpty && brand != null && brand!.isNotEmpty) {
       title = FoodTextNormalizer.normalize(brand!);
     }
-    
+
     return title;
   }
-  
+
   /// Convert to title case while preserving brand stylization
   String _toTitleCase(String text) {
     if (text.isEmpty) return text;
-    
+
     // Preserve known brand stylizations
     const preservedWords = {
       'coke': 'Coke',
@@ -129,23 +153,26 @@ class FoodModel extends Equatable {
       'kfc': 'KFC',
       'usda': 'USDA',
     };
-    
+
     final words = text.split(' ');
     final titleCased = words.map((word) {
       if (word.isEmpty) return word;
-      
+
       final lower = word.toLowerCase();
       // Check for preserved brand names
       for (final entry in preservedWords.entries) {
         if (lower.contains(entry.key)) {
-          return word.replaceAll(RegExp(entry.key, caseSensitive: false), entry.value);
+          return word.replaceAll(
+            RegExp(entry.key, caseSensitive: false),
+            entry.value,
+          );
         }
       }
-      
+
       // Standard title case
       return word[0].toUpperCase() + word.substring(1).toLowerCase();
     }).toList();
-    
+
     return titleCased.join(' ');
   }
 
@@ -160,7 +187,7 @@ class FoodModel extends Equatable {
   /// Example: "Coca Cola • 140 cal • 355 ml"
   String get displaySubtitle {
     final parts = <String>[];
-    
+
     // Add brand if available and not generic
     final cleanBrand = displayBrand;
     if (cleanBrand.isNotEmpty && cleanBrand.toLowerCase() != 'generic') {
@@ -170,16 +197,16 @@ class FoodModel extends Equatable {
     } else if (source == 'open_food_facts') {
       parts.add('Open Food Facts');
     }
-    
+
     // Add calories
     parts.add('$calories cal');
-    
+
     // Add serving info
     final serving = servingLine;
     if (serving != 'serving?') {
       parts.add(serving);
     }
-    
+
     return parts.join(' • ');
   }
 
@@ -188,14 +215,33 @@ class FoodModel extends Equatable {
     final nameLower = name.toLowerCase();
     final brandLower = (brand ?? '').toLowerCase();
     final searchText = '$nameLower $brandLower';
-    
+
     const beverageKeywords = [
-      'coke', 'cola', 'soda', 'beverage', 'drink', 'juice', 
-      'coffee', 'tea', 'milk', 'water', 'energy', 'lemonade',
-      'sprite', 'fanta', 'pepsi', 'smoothie', 'shake', 'beer',
-      'wine', 'liquor', 'cocktail', 'champagne', 'cider'
+      'coke',
+      'cola',
+      'soda',
+      'beverage',
+      'drink',
+      'juice',
+      'coffee',
+      'tea',
+      'milk',
+      'water',
+      'energy',
+      'lemonade',
+      'sprite',
+      'fanta',
+      'pepsi',
+      'smoothie',
+      'shake',
+      'beer',
+      'wine',
+      'liquor',
+      'cocktail',
+      'champagne',
+      'cider',
     ];
-    
+
     return beverageKeywords.any((keyword) => searchText.contains(keyword));
   }
 
@@ -205,17 +251,21 @@ class FoodModel extends Equatable {
     if (servingSize > 0 && servingSize != 100.0 && servingUnit.isNotEmpty) {
       return 'perServing';
     }
-    
+
     // Check if it's per 100ml (beverage standard)
-    if (isBeverage || servingUnit.toLowerCase().contains('ml') || servingUnit.toLowerCase().contains('fluid')) {
+    if (isBeverage ||
+        servingUnit.toLowerCase().contains('ml') ||
+        servingUnit.toLowerCase().contains('fluid')) {
       return 'per100ml';
     }
-    
+
     // Default to per 100g
-    if (servingSize == 100.0 && (servingUnit.toLowerCase().contains('g') || servingUnit.toLowerCase().contains('gram'))) {
+    if (servingSize == 100.0 &&
+        (servingUnit.toLowerCase().contains('g') ||
+            servingUnit.toLowerCase().contains('gram'))) {
       return 'per100g';
     }
-    
+
     return 'unknown';
   }
 
@@ -224,17 +274,19 @@ class FoodModel extends Equatable {
     if (servingSize == 0 || servingUnit.isEmpty) {
       return 'serving?';
     }
-    
-    final sizeStr = servingSize == servingSize.toInt() 
-        ? servingSize.toInt().toString() 
+
+    final sizeStr = servingSize == servingSize.toInt()
+        ? servingSize.toInt().toString()
         : servingSize.toStringAsFixed(1);
-    
+
     // Fix unit for beverages: if it says "g" but it's a liquid, show "ml"
     String displayUnit = servingUnit;
-    if (isBeverage && (servingUnit.toLowerCase() == 'g' || servingUnit.toLowerCase() == 'gram')) {
+    if (isBeverage &&
+        (servingUnit.toLowerCase() == 'g' ||
+            servingUnit.toLowerCase() == 'gram')) {
       displayUnit = 'ml';
     }
-    
+
     return '$sizeStr $displayUnit';
   }
 
@@ -338,7 +390,8 @@ class FoodModel extends Equatable {
       'name_normalized': nameNormalized.isEmpty
           ? normalizeName(name + (brand ?? ''))
           : nameNormalized,
-      'updated_at': updatedAt?.millisecondsSinceEpoch ??
+      'updated_at':
+          updatedAt?.millisecondsSinceEpoch ??
           DateTime.now().millisecondsSinceEpoch,
       'is_favorite': isFavorite ? 1 : 0,
       'source_id': sourceId,
@@ -429,12 +482,15 @@ class FoodModel extends Equatable {
   factory FoodModel.fromRaw(FoodSearchResultRaw raw) {
     final name = raw.foodName ?? raw.foodNameRaw ?? 'Unknown';
     final brand = raw.brandName ?? raw.brandOwner ?? raw.restaurantName;
-    final servingSize = raw.servingQty ??
-        raw.servingWeightGrams ??
-        raw.servingVolumeMl ??
-        0;
-    final servingUnit = raw.servingUnit ??
-        (raw.servingWeightGrams != null ? 'g' : raw.servingVolumeMl != null ? 'ml' : 'g');
+    final servingSize =
+        raw.servingQty ?? raw.servingWeightGrams ?? raw.servingVolumeMl ?? 0;
+    final servingUnit =
+        raw.servingUnit ??
+        (raw.servingWeightGrams != null
+            ? 'g'
+            : raw.servingVolumeMl != null
+            ? 'ml'
+            : 'g');
 
     return FoodModel.create(
       id: raw.id,
@@ -541,38 +597,38 @@ class FoodModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        brand,
-        servingSize,
-        servingUnit,
-        calories,
-        protein,
-        carbs,
-        fat,
-        source,
-      sourceId,
-      barcode,
-      verified,
-      confidence,
-      foodNameRaw,
-      foodName,
-      brandName,
-      brandOwner,
-      restaurantName,
-      category,
-      subcategory,
-      languageCode,
-      servingQty,
-      servingUnitRaw,
-      servingWeightGrams,
-      servingVolumeMl,
-      nutritionBasis,
-      dataType,
-      popularity,
-      isGeneric,
-      isBranded,
-      ];
+    id,
+    name,
+    brand,
+    servingSize,
+    servingUnit,
+    calories,
+    protein,
+    carbs,
+    fat,
+    source,
+    sourceId,
+    barcode,
+    verified,
+    confidence,
+    foodNameRaw,
+    foodName,
+    brandName,
+    brandOwner,
+    restaurantName,
+    category,
+    subcategory,
+    languageCode,
+    servingQty,
+    servingUnitRaw,
+    servingWeightGrams,
+    servingVolumeMl,
+    nutritionBasis,
+    dataType,
+    popularity,
+    isGeneric,
+    isBranded,
+  ];
 
   @override
   String toString() =>

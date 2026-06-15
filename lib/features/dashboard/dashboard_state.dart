@@ -2,32 +2,54 @@ import 'package:flutter/foundation.dart';
 import '../../shared/date_utils.dart';
 import '../../providers/user_state.dart';
 import '../../models/data_inputs_settings.dart';
+import '../../services/calorie_calculation_service.dart';
 
 class DashboardDayData {
   final int caloriesConsumed;
   final int caloriesGoal;
   final int proteinConsumed;
+  final int proteinGoal;
   final int carbsConsumed;
+  final int carbsGoal;
   final int fatConsumed;
+  final int fatGoal;
   final int stepsTaken;
   final int stepsGoal;
+  // ─ HealthKit / DailyLog passthrough ────────────────────────────────────────
+  final int? sleepMinutes;
+  final int? restingHR;
+  final int? workoutCalories;
+  final int? workoutDurationMinutes;
+  final String? workoutType;
+  final double waterOz;
+  final double? tdee;
 
   const DashboardDayData({
     required this.caloriesConsumed,
     required this.caloriesGoal,
     required this.proteinConsumed,
+    required this.proteinGoal,
     required this.carbsConsumed,
+    required this.carbsGoal,
     required this.fatConsumed,
+    required this.fatGoal,
     required this.stepsTaken,
     required this.stepsGoal,
+    this.sleepMinutes,
+    this.restingHR,
+    this.workoutCalories,
+    this.workoutDurationMinutes,
+    this.workoutType,
+    this.waterOz = 0,
+    this.tdee,
   });
 }
 
 class DashboardState extends ChangeNotifier {
-  DashboardState({
-    DateTime? initialDate,
-    this.userState,
-  }) : _selectedDate = AppDateUtils.normalizeDate(initialDate ?? DateTime.now()) {
+  DashboardState({DateTime? initialDate, this.userState})
+    : _selectedDate = AppDateUtils.normalizeDate(
+        initialDate ?? DateTime.now(),
+      ) {
     if (userState != null) {
       _loadDailyData();
     }
@@ -70,10 +92,19 @@ class DashboardState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final log = await userState!.db.getDailyLogByUserAndDate(user.id!, _selectedDate);
-      final foodEntryMaps = await userState!.db.getFoodEntriesForDay(user.id!, _selectedDate);
-        final settings = await userState!.db.getDataInputsSettings(user.id!) ??
-          DataInputsSettings.defaults(user.id!).copyWith(stepGoal: user.dailyStepsGoal);
+      final log = await userState!.db.getDailyLogByUserAndDate(
+        user.id!,
+        _selectedDate,
+      );
+      final foodEntryMaps = await userState!.db.getFoodEntriesForDay(
+        user.id!,
+        _selectedDate,
+      );
+      final settings =
+          await userState!.db.getDataInputsSettings(user.id!) ??
+          DataInputsSettings.defaults(
+            user.id!,
+          ).copyWith(stepGoal: user.dailyStepsGoal);
       await userState!.db.createOrUpdateDataInputsSettings(settings);
 
       int foodCalories = 0;
@@ -88,23 +119,64 @@ class DashboardState extends ChangeNotifier {
         foodFat += (map['fatG'] as int?) ?? 0;
       }
 
+      // Debugging: Log values for calories calculation
+      debugPrint('Log caloriesConsumed: \\${log?.caloriesConsumed ?? 0}');
+      debugPrint('Food calories: \\$foodCalories');
+      debugPrint('Daily caloric goal: \\$user.dailyCaloricGoal');
+
+      // Additional debugging to verify data fetching
+      debugPrint('Log: \\$log');
+      debugPrint('Food Entry Maps: \\$foodEntryMaps');
+      debugPrint('Settings: \\$settings');
+
+      // Compute TDEE from today's log data
+      double? todayTDEE;
+      if (log != null) {
+        try {
+          final metrics = CalorieCalculationService.calculateDayMetrics(
+            user: user,
+            log: log,
+            settings: userState!.metabolicSettings,
+            inputs: userState!.dataInputsSettings,
+          );
+          todayTDEE = metrics.tdee;
+        } catch (_) {}
+      }
+
       if (log != null) {
         _cachedData[_selectedDate] = DashboardDayData(
           caloriesConsumed: log.caloriesConsumed + foodCalories,
           caloriesGoal: user.dailyCaloricGoal,
           proteinConsumed: log.protein + foodProtein,
+          proteinGoal:
+              user.macroTargets?['protein'] ?? (user.dailyCaloricGoal ~/ 8),
           carbsConsumed: log.carbs + foodCarbs,
+          carbsGoal:
+              user.macroTargets?['carbs'] ?? (user.dailyCaloricGoal ~/ 2),
           fatConsumed: log.fat + foodFat,
+          fatGoal: user.macroTargets?['fat'] ?? (user.dailyCaloricGoal ~/ 4),
           stepsTaken: log.stepsCount,
           stepsGoal: settings.stepGoal,
+          sleepMinutes: log.sleepMinutes,
+          restingHR: log.restingHeartRate,
+          workoutCalories: log.workoutCalories,
+          workoutDurationMinutes: log.workoutDurationMinutes,
+          workoutType: log.workoutType,
+          waterOz: log.waterIntake,
+          tdee: todayTDEE,
         );
       } else {
         _cachedData[_selectedDate] = DashboardDayData(
           caloriesConsumed: foodCalories,
           caloriesGoal: user.dailyCaloricGoal,
           proteinConsumed: foodProtein,
+          proteinGoal:
+              user.macroTargets?['protein'] ?? (user.dailyCaloricGoal ~/ 8),
           carbsConsumed: foodCarbs,
+          carbsGoal:
+              user.macroTargets?['carbs'] ?? (user.dailyCaloricGoal ~/ 2),
           fatConsumed: foodFat,
+          fatGoal: user.macroTargets?['fat'] ?? (user.dailyCaloricGoal ~/ 4),
           stepsTaken: 0,
           stepsGoal: settings.stepGoal,
         );
@@ -119,10 +191,13 @@ class DashboardState extends ChangeNotifier {
     // Return zero values if not in cache
     return DashboardDayData(
       caloriesConsumed: 0,
-      caloriesGoal: 2200,
+      caloriesGoal: 2000,
       proteinConsumed: 0,
+      proteinGoal: 150,
       carbsConsumed: 0,
+      carbsGoal: 200,
       fatConsumed: 0,
+      fatGoal: 65,
       stepsTaken: 0,
       stepsGoal: 8000,
     );

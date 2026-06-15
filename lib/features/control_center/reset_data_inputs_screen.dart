@@ -10,10 +10,10 @@ class ResetDataInputsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Reset Data & Inputs'),
       ),
@@ -24,7 +24,7 @@ class ResetDataInputsScreen extends StatelessWidget {
             'This will reset your data input settings back to the defaults.',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withOpacity(0.55),
+              color: context.colors.textPrimary.withValues(alpha: 0.55),
               height: 1.4,
             ),
           ),
@@ -35,9 +35,13 @@ class ResetDataInputsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(16),
-            child: const Text(
+            child: Text(
               'This only changes your settings. It won’t delete your logs.',
-              style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.35),
+              style: TextStyle(
+                fontSize: 14,
+                color: context.colors.textPrimary,
+                height: 1.35,
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -57,8 +61,8 @@ class ResetDataInputsScreen extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
+              backgroundColor: context.colors.accent,
+              foregroundColor: context.colors.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

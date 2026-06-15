@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../services/food_service.dart';
+import '../../shared/palette.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
   final Function(String)? onBarcodeScanned;
@@ -93,16 +94,23 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               if (mounted) setState(() => _hasError = true);
             });
             return Container(
-              color: Colors.black,
+              color: context.colors.textPrimary,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.white),
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: context.colors.textPrimary,
+                    ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Camera permission required',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+                      style: TextStyle(
+                        color: context.colors.textPrimary,
+                        fontSize: 18,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
@@ -121,84 +129,91 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         // Scanner UI overlay - hide when there's an error
         if (!_hasError)
           Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 100),
-                  const Text(
-                    'Scan Food Barcode',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Position the barcode within the frame',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                  const Spacer(),
-                  // Scanning frame
-                  Center(
-                    child: Container(
-                      width: 280,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.greenAccent, width: 3),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(13),
-                        child: Container(
-                          color: Colors.transparent,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  // Action buttons at the bottom
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 60),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Torch button
-                        IconButton(
-                          onPressed: _toggleTorch,
-                          icon: Icon(
-                            _torchOn ? Icons.flash_on : Icons.flash_off,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                          tooltip: 'Toggle Flashlight',
-                        ),
-                        const SizedBox(width: 40),
-                        // Scanner icon (center)
-                        const Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.white70,
-                          size: 48,
-                        ),
-                        const SizedBox(width: 40),
-                        // Manual entry button
-                        IconButton(
-                          onPressed: _showManualEntryDialog,
-                          icon: const Icon(
-                            Icons.keyboard,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                          tooltip: 'Enter Manually',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            decoration: BoxDecoration(
+              color: context.colors.surface.withValues(alpha: 0.5),
             ),
+            child: Column(
+              children: [
+                const SizedBox(height: 100),
+                Text(
+                  'Scan Food Barcode',
+                  style: TextStyle(
+                    color: context.colors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Position the barcode within the frame',
+                  style: TextStyle(
+                    color: context.colors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                const Spacer(),
+                // Scanning frame
+                Center(
+                  child: Container(
+                    width: 280,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: context.colors.accent,
+                        width: 3,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(13),
+                      child: Container(
+                        color: Colors
+                            .transparent, // No equivalent in Palette, keeping as is.
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // Action buttons at the bottom
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 60),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Torch button
+                      IconButton(
+                        onPressed: _toggleTorch,
+                        icon: Icon(
+                          _torchOn ? Icons.flash_on : Icons.flash_off,
+                          color: context.colors.textPrimary,
+                          size: 32,
+                        ),
+                        tooltip: 'Toggle Flashlight',
+                      ),
+                      const SizedBox(width: 40),
+                      // Scanner icon (center)
+                      Icon(
+                        Icons.qr_code_scanner,
+                        color: context.colors.textSecondary,
+                        size: 48,
+                      ),
+                      const SizedBox(width: 40),
+                      // Manual entry button
+                      IconButton(
+                        onPressed: _showManualEntryDialog,
+                        icon: Icon(
+                          Icons.keyboard,
+                          color: context.colors.textPrimary,
+                          size: 32,
+                        ),
+                        tooltip: 'Enter Manually',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -208,10 +223,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 class FoodSearchDialog extends StatefulWidget {
   final Function(Food) onFoodSelected;
 
-  const FoodSearchDialog({
-    super.key,
-    required this.onFoodSelected,
-  });
+  const FoodSearchDialog({super.key, required this.onFoodSelected});
 
   @override
   State<FoodSearchDialog> createState() => _FoodSearchDialogState();
@@ -245,9 +257,9 @@ class _FoodSearchDialogState extends State<FoodSearchDialog> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
         setState(() => _isLoading = false);
       }
     }
@@ -276,7 +288,8 @@ class _FoodSearchDialogState extends State<FoodSearchDialog> {
                 height: 100,
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (_searchResults.isEmpty && _searchController.text.isNotEmpty)
+            else if (_searchResults.isEmpty &&
+                _searchController.text.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('No foods found'),

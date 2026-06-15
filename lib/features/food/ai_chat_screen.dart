@@ -8,9 +8,11 @@ import '../../models/ai_suggestion.dart';
 import '../../models/diary_entry_food.dart';
 import '../../data/models/food_model.dart';
 import '../../services/ai_service.dart';
+import '../../services/ai_router.dart';
 import '../../services/ai_suggestion_engine.dart';
 import '../../services/food_text_normalizer.dart';
 import '../../data/repositories/ai_suggestion_repository.dart';
+import '../../models/ai_router_result.dart';
 import '../../providers/user_state.dart';
 
 /// Unified AI screen for food estimation via text, camera, or gallery
@@ -37,8 +39,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   AiFoodEstimate? _currentEstimate;
   AiSuggestionResponse? _suggestionResponse;
+  AiRouterResult? _routerResult;
+  int _selectedAlternative = 0;
   bool _isLoading = false;
   String? _error;
+  AiRouter? _aiRouter;
 
   // Camera state
   CameraController? _cameraController;
@@ -59,6 +64,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     if (_serviceInitialized) return;
     try {
       _aiService = AiService();
+      _aiRouter = AiRouter(_aiService);
       _serviceInitialized = true;
     } catch (e) {
       setState(() {
@@ -179,19 +185,37 @@ class _AiChatScreenState extends State<AiChatScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _routerResult = null;
+      _currentEstimate = null;
     });
 
     try {
+      // Use AI Router vision mode for structured output
+      if (_aiRouter != null) {
+        final result = await _aiRouter!.processImage(
+          imageFile: _capturedImage!,
+          userDescription: description.isNotEmpty ? description : null,
+        );
+        if (!mounted) return;
+        setState(() {
+          _routerResult = result;
+          _selectedAlternative = 0;
+          _isLoading = false;
+        });
+        return;
+      }
+      // Fallback to legacy estimate
       final estimate = await _aiService.estimateFoodFromImage(
         _capturedImage!,
         userDescription: description.isNotEmpty ? description : null,
       );
-
+      if (!mounted) return;
       setState(() {
         _currentEstimate = estimate;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -230,27 +254,46 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _error = null;
       _currentEstimate = null;
       _suggestionResponse = null;
+      _routerResult = null;
     });
 
     try {
+      // Build diary context for smarter routing
+      final diaryCtx = await _buildDiaryContext();
+
+      // Use AI Router as primary path
+      if (_aiRouter != null) {
+        final result = await _aiRouter!.processText(
+          userText: input,
+          diaryContext: diaryCtx,
+        );
+        if (!mounted) return;
+        setState(() {
+          _routerResult = result;
+          _selectedAlternative = result.bestAlternativeIndex ?? 0;
+          _isLoading = false;
+        });
+        _controller.clear();
+        return;
+      }
+
+      // Fallback: legacy suggestion engine
       final intent = _suggestionEngine.detectIntent(input);
       if (intent.isSuggestionIntent) {
         final suggestionInput = await _buildSuggestionInput(
           query: input,
           restaurantName: intent.restaurantName,
         );
-
         final candidates = intent.isRestaurantIntent
             ? await _suggestionRepository.searchRestaurantItems(
                 intent.restaurantName ?? input,
               )
             : <FoodModel>[];
-
         final response = _suggestionEngine.buildSuggestions(
           input: suggestionInput,
           candidates: candidates,
         );
-
+        if (!mounted) return;
         setState(() {
           _suggestionResponse = response;
           _isLoading = false;
@@ -259,15 +302,120 @@ class _AiChatScreenState extends State<AiChatScreen> {
       }
 
       final estimate = await _aiService.estimateFoodFromChat(input);
+      if (!mounted) return;
       setState(() {
         _currentEstimate = estimate;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  /// Build diary context for the AI router (remaining macros/calories).
+  Future<Map<String, dynamic>> _buildDiaryContext() async {
+    final user = widget.userState.currentUser;
+    if (user == null) return {};
+
+    final log = await widget.userState.db.getDailyLogByUserAndDate(
+      user.id!,
+      widget.selectedDay,
+    );
+    final foodEntryMaps = await widget.userState.db.getFoodEntriesForDay(
+      user.id!,
+      widget.selectedDay,
+    );
+
+    int foodCalories = 0, foodProtein = 0, foodCarbs = 0, foodFat = 0;
+    for (final map in foodEntryMaps) {
+      foodCalories += (map['calories'] as int?) ?? 0;
+      foodProtein += (map['proteinG'] as int?) ?? 0;
+      foodCarbs += (map['carbsG'] as int?) ?? 0;
+      foodFat += (map['fatG'] as int?) ?? 0;
+    }
+
+    final calConsumed = (log?.caloriesConsumed ?? 0) + foodCalories;
+    final pConsumed = (log?.protein ?? 0) + foodProtein;
+    final cConsumed = (log?.carbs ?? 0) + foodCarbs;
+    final fConsumed = (log?.fat ?? 0) + foodFat;
+
+    final pTarget = user.macroTargets?['protein'] ?? 150;
+    final cTarget = user.macroTargets?['carbs'] ?? 250;
+    final fTarget = user.macroTargets?['fat'] ?? 73;
+    final calGoal = user.dailyCaloricGoal;
+
+    return {
+      'caloriesRemaining': calGoal - calConsumed,
+      'proteinRemaining': pTarget - pConsumed,
+      'carbsRemaining': cTarget - cConsumed,
+      'fatRemaining': fTarget - fConsumed,
+      'goal': 'lose weight',
+    };
+  }
+
+  /// Add all entries from a router result to the diary.
+  Future<void> _addRouterEntriesToDiary(
+    List<AiStructuredFoodEntry> entries,
+  ) async {
+    final user = widget.userState.currentUser;
+    if (user == null || entries.isEmpty) return;
+    try {
+      final now = _timestampForSelectedDay();
+      for (final entry in entries) {
+        final diaryEntry = DiaryEntryFood(
+          id: '${DateTime.now().millisecondsSinceEpoch}_${entries.indexOf(entry)}',
+          userId: user.id!,
+          timestamp: now,
+          name: entry.name,
+          calories: entry.calories,
+          proteinG: entry.protein,
+          carbsG: entry.carbs,
+          fatG: entry.fat,
+          source: entry.source,
+          serving: entry.serving,
+          confidence: _confidenceToDouble(entry.confidence),
+          assumptions: null,
+          rawInput: _controller.text.trim(),
+        );
+        await widget.userState.db.addFoodEntry(diaryEntry);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            entries.length == 1
+                ? '✓ "${entries.first.name}" added to Diary'
+                : '✓ ${entries.length} items added to Diary',
+          ),
+          backgroundColor: context.colors.accent,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      setState(() {
+        _routerResult = null;
+        _controller.clear();
+        _capturedImage = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add: $e')),
+      );
+    }
+  }
+
+  double _confidenceToDouble(String confidence) {
+    switch (confidence) {
+      case 'high':
+        return 0.9;
+      case 'low':
+        return 0.5;
+      default:
+        return 0.75;
     }
   }
 
@@ -401,10 +549,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✓ Added to Diary'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('✓ Added to Diary'),
+        backgroundColor: context.colors.accent,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -442,10 +590,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✓ Added to Diary'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('✓ Added to Diary'),
+          backgroundColor: context.colors.accent,
+          duration: const Duration(seconds: 2),
         ),
       );
 
@@ -471,12 +619,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     // Show main chat interface
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Assistant'),
-      ),
+      appBar: AppBar(title: const Text('AI Assistant')),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Container(
+        child: SizedBox(
           height: double.infinity,
           width: double.infinity,
           child: Column(
@@ -491,7 +637,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
+                          color: context.colors.surface,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -501,25 +647,26 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               children: [
                                 Icon(
                                   Icons.auto_awesome,
-                                  color: Theme.of(context).colorScheme.primary,
+                                  color: context.colors.accent,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                const Text(
+                                Text(
                                   'AI Food Assistant',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
+                                    color: context.colors.textPrimary,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'Type what you ate, snap a photo, or upload from gallery. '
-                              'AI will estimate the nutrition for you.',
+                            Text(
+                              'Type what you ate, snap a photo, or upload from gallery. AI will estimate the nutrition for you.',
                               style: TextStyle(
                                 fontSize: 13,
+                                color: context.colors.textSecondary,
                               ),
                             ),
                           ],
@@ -527,11 +674,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      if (_suggestionResponse != null)
+                      if (_routerResult != null)
+                        _buildRouterResultCard(_routerResult!),
+
+                      if (_routerResult == null &&
+                          _suggestionResponse != null)
                         _buildSuggestionResponse(_suggestionResponse!),
 
-                      // Result card
-                      if (_currentEstimate != null)
+                      // Legacy estimate card
+                      if (_routerResult == null && _currentEstimate != null)
                         _buildResultCard(_currentEstimate!),
 
                       if (_isLoading) _buildLoadingCard(),
@@ -544,17 +695,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
               // Input area with photo above text field
               Container(
-                padding: const EdgeInsets.fromLTRB(
-                  12,
-                  8,
-                  12,
-                  24,
-                ), // Extra bottom padding for home indicator
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
                 decoration: BoxDecoration(
-                  color: context.colors.surfaceVariant,
+                  color: context.colors.surface,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: context.colors.textMuted.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, -2),
                     ),
@@ -563,7 +709,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Camera button
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: IconButton(
@@ -571,7 +716,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         icon: Icon(
                           Icons.camera_alt,
                           color: _isLoading
-                              ? Colors.grey
+                              ? context.colors.textMuted
                               : context.colors.accent,
                           size: 28,
                         ),
@@ -587,12 +732,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
+                          color: context.colors.surfaceVariant,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
-                            width: 1,
-                          ),
+                          border: Border.all(color: context.divider, width: 1),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -603,7 +745,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                                 _currentEstimate == null &&
                                 !_isLoading)
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                                padding: const EdgeInsets.fromLTRB(
+                                  12,
+                                  12,
+                                  12,
+                                  8,
+                                ),
                                 child: Stack(
                                   children: [
                                     ClipRRect(
@@ -624,14 +771,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
                                           width: 28,
                                           height: 28,
                                           decoration: BoxDecoration(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.7,
-                                            ),
+                                            color: context.colors.textMuted
+                                                .withValues(alpha: 0.7),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(
+                                          child: Icon(
                                             Icons.close,
-                                            color: Colors.white,
+                                            color: context.colors.onPrimary,
                                             size: 18,
                                           ),
                                         ),
@@ -643,12 +789,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
                             // Text field
                             TextField(
                               controller: _controller,
+                              style: TextStyle(
+                                color: context.colors.textPrimary,
+                              ),
                               decoration: InputDecoration(
                                 hintText: _capturedImage != null
                                     ? 'Add comment or Send'
                                     : 'Describe what you ate...',
                                 hintStyle: TextStyle(
-                                  color: Colors.grey.shade500,
+                                  color: context.colors.textSecondary,
                                 ),
                                 border: InputBorder.none,
                                 contentPadding: const EdgeInsets.symmetric(
@@ -665,7 +814,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Send button
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: GestureDetector(
@@ -675,13 +823,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
                           height: 32,
                           decoration: BoxDecoration(
                             color: _isLoading
-                                ? Colors.grey
+                                ? context.colors.textMuted
                                 : context.colors.accent,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.arrow_upward,
-                            color: Colors.white,
+                            color: context.colors.onPrimary,
                             size: 20,
                           ),
                         ),
@@ -720,9 +868,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         children: [
                           IconButton(
                             onPressed: _closeCamera,
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close,
-                              color: Colors.white,
+                              color: context.colors.onPrimary,
                               size: 32,
                             ),
                             tooltip: 'Close camera',
@@ -741,7 +889,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                             onPressed: _toggleTorch,
                             icon: Icon(
                               _torchOn ? Icons.flash_on : Icons.flash_off,
-                              color: Colors.white,
+                              color: context.colors.onPrimary,
                               size: 32,
                             ),
                             tooltip: 'Toggle flash',
@@ -756,15 +904,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.white,
+                                  color: context.colors.onPrimary,
                                   width: 4,
                                 ),
                               ),
                               child: Container(
                                 margin: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.white,
+                                  color: context.colors.onPrimary,
                                 ),
                               ),
                             ),
@@ -776,9 +924,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                               _closeCamera();
                               _pickImageFromGallery();
                             },
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.photo_library,
-                              color: Colors.white,
+                              color: context.colors.onPrimary,
                               size: 32,
                             ),
                             tooltip: 'Choose from gallery',
@@ -793,10 +941,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
           );
         } else {
           return Container(
-            color: Colors.black,
-            child: const Center(
+            color: context.colors.background,
+            child: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  context.colors.onPrimary,
+                ),
               ),
             ),
           );
@@ -805,11 +955,224 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  // ── AI Router Result Card ─────────────────────────────────────────────────
+
+  Widget _buildRouterResultCard(AiRouterResult result) {
+    final accent = context.colors.accent;
+    final surface = context.colors.surface;
+    final bool hasAlternatives = result.alternatives.length > 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Mode badge + headline
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _RouterModeBadge(mode: result.mode),
+                  const Spacer(),
+                  _ConfidenceBadge(confidence: result.confidence),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                result.headline,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              if (result.confidenceNote != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  result.confidenceNote!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.textMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Alternatives tab row (restaurant / strategy modes)
+        if (hasAlternatives) ...[
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: result.alternatives.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, idx) {
+                final opt = result.alternatives[idx];
+                final selected = _selectedAlternative == idx;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedAlternative = idx),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? accent
+                          : surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: selected ? accent : context.colors.divider,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (opt.isRecommended)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Icon(
+                              Icons.star_rounded,
+                              size: 12,
+                              color: selected
+                                  ? context.colors.onPrimary
+                                  : accent,
+                            ),
+                          ),
+                        Text(
+                          opt.title,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: selected
+                                ? context.colors.onPrimary
+                                : context.colors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        // Food entries (primary or selected alternative)
+        () {
+          final entriesToShow = hasAlternatives
+              ? [result.alternatives[_selectedAlternative].entry]
+              : result.entries;
+          return Column(
+            children: entriesToShow
+                .map((e) => _RouterEntryRow(entry: e))
+                .toList(),
+          );
+        }(),
+
+        // Alternative reasoning (if selected)
+        if (hasAlternatives &&
+            _selectedAlternative < result.alternatives.length) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              result.alternatives[_selectedAlternative].reasoning ??
+                  'Estimated nutrition values.',
+              style: TextStyle(
+                fontSize: 12,
+                color: context.colors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+
+        // Detail / assumptions
+        if (result.detail != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.colors.surfaceVariant,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              result.detail!,
+              style: TextStyle(
+                fontSize: 12,
+                color: context.colors.textMuted,
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 14),
+
+        // Action buttons
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: FilledButton.icon(
+                onPressed: () {
+                  final entries = hasAlternatives
+                      ? [result.alternatives[_selectedAlternative].entry]
+                      : result.entries;
+                  _addRouterEntriesToDiary(entries);
+                },
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add to Diary'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: context.colors.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => setState(() {
+                  _routerResult = null;
+                  _currentEstimate = null;
+                }),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: context.colors.divider),
+                  foregroundColor: context.colors.textSecondary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Clear', style: TextStyle(fontSize: 13)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildResultCard(AiFoodEstimate estimate) {
     final normalizedName = FoodTextNormalizer.normalize(estimate.itemName);
-    
+
     return Card(
-      color: Palette.lightStone,
+      color: context.colors.surface,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -835,8 +1198,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: estimate.confidence > 0.7
-                        ? Colors.green.withValues(alpha: 0.2)
-                        : Colors.orange.withValues(alpha: 0.2),
+                        ? context.colors.accent.withValues(alpha: 0.2)
+                        : context.colors.cta.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -845,8 +1208,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: estimate.confidence > 0.7
-                          ? Colors.green.shade700
-                          : Colors.orange.shade700,
+                          ? context.colors.accent
+                          : context.colors.cta,
                     ),
                   ),
                 ),
@@ -862,7 +1225,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     'Calories',
                     '${estimate.calories}',
                     'kcal',
-                    Colors.blue,
+                    context.colors.primary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -871,7 +1234,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     'Protein',
                     '${estimate.proteinG}',
                     'g',
-                    Colors.red,
+                    context.colors.cta,
                   ),
                 ),
               ],
@@ -884,7 +1247,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     'Carbs',
                     '${estimate.carbsG}',
                     'g',
-                    Colors.teal,
+                    context.colors.accent,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -893,7 +1256,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     'Fat',
                     '${estimate.fatG}',
                     'g',
-                    Colors.orange,
+                    context.colors.cta,
                   ),
                 ),
               ],
@@ -902,12 +1265,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
             // Assumptions
             if (estimate.assumptions.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Assumptions:',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey,
+                  color: context.colors.textMuted,
                 ),
               ),
               const SizedBox(height: 4),
@@ -917,13 +1280,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('• ', style: TextStyle(color: Colors.grey)),
+                      Text(
+                        '• ',
+                        style: TextStyle(color: context.colors.textSecondary),
+                      ),
                       Expanded(
                         child: Text(
                           assumption,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: context.colors.textMuted,
                           ),
                         ),
                       ),
@@ -940,10 +1306,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
               child: ElevatedButton.icon(
                 onPressed: _onAddToDiary,
                 icon: const Icon(Icons.add_circle_outline),
-                label: const Text('Add to Diary'),
+                label: Text(
+                  'Add to Diary',
+                  style: TextStyle(color: context.colors.onPrimary),
+                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Palette.forestGreen,
-                  foregroundColor: Colors.white,
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: context.colors.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -959,7 +1328,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   Widget _buildSuggestionResponse(AiSuggestionResponse response) {
     return Card(
-      color: Palette.lightStone,
+      color: context.colors.surface,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -969,18 +1338,29 @@ class _AiChatScreenState extends State<AiChatScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.auto_awesome, color: Palette.forestGreen, size: 20),
+                Icon(
+                  Icons.auto_awesome,
+                  color: context.colors.accent,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'AI Suggestions',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: context.colors.textPrimary,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               response.message,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colors.textSecondary,
+              ),
             ),
             const SizedBox(height: 12),
             if (response.mode == AiSuggestionMode.meal)
@@ -990,7 +1370,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
             if (response.mode == AiSuggestionMode.none)
               Text(
                 'You are at or over your target. Consider ultra-low add-ons only.',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontSize: 12,
+                ),
               ),
           ],
         ),
@@ -1003,9 +1388,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: context.colors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).dividerColor),
+          border: Border.all(color: context.divider),
         ),
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -1021,9 +1406,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 ),
                 Text(
                   '${suggestion.totals.calories} kcal',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Colors.black54,
+                    color: context.colors.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1032,34 +1417,48 @@ class _AiChatScreenState extends State<AiChatScreen> {
             const SizedBox(height: 4),
             Text(
               suggestion.description,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 12,
+                color: context.colors.textSecondary,
+              ),
             ),
             const SizedBox(height: 6),
             ...suggestion.items.map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 2),
-                child: Text('• $item', style: const TextStyle(fontSize: 12)),
+                child: Text(
+                  '• $item',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _macroLine(suggestion.totals),
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
+              style: TextStyle(fontSize: 12, color: context.colors.textPrimary),
             ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: ElevatedButton(
-                onPressed: () => _addSuggestionToDiary(
-                  suggestion.addActionPayload,
-                ),
+                onPressed: () =>
+                    _addSuggestionToDiary(suggestion.addActionPayload),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Palette.forestGreen,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  backgroundColor: context.colors.accent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
-                child: const Text(
+                child: Text(
                   'Add to Diary',
-                  style: TextStyle(fontSize: 12, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.onPrimary,
+                  ),
                 ),
               ),
             ),
@@ -1077,10 +1476,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
         children: [
           Text(
             group.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: Colors.black54,
+              color: context.colors.textSecondary,
             ),
           ),
           const SizedBox(height: 6),
@@ -1089,9 +1488,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
               margin: const EdgeInsets.only(bottom: 6),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.colors.surfaceVariant,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: context.divider),
               ),
               child: Row(
                 children: [
@@ -1106,7 +1505,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         const SizedBox(height: 2),
                         Text(
                           item.serving,
-                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: context.colors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -1118,12 +1520,16 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                   Text(
                     '${item.totals.calories} kcal',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.add_circle, color: Palette.forestGreen),
-                    onPressed: () => _addSuggestionToDiary(item.addActionPayload),
+                    icon: Icon(Icons.add_circle, color: context.colors.accent),
+                    onPressed: () =>
+                        _addSuggestionToDiary(item.addActionPayload),
                   ),
                 ],
               ),
@@ -1152,7 +1558,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey.shade600,
+              color: context.colors.textMuted,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -1172,7 +1578,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
               const SizedBox(width: 4),
               Text(
                 unit,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: context.colors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -1183,14 +1592,17 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   Widget _buildLoadingCard() {
     return Card(
-      color: Palette.lightStone,
+      color: context.colors.surface,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            CircularProgressIndicator(color: Palette.forestGreen),
+            CircularProgressIndicator(color: context.colors.accent),
             const SizedBox(height: 16),
-            const Text('Analyzing your food...'),
+            Text(
+              'Analyzing your food...',
+              style: TextStyle(color: context.colors.textSecondary),
+            ),
           ],
         ),
       ),
@@ -1199,18 +1611,259 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   Widget _buildErrorCard(String error) {
     return Card(
-      color: Colors.red.shade50,
+      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.error_outline, color: Colors.red.shade700),
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(error, style: TextStyle(color: Colors.red.shade700)),
+              child: Text(
+                error,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+// ── AI Router support widgets ─────────────────────────────────────────────────
+
+class _RouterModeBadge extends StatelessWidget {
+  final AiRouteMode mode;
+  const _RouterModeBadge({required this.mode});
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color) = switch (mode) {
+      AiRouteMode.visionFoodEstimate => (
+          Icons.camera_alt_outlined,
+          const Color(0xFF4C7FA8)
+        ),
+      AiRouteMode.restaurantOrderHelper => (
+          Icons.restaurant_outlined,
+          const Color(0xFFEF8C2E)
+        ),
+      AiRouteMode.mealStrategyHelper => (
+          Icons.tips_and_updates_outlined,
+          const Color(0xFF2E8B57)
+        ),
+      AiRouteMode.structuredFoodLogger => (
+          Icons.receipt_long_outlined,
+          const Color(0xFF2E8B57)
+        ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 5),
+          Text(
+            mode.displayName.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfidenceBadge extends StatelessWidget {
+  final String confidence;
+  const _ConfidenceBadge({required this.confidence});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (confidence) {
+      'high' => const Color(0xFF2E8B57),
+      'low' => const Color(0xFFD0021B),
+      _ => const Color(0xFFEF8C2E),
+    };
+    final label = switch (confidence) {
+      'high' => 'High confidence',
+      'low' => 'Low confidence',
+      _ => 'Estimated',
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RouterEntryRow extends StatelessWidget {
+  final AiStructuredFoodEntry entry;
+  const _RouterEntryRow({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    if (entry.brand != null)
+                      Text(
+                        entry.brand!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.textMuted,
+                        ),
+                      ),
+                    Text(
+                      entry.serving,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.colors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${entry.calories}',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: context.colors.textPrimary,
+                      height: 1.0,
+                    ),
+                  ),
+                  Text(
+                    'kcal',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _MacroChip(
+                label: 'P',
+                value: entry.protein,
+                color: Palette.macroProtein,
+              ),
+              const SizedBox(width: 8),
+              _MacroChip(
+                label: 'C',
+                value: entry.carbs,
+                color: Palette.macroCarbs,
+              ),
+              const SizedBox(width: 8),
+              _MacroChip(
+                label: 'F',
+                value: entry.fat,
+                color: Palette.macroFat,
+              ),
+              const Spacer(),
+              Text(
+                'Source: ${entry.source}',
+                style: TextStyle(fontSize: 10, color: context.colors.textMuted),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MacroChip extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+  const _MacroChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: RichText(
+        text: TextSpan(children: [
+          TextSpan(
+            text: label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          TextSpan(
+            text: ' ${value}g',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: context.colors.textPrimary,
+            ),
+          ),
+        ]),
       ),
     );
   }

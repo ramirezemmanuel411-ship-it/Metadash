@@ -13,20 +13,33 @@ class ScaleDeltaResult {
   final DateTime? startDate;
   final DateTime? endDate;
 
-  ScaleDeltaResult({this.startWeight, this.endWeight, this.delta, this.startDate, this.endDate});
+  ScaleDeltaResult({
+    this.startWeight,
+    this.endWeight,
+    this.delta,
+    this.startDate,
+    this.endDate,
+  });
 
   bool get hasEnoughData => startWeight != null && endWeight != null;
 }
 
 DateTime? _cutoffForFilter(String filter, DateTime now) {
   switch (filter) {
-    case '1D': return now.subtract(const Duration(days: 1));
-    case '1W': return now.subtract(const Duration(days: 7));
-    case '1M': return DateTime(now.year, now.month - 1, now.day);
-    case '3M': return DateTime(now.year, now.month - 3, now.day);
-    case '1Y': return DateTime(now.year - 1, now.month, now.day);
-    case 'YTD': return DateTime(now.year, 1, 1);
-    case 'ALL': return null;
+    case '1D':
+      return now.subtract(const Duration(days: 1));
+    case '1W':
+      return now.subtract(const Duration(days: 7));
+    case '1M':
+      return DateTime(now.year, now.month - 1, now.day);
+    case '3M':
+      return DateTime(now.year, now.month - 3, now.day);
+    case '1Y':
+      return DateTime(now.year - 1, now.month, now.day);
+    case 'YTD':
+      return DateTime(now.year, 1, 1);
+    case 'ALL':
+      return null;
     // support numeric days like '7D', '14D', '30D', '90D'
     default:
       if (filter.endsWith('D')) {
@@ -37,7 +50,11 @@ DateTime? _cutoffForFilter(String filter, DateTime now) {
   }
 }
 
-ScaleDeltaResult computeScaleDeltaForRange(List<WeightRecord> records, String filter, {DateTime? now}) {
+ScaleDeltaResult computeScaleDeltaForRange(
+  List<WeightRecord> records,
+  String filter, {
+  DateTime? now,
+}) {
   return computeDeltaByRange<WeightRecord>(
     records,
     filter,
@@ -58,11 +75,18 @@ ScaleDeltaResult computeDeltaByRange<T>(
   final effectiveNow = now ?? DateTime.now();
   if (items.isEmpty) return ScaleDeltaResult();
 
-  final sorted = List<T>.from(items)..sort((a, b) => dateSelector(a).compareTo(dateSelector(b)));
+  final sorted = List<T>.from(items)
+    ..sort((a, b) => dateSelector(a).compareTo(dateSelector(b)));
   final cutoff = _cutoffForFilter(filter, effectiveNow);
   final inRange = cutoff == null
       ? sorted
-      : sorted.where((r) => dateSelector(r).isAfter(cutoff) || dateSelector(r).isAtSameMomentAs(cutoff)).toList();
+      : sorted
+            .where(
+              (r) =>
+                  dateSelector(r).isAfter(cutoff) ||
+                  dateSelector(r).isAtSameMomentAs(cutoff),
+            )
+            .toList();
 
   if (inRange.length < 2) return ScaleDeltaResult();
 

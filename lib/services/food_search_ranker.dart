@@ -5,7 +5,7 @@ import 'food_deduplication_service.dart';
 /// Intelligent food search ranking with brand boost, synonym mapping, and serving context
 class FoodSearchRanker {
   /// Rank and sort food results by relevance
-  /// 
+  ///
   /// Scoring:
   /// - Prefix match on display title: +10
   /// - Whole word match on display title: +6
@@ -14,7 +14,7 @@ class FoodSearchRanker {
   /// - Has complete serving information: +2
   /// - Penalize items without serving: -3
   /// - Penalize "Generic" brand: -2
-  /// 
+  ///
   /// Tiebreakers (secondary sort):
   /// - Items with serving info come first
   /// - Branded items before generic
@@ -55,10 +55,12 @@ class FoodSearchRanker {
       }
 
       // Tiebreaker 2: Branded items first
-      final aIsBranded = a.item.displayBrand.isNotEmpty && 
-                          a.item.displayBrand.toLowerCase() != 'generic';
-      final bIsBranded = b.item.displayBrand.isNotEmpty && 
-                          b.item.displayBrand.toLowerCase() != 'generic';
+      final aIsBranded =
+          a.item.displayBrand.isNotEmpty &&
+          a.item.displayBrand.toLowerCase() != 'generic';
+      final bIsBranded =
+          b.item.displayBrand.isNotEmpty &&
+          b.item.displayBrand.toLowerCase() != 'generic';
       if (aIsBranded != bIsBranded) {
         return aIsBranded ? -1 : 1;
       }
@@ -68,18 +70,18 @@ class FoodSearchRanker {
     });
 
     final ranked = scored.map((s) => s.item).toList();
-    
+
     // Two-stage deduplication:
     // 1. Exact duplicates (same canonical key)
     final deduplicated = _deduplicateResults(ranked);
-    
+
     // 2. Family-based deduplication with improved core name inference
     final result = FoodDeduplicationService.deduplicateByFamily(
       items: deduplicated,
       query: query,
       debug: true,
     );
-    
+
     return result.groupedResults;
   }
 
@@ -150,7 +152,9 @@ class FoodSearchRanker {
   ///   - 5000 cal for 12 fl oz: NOT plausible
   static bool _caloriesSeemPlausible(FoodModel item) {
     if (item.calories == 0) return true; // Diet/zero calorie items OK
-    if (item.servingSize == 0 || item.isMissingServing) return true; // Can't judge without serving
+    if (item.servingSize == 0 || item.isMissingServing) {
+      return true; // Can't judge without serving
+    }
 
     // Rough heuristic: calories per 100g should be 0-900
     final caloriesPer100 = (item.calories / item.servingSize) * 100;

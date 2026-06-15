@@ -6,7 +6,7 @@ class SearchNormalization {
   /// "Coca-Cola" → "coca cola", "Coca  Cola" → "coca cola"
   static String normalizeText(String text) {
     if (text.isEmpty) return '';
-    
+
     return text
         .toLowerCase()
         .trim()
@@ -24,7 +24,9 @@ class SearchNormalization {
     // Priority: brandName → brandOwner → restaurantName
     String? brand = item.brandName?.isNotEmpty == true ? item.brandName : null;
     brand ??= item.brandOwner?.isNotEmpty == true ? item.brandOwner : null;
-    brand ??= item.restaurantName?.isNotEmpty == true ? item.restaurantName : null;
+    brand ??= item.restaurantName?.isNotEmpty == true
+        ? item.restaurantName
+        : null;
 
     if (brand?.isNotEmpty == true) {
       return _titleCase(_removeNoiseTokens(normalizeText(brand!)));
@@ -70,7 +72,8 @@ class SearchNormalization {
     if (_isFragment(normalized) && item.foodNameRaw?.isNotEmpty == true) {
       // Try to rebuild from raw name with context
       final raw = item.foodNameRaw!.toUpperCase();
-      if (raw.contains('COKE') && (raw.contains('LIME') || raw.contains('CHERRY'))) {
+      if (raw.contains('COKE') &&
+          (raw.contains('LIME') || raw.contains('CHERRY'))) {
         final variant = _extractVariant(raw);
         if (variant.isNotEmpty) {
           normalized = 'Coke $variant';
@@ -209,7 +212,7 @@ class SearchNormalization {
       'slice',
       'piece',
       'can',
-      'bottle'
+      'bottle',
     ];
 
     var result = text;

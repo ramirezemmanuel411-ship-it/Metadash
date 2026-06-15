@@ -7,8 +7,7 @@ import '../models/search_cache_entry.dart';
 /// Local datasource for fast food search with caching
 /// Implements SQLite with indexes for optimal performance
 class FoodLocalDatasource {
-  static final FoodLocalDatasource _instance =
-      FoodLocalDatasource._internal();
+  static final FoodLocalDatasource _instance = FoodLocalDatasource._internal();
   static Database? _database;
 
   // In-memory LRU cache for ultra-fast repeat queries
@@ -105,9 +104,12 @@ class FoodLocalDatasource {
       'CREATE INDEX idx_foods_name_normalized ON foods(name_normalized)',
     );
     await db.execute('CREATE INDEX idx_foods_updated_at ON foods(updated_at)');
-    await db.execute('CREATE INDEX idx_foods_is_favorite ON foods(is_favorite)');
-    await db
-        .execute('CREATE INDEX idx_cached_searches_updated_at ON cached_searches(updated_at)');
+    await db.execute(
+      'CREATE INDEX idx_foods_is_favorite ON foods(is_favorite)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_cached_searches_updated_at ON cached_searches(updated_at)',
+    );
     await db.execute(
       'CREATE INDEX idx_recent_searches_updated_at ON recent_searches(updated_at)',
     );
@@ -129,9 +131,13 @@ class FoodLocalDatasource {
       await db.execute('ALTER TABLE foods ADD COLUMN language_code TEXT');
       await db.execute('ALTER TABLE foods ADD COLUMN serving_qty REAL');
       await db.execute('ALTER TABLE foods ADD COLUMN serving_unit_raw TEXT');
-      await db.execute('ALTER TABLE foods ADD COLUMN serving_weight_grams REAL');
+      await db.execute(
+        'ALTER TABLE foods ADD COLUMN serving_weight_grams REAL',
+      );
       await db.execute('ALTER TABLE foods ADD COLUMN serving_volume_ml REAL');
-      await db.execute('ALTER TABLE foods ADD COLUMN serving_options_json TEXT');
+      await db.execute(
+        'ALTER TABLE foods ADD COLUMN serving_options_json TEXT',
+      );
       await db.execute('ALTER TABLE foods ADD COLUMN nutrition_basis TEXT');
       await db.execute('ALTER TABLE foods ADD COLUMN raw_json TEXT');
       await db.execute('ALTER TABLE foods ADD COLUMN last_updated INTEGER');
@@ -206,7 +212,8 @@ class FoodLocalDatasource {
     final results = await db.query(
       'foods',
       where: whereConditions,
-      orderBy: '''
+      orderBy:
+          '''
         CASE 
           WHEN name_normalized LIKE '$normalized%' THEN 1
           WHEN name_normalized LIKE '%$normalized%' THEN 2
@@ -251,8 +258,9 @@ class FoodLocalDatasource {
   /// Clean up old cached foods (> 30 days)
   Future<void> cleanOldFoods() async {
     final db = await database;
-    final cutoff =
-        DateTime.now().subtract(const Duration(days: 30)).millisecondsSinceEpoch;
+    final cutoff = DateTime.now()
+        .subtract(const Duration(days: 30))
+        .millisecondsSinceEpoch;
 
     await db.delete(
       'foods',
@@ -322,8 +330,9 @@ class FoodLocalDatasource {
   /// Clean up old cached searches (> 24 hours)
   Future<void> cleanOldCaches() async {
     final db = await database;
-    final cutoff =
-        DateTime.now().subtract(const Duration(hours: 24)).millisecondsSinceEpoch;
+    final cutoff = DateTime.now()
+        .subtract(const Duration(hours: 24))
+        .millisecondsSinceEpoch;
 
     await db.delete(
       'cached_searches',
@@ -352,14 +361,10 @@ class FoodLocalDatasource {
     if (query.trim().length < 2) return;
 
     final db = await database;
-    await db.insert(
-      'recent_searches',
-      {
-        'query': query.trim(),
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('recent_searches', {
+      'query': query.trim(),
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     // Keep only last 50 recent searches
     await _trimRecentSearches(50);
@@ -390,7 +395,8 @@ class FoodLocalDatasource {
     final db = await database;
     await db.delete(
       'recent_searches',
-      where: 'id NOT IN (SELECT id FROM recent_searches ORDER BY updated_at DESC LIMIT ?)',
+      where:
+          'id NOT IN (SELECT id FROM recent_searches ORDER BY updated_at DESC LIMIT ?)',
       whereArgs: [keepCount],
     );
   }

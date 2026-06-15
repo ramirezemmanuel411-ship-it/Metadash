@@ -24,10 +24,10 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
     final fat = (food.fat * _servings).toInt();
 
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.forestGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: context.colors.accent,
+        foregroundColor: context.colors.onPrimary,
         title: const Text('Food Details'),
         elevation: 0,
       ),
@@ -49,32 +49,38 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                   const SizedBox(height: 4),
                   Text(
                     FoodTextNormalizer.normalize(food.brand!),
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: context.colors.textSecondary,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 8),
                 Text(
                   'Source: ${food.source}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 24),
 
                 // Serving Size Control
                 Container(
                   decoration: BoxDecoration(
-                    color: Palette.lightStone,
+                    color: context.colors.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'SERVING SIZE',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -87,7 +93,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                               }
                             },
                             icon: const Icon(Icons.remove_circle_outline),
-                            color: Palette.forestGreen,
+                            color: context.colors.accent,
                           ),
                           Expanded(
                             child: Column(
@@ -103,7 +109,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                                   '${(food.servingSize * _servings).toStringAsFixed(1)}g',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey[600],
+                                    color: context.colors.textSecondary,
                                   ),
                                 ),
                               ],
@@ -114,7 +120,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                               setState(() => _servings += 0.25);
                             },
                             icon: const Icon(Icons.add_circle_outline),
-                            color: Palette.forestGreen,
+                            color: context.colors.accent,
                           ),
                         ],
                       ),
@@ -126,27 +132,29 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                 // Calories
                 Container(
                   decoration: BoxDecoration(
-                    color: Palette.forestGreen,
+                    color: context.colors.accent,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.all(20),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'CALORIES',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white70,
+                          color: context.colors.onPrimary.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                       ),
                       Text(
                         '$calories',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: context.colors.onPrimary,
                         ),
                       ),
                     ],
@@ -155,12 +163,12 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                 const SizedBox(height: 24),
 
                 // Macronutrients
-                const Text(
+                Text(
                   'MACRONUTRIENTS',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey,
+                    color: context.colors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -168,21 +176,21 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                   label: 'Protein',
                   value: protein,
                   unit: 'g',
-                  color: Colors.redAccent,
+                  color: context.colors.accent,
                 ),
                 const SizedBox(height: 8),
                 _MacroCard(
                   label: 'Carbohydrates',
                   value: carbs,
                   unit: 'g',
-                  color: Colors.teal,
+                  color: context.colors.accent,
                 ),
                 const SizedBox(height: 8),
                 _MacroCard(
                   label: 'Fat',
                   value: fat,
                   unit: 'g',
-                  color: Colors.orange,
+                  color: context.colors.accent,
                 ),
                 const SizedBox(height: 24),
 
@@ -196,12 +204,12 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'PER SERVING (${100}g)',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey,
+                          color: context.colors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -243,8 +251,8 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                   });
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Palette.forestGreen,
-                  foregroundColor: Colors.white,
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: context.colors.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

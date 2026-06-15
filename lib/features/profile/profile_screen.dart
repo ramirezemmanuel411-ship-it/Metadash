@@ -18,9 +18,9 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   void _showInvalid(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -28,19 +28,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = widget.userState.currentUser;
     if (user == null) {
       return Scaffold(
-        backgroundColor: Palette.warmNeutral,
-        body: const Center(child: CircularProgressIndicator()),
+        backgroundColor: context.colors.background,
+        body: Center(
+          child: CircularProgressIndicator(color: context.colors.cta),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
+        backgroundColor: context.colors.background,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Profile',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: context.colors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
           PopupMenuButton(
@@ -66,16 +71,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Palette.lightStone,
+                        color: context.colors.surface,
                         border: Border.all(
-                          color: Palette.forestGreen,
+                          color: context.colors.accent,
                           width: 3,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.person,
                         size: 60,
-                        color: Palette.forestGreen,
+                        color: context.colors.accent,
                       ),
                     ),
                     Positioned(
@@ -86,16 +91,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Palette.forestGreen,
+                          color: context.colors.accent,
                           border: Border.all(
-                            color: Palette.warmNeutral,
+                            color: context.colors.background,
                             width: 2,
                           ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.camera_alt,
                           size: 18,
-                          color: Palette.warmNeutral,
+                          color: context.colors.background,
                         ),
                       ),
                     ),
@@ -105,10 +110,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
               Text(
                 user.name,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: context.colors.textPrimary,
                 ),
               ),
               const SizedBox(height: 32),
@@ -119,14 +124,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: 'Weight',
                       value: user.weight.toStringAsFixed(0),
                       unit: 'lbs',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onSave: (text) async {
                         final val = double.tryParse(text);
                         if (val == null || val <= 0) {
                           _showInvalid('Enter a valid weight');
                           return false;
                         }
-                        await widget.userState.updateCurrentUser(user.copyWith(weight: val));
+                        await widget.userState.updateCurrentUser(
+                          user.copyWith(weight: val),
+                        );
                         return true;
                       },
                     ),
@@ -142,7 +151,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           return false;
                         }
                         final total = (feet * 12) + inches;
-                        await widget.userState.updateCurrentUser(user.copyWith(height: total.toDouble()));
+                        await widget.userState.updateCurrentUser(
+                          user.copyWith(height: total.toDouble()),
+                        );
                         return true;
                       },
                     ),
@@ -164,7 +175,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _showInvalid('Enter a valid age');
                           return false;
                         }
-                        await widget.userState.updateCurrentUser(user.copyWith(age: val));
+                        await widget.userState.updateCurrentUser(
+                          user.copyWith(age: val),
+                        );
                         return true;
                       },
                     ),
@@ -175,14 +188,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: 'BMR',
                       value: user.bmr.toStringAsFixed(0),
                       unit: 'kcal',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       onSave: (text) async {
                         final val = double.tryParse(text);
                         if (val == null || val <= 0) {
                           _showInvalid('Enter a valid BMR');
                           return false;
                         }
-                        await widget.userState.updateCurrentUser(user.copyWith(bmr: val));
+                        await widget.userState.updateCurrentUser(
+                          user.copyWith(bmr: val),
+                        );
                         return true;
                       },
                     ),
@@ -201,7 +218,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _SettingsTile(
                 icon: Icons.cake,
                 title: 'Date of Birth',
-                value: '${user.dateOfBirth.month}/${user.dateOfBirth.day}/${user.dateOfBirth.year}',
+                value:
+                    '${user.dateOfBirth.month}/${user.dateOfBirth.day}/${user.dateOfBirth.year}',
                 onTap: () {},
               ),
               _SettingsTile(
@@ -224,18 +242,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Goal Weight',
                 value: '${user.goalWeight.toStringAsFixed(0)} lbs',
                 onTap: () async {
-                  final controller = TextEditingController(text: user.goalWeight.toStringAsFixed(1));
+                  final controller = TextEditingController(
+                    text: user.goalWeight.toStringAsFixed(1),
+                  );
                   final v = await showDialog<double?>(
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Set Goal Weight'),
                       content: TextField(
                         controller: controller,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(hintText: 'e.g. 175.0'),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. 175.0',
+                        ),
                       ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(null),
+                          child: const Text('Cancel'),
+                        ),
                         ElevatedButton(
                           onPressed: () {
                             final val = double.tryParse(controller.text);
@@ -247,7 +274,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                   if (v != null) {
-                    await widget.userState.updateCurrentUser(user.copyWith(goalWeight: v));
+                    await widget.userState.updateCurrentUser(
+                      user.copyWith(goalWeight: v),
+                    );
                   }
                 },
               ),
@@ -256,7 +285,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Daily Calorie Goal',
                 value: '${user.dailyCaloricGoal} cal',
                 onTap: () async {
-                  final controller = TextEditingController(text: user.dailyCaloricGoal.toString());
+                  final controller = TextEditingController(
+                    text: user.dailyCaloricGoal.toString(),
+                  );
                   final v = await showDialog<int?>(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -264,10 +295,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       content: TextField(
                         controller: controller,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(hintText: 'e.g. 2200'),
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. 2200',
+                        ),
                       ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(null),
+                          child: const Text('Cancel'),
+                        ),
                         ElevatedButton(
                           onPressed: () {
                             final val = int.tryParse(controller.text);
@@ -279,7 +315,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                   if (v != null) {
-                    await widget.userState.updateCurrentUser(user.copyWith(dailyCaloricGoal: v));
+                    await widget.userState.updateCurrentUser(
+                      user.copyWith(dailyCaloricGoal: v),
+                    );
                   }
                 },
               ),
@@ -298,22 +336,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: const Text('Sedentary'),
                         ),
                         SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Lightly Active'),
+                          onPressed: () =>
+                              Navigator.pop(context, 'Lightly Active'),
                           child: const Text('Lightly Active'),
                         ),
                         SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Moderately Active'),
+                          onPressed: () =>
+                              Navigator.pop(context, 'Moderately Active'),
                           child: const Text('Moderately Active'),
                         ),
                         SimpleDialogOption(
-                          onPressed: () => Navigator.pop(context, 'Very Active'),
+                          onPressed: () =>
+                              Navigator.pop(context, 'Very Active'),
                           child: const Text('Very Active'),
                         ),
                       ],
                     ),
                   );
                   if (selected != null) {
-                    await widget.userState.updateCurrentUser(user.copyWith(activityLevel: selected));
+                    await widget.userState.updateCurrentUser(
+                      user.copyWith(activityLevel: selected),
+                    );
                   }
                 },
               ),
@@ -325,7 +368,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Daily Steps Goal',
                 value: '${user.dailyStepsGoal} steps',
                 onTap: () async {
-                  final controller = TextEditingController(text: user.dailyStepsGoal.toString());
+                  final controller = TextEditingController(
+                    text: user.dailyStepsGoal.toString(),
+                  );
                   final v = await showDialog<int?>(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -333,10 +378,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       content: TextField(
                         controller: controller,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(hintText: 'e.g. 10000'),
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. 10000',
+                        ),
                       ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(null),
+                          child: const Text('Cancel'),
+                        ),
                         ElevatedButton(
                           onPressed: () {
                             final val = int.tryParse(controller.text);
@@ -348,7 +398,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                   if (v != null) {
-                    await widget.userState.updateCurrentUser(user.copyWith(dailyStepsGoal: v));
+                    await widget.userState.updateCurrentUser(
+                      user.copyWith(dailyStepsGoal: v),
+                    );
                   }
                 },
               ),
@@ -370,12 +422,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: TextButton(
                   onPressed: widget.onLogout,
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
+                    foregroundColor: Theme.of(context).colorScheme.error,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Logout',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ),
@@ -441,7 +497,10 @@ class _EditableStatCardState extends State<_EditableStatCard> {
 
   void _startEdit() {
     setState(() => _isEditing = true);
-    _controller.selection = TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
+    _controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _controller.text.length,
+    );
   }
 
   void _cancelEdit() {
@@ -456,7 +515,7 @@ class _EditableStatCardState extends State<_EditableStatCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Palette.lightStone,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -466,9 +525,9 @@ class _EditableStatCardState extends State<_EditableStatCard> {
             children: [
               Text(
                 widget.label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Colors.black54,
+                  color: context.colors.textMuted,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -477,7 +536,7 @@ class _EditableStatCardState extends State<_EditableStatCard> {
                 child: Icon(
                   _isEditing ? Icons.close : Icons.edit,
                   size: 16,
-                  color: Colors.black54,
+                  color: context.colors.textMuted,
                 ),
               ),
             ],
@@ -505,12 +564,19 @@ class _EditableStatCardState extends State<_EditableStatCard> {
                 const SizedBox(width: 6),
                 Text(
                   widget.unit,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.textSecondary,
+                  ),
                 ),
                 const SizedBox(width: 6),
                 InkWell(
                   onTap: _handleSave,
-                  child: const Icon(Icons.check, size: 18, color: Palette.forestGreen),
+                  child: Icon(
+                    Icons.check,
+                    size: 18,
+                    color: context.colors.accent,
+                  ),
                 ),
               ],
             )
@@ -523,17 +589,20 @@ class _EditableStatCardState extends State<_EditableStatCard> {
                 children: [
                   Text(
                     widget.value,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Palette.forestGreen,
+                      color: context.colors.accent,
                     ),
                   ),
                   const SizedBox(width: 4),
                   if (widget.unit.isNotEmpty)
                     Text(
                       widget.unit,
-                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.textSecondary,
+                      ),
                     ),
                 ],
               ),
@@ -624,7 +693,7 @@ class _EditableHeightCardState extends State<_EditableHeightCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Palette.lightStone,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -634,9 +703,9 @@ class _EditableHeightCardState extends State<_EditableHeightCard> {
             children: [
               Text(
                 widget.label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Colors.black54,
+                  color: context.colors.textMuted,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -645,7 +714,7 @@ class _EditableHeightCardState extends State<_EditableHeightCard> {
                 child: Icon(
                   _isEditing ? Icons.close : Icons.edit,
                   size: 16,
-                  color: Colors.black54,
+                  color: context.colors.textMuted,
                 ),
               ),
             ],
@@ -669,7 +738,13 @@ class _EditableHeightCardState extends State<_EditableHeightCard> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Text('\'', style: TextStyle(fontSize: 16, color: Colors.black54)),
+                Text(
+                  '\'',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
                 const SizedBox(width: 4),
                 SizedBox(
                   width: 40,
@@ -685,11 +760,21 @@ class _EditableHeightCardState extends State<_EditableHeightCard> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Text('"', style: TextStyle(fontSize: 16, color: Colors.black54)),
+                Text(
+                  '"',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 InkWell(
                   onTap: _handleSave,
-                  child: const Icon(Icons.check, size: 18, color: Palette.forestGreen),
+                  child: Icon(
+                    Icons.check,
+                    size: 18,
+                    color: context.colors.accent,
+                  ),
                 ),
               ],
             )
@@ -698,10 +783,10 @@ class _EditableHeightCardState extends State<_EditableHeightCard> {
               onTap: _startEdit,
               child: Text(
                 display,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Palette.forestGreen,
+                  color: context.colors.accent,
                 ),
               ),
             ),
@@ -722,10 +807,10 @@ class _SectionTitle extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: context.colors.textPrimary,
         ),
       ),
     );
@@ -750,7 +835,7 @@ class _SettingsTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Palette.lightStone,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -758,36 +843,26 @@ class _SettingsTile extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Palette.forestGreen.withValues(alpha: 0.1),
+            color: context.colors.accent.withValues(alpha: 0.10),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            icon,
-            color: Palette.forestGreen,
-            size: 20,
-          ),
+          child: Icon(icon, color: context.colors.accent, size: 20),
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: context.colors.textPrimary,
           ),
         ),
         subtitle: value.isNotEmpty
             ? Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black54,
-                ),
+                style: TextStyle(fontSize: 13, color: context.colors.textMuted),
               )
             : null,
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: Colors.black38,
-        ),
+        trailing: Icon(Icons.chevron_right, color: context.colors.textMuted),
         onTap: onTap,
       ),
     );

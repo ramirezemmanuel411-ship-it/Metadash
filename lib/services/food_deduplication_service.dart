@@ -6,11 +6,11 @@ import '../data/models/food_model.dart';
 /// Specifically handles language variants and "Original Taste" collapsing
 class FoodDeduplicationService {
   // ==================== NORMALIZATION ====================
-  
+
   /// Normalize text: lowercase, remove diacritics, punctuation, collapse spaces
   static String normalizeText(String text) {
     if (text.isEmpty) return '';
-    
+
     String result = _removeDiacritics(text);
     result = result.toLowerCase();
     result = result.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
@@ -20,21 +20,66 @@ class FoodDeduplicationService {
 
   static String _removeDiacritics(String text) {
     const accents = {
-      'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
-      'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e',
-      'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i',
-      'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o',
-      'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
-      'ý': 'y', 'ỳ': 'y', 'ÿ': 'y',
-      'ñ': 'n', 'ç': 'c', 'œ': 'oe', 'æ': 'ae',
-      'Á': 'A', 'À': 'A', 'Ä': 'A', 'Â': 'A', 'Ã': 'A', 'Å': 'A',
-      'É': 'E', 'È': 'E', 'Ë': 'E', 'Ê': 'E',
-      'Í': 'I', 'Ì': 'I', 'Ï': 'I', 'Î': 'I',
-      'Ó': 'O', 'Ò': 'O', 'Ö': 'O', 'Ô': 'O', 'Õ': 'O',
-      'Ú': 'U', 'Ù': 'U', 'Ü': 'U', 'Û': 'U',
-      'Ý': 'Y', 'Ñ': 'N', 'Ç': 'C', 'Œ': 'OE', 'Æ': 'AE',
+      'á': 'a',
+      'à': 'a',
+      'ä': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'å': 'a',
+      'é': 'e',
+      'è': 'e',
+      'ë': 'e',
+      'ê': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'ï': 'i',
+      'î': 'i',
+      'ó': 'o',
+      'ò': 'o',
+      'ö': 'o',
+      'ô': 'o',
+      'õ': 'o',
+      'ú': 'u',
+      'ù': 'u',
+      'ü': 'u',
+      'û': 'u',
+      'ý': 'y',
+      'ỳ': 'y',
+      'ÿ': 'y',
+      'ñ': 'n',
+      'ç': 'c',
+      'œ': 'oe',
+      'æ': 'ae',
+      'Á': 'A',
+      'À': 'A',
+      'Ä': 'A',
+      'Â': 'A',
+      'Ã': 'A',
+      'Å': 'A',
+      'É': 'E',
+      'È': 'E',
+      'Ë': 'E',
+      'Ê': 'E',
+      'Í': 'I',
+      'Ì': 'I',
+      'Ï': 'I',
+      'Î': 'I',
+      'Ó': 'O',
+      'Ò': 'O',
+      'Ö': 'O',
+      'Ô': 'O',
+      'Õ': 'O',
+      'Ú': 'U',
+      'Ù': 'U',
+      'Ü': 'U',
+      'Û': 'U',
+      'Ý': 'Y',
+      'Ñ': 'N',
+      'Ç': 'C',
+      'Œ': 'OE',
+      'Æ': 'AE',
     };
-    
+
     final buffer = StringBuffer();
     for (int i = 0; i < text.length; i++) {
       buffer.write(accents[text[i]] ?? text[i]);
@@ -95,7 +140,16 @@ class FoodDeduplicationService {
   }
 
   static bool _isNoisyBrand(String brand) {
-    const noise = ['restaurant', 'supermarket', 'generic', 'store', 'company', 'inc', 'ltd', 'food service'];
+    const noise = [
+      'restaurant',
+      'supermarket',
+      'generic',
+      'store',
+      'company',
+      'inc',
+      'ltd',
+      'food service',
+    ];
     return noise.any((n) => brand.contains(n));
   }
 
@@ -103,13 +157,15 @@ class FoodDeduplicationService {
 
   static String extractDietType(String nameNorm) {
     if (nameNorm.contains('diet')) return 'diet';
-    if (nameNorm.contains('zero') || 
-        nameNorm.contains('zéro') || 
-        nameNorm.contains('0 sugar') || 
+    if (nameNorm.contains('zero') ||
+        nameNorm.contains('zéro') ||
+        nameNorm.contains('0 sugar') ||
         nameNorm.contains('no sugar')) {
       return 'zero';
     }
-    if (nameNorm.contains('sugar free') || nameNorm.contains('sugarfree')) return 'sugar-free';
+    if (nameNorm.contains('sugar free') || nameNorm.contains('sugarfree')) {
+      return 'sugar-free';
+    }
     if (nameNorm.contains('light') || nameNorm.contains('lite')) return 'light';
     if (nameNorm.contains('low calorie')) return 'low-cal';
     return 'regular';
@@ -119,11 +175,35 @@ class FoodDeduplicationService {
 
   static String extractFlavor(String nameNorm) {
     const flavors = [
-      'cherry', 'vanilla', 'lime', 'lemon', 'orange', 'strawberry',
-      'raspberry', 'blueberry', 'mango', 'peach', 'grape', 'apple',
-      'pineapple', 'coconut', 'banana', 'chocolate', 'caramel',
-      'mint', 'cinnamon', 'ginger', 'coffee', 'mocha', 'hazelnut',
-      'almond', 'peanut butter', 'honey', 'maple', 'berry', 'citrus',
+      'cherry',
+      'vanilla',
+      'lime',
+      'lemon',
+      'orange',
+      'strawberry',
+      'raspberry',
+      'blueberry',
+      'mango',
+      'peach',
+      'grape',
+      'apple',
+      'pineapple',
+      'coconut',
+      'banana',
+      'chocolate',
+      'caramel',
+      'mint',
+      'cinnamon',
+      'ginger',
+      'coffee',
+      'mocha',
+      'hazelnut',
+      'almond',
+      'peanut butter',
+      'honey',
+      'maple',
+      'berry',
+      'citrus',
     ];
 
     for (final flavor in flavors) {
@@ -151,16 +231,34 @@ class FoodDeduplicationService {
     String core = nameNorm;
 
     // 1. Remove brand tokens
-    const brandKeywords = ['coca', 'cola', 'coke', 'coca cola', 'coca-cola', 'cocacola'];
+    const brandKeywords = [
+      'coca',
+      'cola',
+      'coke',
+      'coca cola',
+      'coca-cola',
+      'cocacola',
+    ];
     for (final keyword in brandKeywords) {
       core = core.replaceAll(keyword, ' ');
     }
 
     // 2. Remove diet/variant tokens
     const variantTokens = [
-      'diet', 'zero', 'zéro', 'sugar free', 'light', 'lite',
-      'regular', 'original', 'classic', 'traditional',
-      'authentic', 'real', 'new', 'improved',
+      'diet',
+      'zero',
+      'zéro',
+      'sugar free',
+      'light',
+      'lite',
+      'regular',
+      'original',
+      'classic',
+      'traditional',
+      'authentic',
+      'real',
+      'new',
+      'improved',
     ];
     for (final token in variantTokens) {
       core = core.replaceAll(token, ' ');
@@ -168,21 +266,41 @@ class FoodDeduplicationService {
 
     // 3. Remove language-specific "Original Taste" variants
     const styleTokens = [
-      'gout original', 'goût original', 'gout', 'goût',
-      'sabor original', 'sabor',
-      'gusto original', 'gusto',
-      'original taste', 'taste',
-      'flavor', 'flavored', 'flavour', 'flavoured',
-      'classique', 'clasico', 'clásico', 'tradicional',
-      'autentico', 'autêntico', 'autentique',
+      'gout original',
+      'goût original',
+      'gout',
+      'goût',
+      'sabor original',
+      'sabor',
+      'gusto original',
+      'gusto',
+      'original taste',
+      'taste',
+      'flavor',
+      'flavored',
+      'flavour',
+      'flavoured',
+      'classique',
+      'clasico',
+      'clásico',
+      'tradicional',
+      'autentico',
+      'autêntico',
+      'autentique',
     ];
     for (final token in styleTokens) {
       core = core.replaceAll(token, ' ');
     }
 
     // 4. Remove packaging/size tokens
-    core = core.replaceAll(RegExp(r'\d+\.?\d*\s*(ml|l|oz|g|kg|lb|pack|count|ct|pc)\b'), ' ');
-    core = core.replaceAll(RegExp(r'\b(mini|can|bottle|glass|plastic|pet|aluminum)\b'), ' ');
+    core = core.replaceAll(
+      RegExp(r'\d+\.?\d*\s*(ml|l|oz|g|kg|lb|pack|count|ct|pc)\b'),
+      ' ',
+    );
+    core = core.replaceAll(
+      RegExp(r'\b(mini|can|bottle|glass|plastic|pet|aluminum)\b'),
+      ' ',
+    );
 
     // 5. Remove flavor tokens (if already extracted as separate attribute)
     if (flavor != 'none') {
@@ -193,14 +311,13 @@ class FoodDeduplicationService {
     core = core.replaceAll(RegExp(r'\s+'), ' ').trim();
 
     // 7. If core is now empty or just generic words, infer from brand or query
-    if (core.isEmpty || 
-        core == 'original' || 
-        core == 'taste' || 
+    if (core.isEmpty ||
+        core == 'original' ||
+        core == 'taste' ||
         core == 'flavor' ||
         core == 'original taste' ||
         core == 'gout original' ||
         core == 'sabor original') {
-      
       // Infer core from brand
       if (brandNorm == 'coca-cola') {
         return 'cola';
@@ -237,7 +354,7 @@ class FoodDeduplicationService {
 
     final dietType = extractDietType(nameNorm);
     final flavor = extractFlavor(nameNorm);
-    
+
     final coreName = inferCoreName(
       nameNorm: nameNorm,
       brandNorm: brandNorm,
@@ -262,7 +379,7 @@ class FoodDeduplicationService {
 
     final queryNorm = normalizeText(query);
 
-    print('\n${'='*60}');
+    print('\n${'=' * 60}');
     print('[DEDUP] Query: "$query" (norm: "$queryNorm")');
     print('[DEDUP] Raw items: ${items.length}');
 
@@ -305,7 +422,9 @@ class FoodDeduplicationService {
         print('[✓] Family: $sig');
         print('    Candidates: ${candidates.length}');
         print('    Selected: "${best.displayTitle}" (${best.source})');
-        print('    Collapsed: ${candidates.where((c) => c.id != best.id).map((c) => '"${c.displayTitle}" (${c.source})').join(", ")}');
+        print(
+          '    Collapsed: ${candidates.where((c) => c.id != best.id).map((c) => '"${c.displayTitle}" (${c.source})').join(", ")}',
+        );
       }
     }
 
@@ -321,19 +440,23 @@ class FoodDeduplicationService {
         brand: item.brand,
         query: query,
       );
-      print('[${(i+1).toString().padLeft(2)}] "${item.displayTitle}" '
-          '| brand="${item.brand ?? "?"}" '
-          '| ${item.calories} cal '
-          '| source=${item.source} '
-          '| sig=$sig');
+      print(
+        '[${(i + 1).toString().padLeft(2)}] "${item.displayTitle}" '
+        '| brand="${item.brand ?? "?"}" '
+        '| ${item.calories} cal '
+        '| source=${item.source} '
+        '| sig=$sig',
+      );
     }
-    print('${'='*60}\n');
+    print('${'=' * 60}\n');
 
     // Second pass: ensure uniqueness (safety net)
     _ensureUniqueFamilySignatures(representatives, query);
 
     // Preserve original ranking order
-    final originalOrder = {for (var i = 0; i < items.length; i++) items[i].id: i};
+    final originalOrder = {
+      for (var i = 0; i < items.length; i++) items[i].id: i,
+    };
     representatives.sort((a, b) {
       final idxA = originalOrder[a.id] ?? items.length;
       final idxB = originalOrder[b.id] ?? items.length;
@@ -347,7 +470,10 @@ class FoodDeduplicationService {
   }
 
   /// Ensure no duplicate family signatures in the results (safety net)
-  static void _ensureUniqueFamilySignatures(List<FoodModel> items, String query) {
+  static void _ensureUniqueFamilySignatures(
+    List<FoodModel> items,
+    String query,
+  ) {
     final seen = <String>{};
     final duplicates = <String>[];
 
@@ -378,7 +504,8 @@ class FoodDeduplicationService {
       int score = 0;
 
       // 1. Branded items (+1000)
-      if (item.brand != null && item.brand!.isNotEmpty && 
+      if (item.brand != null &&
+          item.brand!.isNotEmpty &&
           !item.brand!.toLowerCase().contains('generic')) {
         score += 1000;
       }

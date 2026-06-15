@@ -105,17 +105,19 @@ class CanonicalFoodParser {
     return _toTitleCase(cleaned);
   }
 
-  /// Infer brand from food name by extracting first meaningful word
+  /// Infer a canonical identifier from the food name when no brand is available.
+  /// Uses the first 2 meaningful words to avoid over-grouping:
+  /// e.g. "Chicken Breast" and "Chicken Thigh" get different canonical keys
+  /// instead of both collapsing into "Chicken".
   static String _inferBrandFromFoodName(String foodName) {
-    final words = foodName.split(RegExp(r'[\s,]+'));
-    for (final word in words) {
-      final cleaned = word.trim().replaceAll(RegExp(r'[^\w]'), '');
-      if (cleaned.isNotEmpty &&
-          !_genericWords.contains(cleaned.toLowerCase())) {
-        return _toTitleCase(cleaned);
-      }
-    }
-    return 'Unknown';
+    final words = foodName
+        .split(RegExp(r'[\s,]+'))
+        .map((w) => w.trim().replaceAll(RegExp(r'[^\w]'), ''))
+        .where((w) => w.isNotEmpty && !_genericWords.contains(w.toLowerCase()))
+        .take(2)
+        .toList();
+    if (words.isEmpty) return 'Unknown';
+    return _toTitleCase(words.join(' '));
   }
 
   /// Detect variant from fixed whitelist

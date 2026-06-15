@@ -6,7 +6,6 @@ import 'package:metadash/services/food_search_engine.dart';
 /// These tests verify the REALISTIC behavior of the search system
 void main() {
   group('Food Search - Realistic Tests', () {
-    
     test('Search returns clean results without errors', () {
       final items = [
         _food('Coca Cola Original', 'Coca Cola', 140, 355, 'ml'),
@@ -30,7 +29,13 @@ void main() {
     test('Search results have clean display formatting', () {
       final items = [
         _food('COCA COLA ORIGINAL TASTE', 'Coca-Cola®', 140, 355, 'ml'),
-        _food('Pepsi, cola-flavored beverage, 355ml', 'PepsiCo', 150, 355, 'ml'),
+        _food(
+          'Pepsi, cola-flavored beverage, 355ml',
+          'PepsiCo',
+          150,
+          355,
+          'ml',
+        ),
       ];
 
       final results = FoodSearchEngine.search(
@@ -43,7 +48,7 @@ void main() {
         // No trademark symbols
         expect(result.displayTitle, isNot(contains('®')));
         expect(result.displayTitle, isNot(contains('™')));
-        
+
         // No excessive punctuation (allow occasional dashes/commas in product names)
         final commaCount = result.displayTitle.split(',').length;
         expect(commaCount, lessThanOrEqualTo(3));
@@ -98,21 +103,18 @@ void main() {
 
     test('Display subtitle shows brand and serving info', () {
       final item = _food('Coca Cola', 'Coca Cola', 140, 355, 'ml');
-      final results = FoodSearchEngine.search(
-        query: 'coca',
-        items: [item],
-      );
+      final results = FoodSearchEngine.search(query: 'coca', items: [item]);
 
       expect(results.isNotEmpty, isTrue);
       final subtitle = results.first.displaySubtitle;
-      
+
       // Should show brand or source
       expect(
-        subtitle.toLowerCase().contains('coca') || 
-        subtitle.toLowerCase().contains('branded'),
+        subtitle.toLowerCase().contains('coca') ||
+            subtitle.toLowerCase().contains('branded'),
         isTrue,
       );
-      
+
       // Should show calories
       expect(subtitle, contains('cal'));
     });
@@ -158,9 +160,7 @@ void main() {
     });
 
     test('FoodSearchEngine.debugSearch outputs debug info', () {
-      final items = [
-        _food('Coca Cola', 'Coca Cola', 140, 355, 'ml'),
-      ];
+      final items = [_food('Coca Cola', 'Coca Cola', 140, 355, 'ml')];
 
       final results = FoodSearchEngine.debugSearch('cola', items, limit: 25);
       expect(results, isNotEmpty);
@@ -172,7 +172,13 @@ void main() {
 // Helpers
 // =============================================================================
 
-FoodModel _food(String name, String brand, int calories, double servingSize, String servingUnit) {
+FoodModel _food(
+  String name,
+  String brand,
+  int calories,
+  double servingSize,
+  String servingUnit,
+) {
   return FoodModel(
     id: '${name}_$brand',
     name: name,

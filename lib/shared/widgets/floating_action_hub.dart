@@ -1,8 +1,15 @@
+import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../palette.dart';
+
+// Night mode tokens used by this widget.
+const Color _nightAccentBlue = Color(0xFF4C7FA8);
+const Color _nightSurface = Color(0xFF222522);
+const Color _nightTextPrimary = Color(0xFFF2F1EC);
 
 /// A draggable, snapping FAB with radial menu on long-press.
 /// Tap = primary action, Long-press = show radial menu.
@@ -30,8 +37,7 @@ class FloatingActionHub extends StatefulWidget {
   State<FloatingActionHub> createState() => _FloatingActionHubState();
 }
 
-class _FloatingActionHubState extends State<FloatingActionHub>
-    with SingleTickerProviderStateMixin {
+class _FloatingActionHubState extends State<FloatingActionHub> {
   static const String _positionKeyX = 'fab_position_x';
   static const String _positionKeyY = 'fab_position_y';
   static const double _fabSize = 56.0;
@@ -41,59 +47,55 @@ class _FloatingActionHubState extends State<FloatingActionHub>
   bool _isDragging = false;
   bool _menuOpen = false;
   OverlayEntry? _overlayEntry;
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
+  OverlayEntry? _fabEntry;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 180),
-    );
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-    _loadPosition();
+    unawaited(_loadPosition());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _fabEntry = OverlayEntry(builder: _buildFabOverlay);
+      Overlay.of(context, rootOverlay: true).insert(_fabEntry!);
+    });
   }
 
   @override
   void dispose() {
-    _closeMenu();
-    _animationController.dispose();
+    _fabEntry?.remove();
+    _fabEntry = null;
+    _closeMenu(animate: false);
     super.dispose();
   }
 
   Future<void> _loadPosition() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
     final x = prefs.getDouble(_positionKeyX);
     final y = prefs.getDouble(_positionKeyY);
-    
-    if (mounted && x != null && y != null) {
+
+    if (x != null && y != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _position = Offset(x, y);
-          });
-        }
+        if (!mounted) return;
+        setState(() {
+          _position = Offset(x, y);
+        });
+        _fabEntry?.markNeedsBuild();
       });
     } else {
       // Default to bottom-right
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          final size = MediaQuery.of(context).size;
-          final safeArea = MediaQuery.of(context).padding;
-          setState(() {
-            _position = Offset(
-              size.width - _fabSize - _edgePadding - safeArea.right,
-              size.height - _fabSize - _edgePadding - safeArea.bottom - 80,
-            );
-          });
-        }
+        if (!mounted) return;
+        final size = MediaQuery.of(context).size;
+        final safeArea = MediaQuery.of(context).padding;
+        setState(() {
+          _position = Offset(
+            size.width - _fabSize - _edgePadding - safeArea.right,
+            size.height - _fabSize - _edgePadding - safeArea.bottom - 80,
+          );
+        });
+        _fabEntry?.markNeedsBuild();
       });
     }
   }
@@ -112,8 +114,6 @@ class _FloatingActionHubState extends State<FloatingActionHub>
     final centerY = _position.dy + _fabSize / 2;
     final isLeft = centerX < size.width / 2;
 
-    // Snap to vertical edge too when near top/bottom (corner snap),
-    // using the same 25% thresholds as _calculatePositions().
     final isNearBottom = centerY > size.height * 3 / 4;
     final isNearTop = centerY < size.height / 4;
 
@@ -137,7 +137,8 @@ class _FloatingActionHubState extends State<FloatingActionHub>
         newY,
       );
     });
-    _savePosition();
+    _fabEntry?.markNeedsBuild();
+    unawaited(_savePosition());
   }
 
   void _onTap() {
@@ -154,10 +155,15 @@ class _FloatingActionHubState extends State<FloatingActionHub>
 
   void _openMenu() {
     if (_menuOpen) return;
-    
+
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    _overlayEntry?.remove();
+
     setState(() {
       _menuOpen = true;
     });
+    _fabEntry?.markNeedsBuild();
 
     final size = MediaQuery.of(context).size;
     final fabCenter = Offset(
@@ -169,8 +175,6 @@ class _FloatingActionHubState extends State<FloatingActionHub>
       builder: (context) => _RadialMenuOverlay(
         fabCenter: fabCenter,
         screenSize: size,
-        scaleAnimation: _scaleAnimation,
-        fadeAnimation: _fadeAnimation,
         onDismiss: _closeMenu,
         onAddFood: () {
           _closeMenu();
@@ -197,78 +201,89 @@ class _FloatingActionHubState extends State<FloatingActionHub>
       ),
     );
 
-    Overlay.of(context).insert(_overlayEntry!);
-    _animationController.forward();
+    overlay.insert(_overlayEntry!);
   }
 
-  void _closeMenu() {
+  void _closeMenu({bool animate = true}) {
     if (!_menuOpen) return;
-    
-    _animationController.reverse().then((_) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
-      if (mounted) {
-        setState(() {
-          _menuOpen = false;
-        });
-      }
-    });
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _menuOpen = false;
+    _fabEntry?.markNeedsBuild();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildFabOverlay(BuildContext ctx) {
+    final theme = Theme.of(ctx);
+    final isDark = theme.brightness == Brightness.dark;
+    final resolvedFabColor = isDark
+        ? _nightAccentBlue
+        : (widget.fabColor ?? theme.colorScheme.primary);
+
     return Positioned(
       left: _position.dx,
       top: _position.dy,
       child: GestureDetector(
         onTap: _menuOpen ? null : _onTap,
         onLongPress: _menuOpen ? null : _onLongPress,
-        onPanStart: _menuOpen ? null : (_) {
-          setState(() {
-            _isDragging = true;
-          });
-        },
-        onPanUpdate: _menuOpen ? null : (details) {
-          setState(() {
-            _position += details.delta;
-          });
-        },
-        onPanEnd: _menuOpen ? null : (_) {
-          setState(() {
-            _isDragging = false;
-          });
-          _snapToEdge();
-        },
+        onPanStart: _menuOpen
+            ? null
+            : (_) {
+                setState(() {
+                  _isDragging = true;
+                });
+                _fabEntry?.markNeedsBuild();
+              },
+        onPanUpdate: _menuOpen
+            ? null
+            : (details) {
+                setState(() {
+                  _position += details.delta;
+                });
+                _fabEntry?.markNeedsBuild();
+              },
+        onPanEnd: _menuOpen
+            ? null
+            : (_) {
+                setState(() {
+                  _isDragging = false;
+                });
+                _snapToEdge();
+              },
         child: Container(
           width: _fabSize,
           height: _fabSize,
           decoration: BoxDecoration(
-            color: widget.fabColor ?? Theme.of(context).colorScheme.primary,
+            color: resolvedFabColor,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.32)
+                    : Colors.black.withValues(alpha: 0.15),
                 blurRadius: _isDragging ? 12 : 8,
                 offset: Offset(0, _isDragging ? 4 : 2),
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.add,
-            color: Colors.white,
+            color: isDark ? _nightTextPrimary : Colors.white,
             size: 28,
           ),
         ),
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
 }
 
-class _RadialMenuOverlay extends StatelessWidget {
+class _RadialMenuOverlay extends StatefulWidget {
   final Offset fabCenter;
   final Size screenSize;
-  final Animation<double> scaleAnimation;
-  final Animation<double> fadeAnimation;
   final VoidCallback onDismiss;
   final VoidCallback onAddFood;
   final VoidCallback onOpenAI;
@@ -281,8 +296,6 @@ class _RadialMenuOverlay extends StatelessWidget {
   const _RadialMenuOverlay({
     required this.fabCenter,
     required this.screenSize,
-    required this.scaleAnimation,
-    required this.fadeAnimation,
     required this.onDismiss,
     required this.onAddFood,
     required this.onOpenAI,
@@ -294,32 +307,67 @@ class _RadialMenuOverlay extends StatelessWidget {
   });
 
   @override
+  State<_RadialMenuOverlay> createState() => _RadialMenuOverlayState();
+}
+
+class _RadialMenuOverlayState extends State<_RadialMenuOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Dismiss backdrop
         Positioned.fill(
           child: GestureDetector(
-            onTap: onDismiss,
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.2),
+            onTap: widget.onDismiss,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.18),
+              ),
             ),
           ),
         ),
         // Radial menu items
         _RadialMenu(
-          fabCenter: fabCenter,
-          screenSize: screenSize,
-          scaleAnimation: scaleAnimation,
-          fadeAnimation: fadeAnimation,
-          onDismiss: onDismiss,
-          onAddFood: onAddFood,
-          onOpenAI: onOpenAI,
-          onAddWorkout: onAddWorkout,
-          onAddWeight: onAddWeight,
-          onSettings: onSettings,
-          fabColor: fabColor,
-          backgroundColor: backgroundColor,
+          fabCenter: widget.fabCenter,
+          screenSize: widget.screenSize,
+          scaleAnimation: _scaleAnimation,
+          fadeAnimation: _fadeAnimation,
+          rotationAnimation: _fadeAnimation,
+          onDismiss: widget.onDismiss,
+          onAddFood: widget.onAddFood,
+          onOpenAI: widget.onOpenAI,
+          onAddWorkout: widget.onAddWorkout,
+          onAddWeight: widget.onAddWeight,
+          onSettings: widget.onSettings,
+          fabColor: widget.fabColor,
+          backgroundColor: widget.backgroundColor,
         ),
       ],
     );
@@ -331,6 +379,7 @@ class _RadialMenu extends StatelessWidget {
   final Size screenSize;
   final Animation<double> scaleAnimation;
   final Animation<double> fadeAnimation;
+  final Animation<double> rotationAnimation;
   final VoidCallback onDismiss;
   final VoidCallback onAddFood;
   final VoidCallback onOpenAI;
@@ -341,13 +390,14 @@ class _RadialMenu extends StatelessWidget {
   final Color? backgroundColor;
 
   static const double _radius = 120.0;
-  static const double _itemSize = 56.0;
+  static const double _itemSize = 64.0;
 
   const _RadialMenu({
     required this.fabCenter,
     required this.screenSize,
     required this.scaleAnimation,
     required this.fadeAnimation,
+    required this.rotationAnimation,
     required this.onDismiss,
     required this.onAddFood,
     required this.onOpenAI,
@@ -360,16 +410,8 @@ class _RadialMenu extends StatelessWidget {
 
   List<_RadialMenuItem> _getItems() {
     return [
-      _RadialMenuItem(
-        icon: Icons.auto_awesome,
-        label: 'AI',
-        onTap: onOpenAI,
-      ),
-      _RadialMenuItem(
-        icon: Icons.restaurant,
-        label: 'Food',
-        onTap: onAddFood,
-      ),
+      _RadialMenuItem(icon: Icons.auto_awesome, label: 'AI', onTap: onOpenAI),
+      _RadialMenuItem(icon: Icons.restaurant, label: 'Food', onTap: onAddFood),
       _RadialMenuItem(
         icon: Icons.fitness_center,
         label: 'Workout',
@@ -391,7 +433,7 @@ class _RadialMenu extends StatelessWidget {
   List<Offset> _calculatePositions() {
     final items = _getItems();
     final positions = <Offset>[];
-    
+
     // Determine FAB position relative to screen
     final isLeft = fabCenter.dx < screenSize.width / 4;
     final isRight = fabCenter.dx > screenSize.width * 3 / 4;
@@ -412,7 +454,10 @@ class _RadialMenu extends StatelessWidget {
     if (isCorner) {
       final maxRadiusX = isLeft ? rightSpace : leftSpace;
       final maxRadiusY = isTop ? bottomSpace : topSpace;
-      effectiveRadius = math.min(desiredCornerRadius, math.min(maxRadiusX, maxRadiusY));
+      effectiveRadius = math.min(
+        desiredCornerRadius,
+        math.min(maxRadiusX, maxRadiusY),
+      );
     } else if (isLeft) {
       effectiveRadius = math.min(desiredEdgeRadius, rightSpace);
     } else if (isRight) {
@@ -424,10 +469,10 @@ class _RadialMenu extends StatelessWidget {
     } else {
       effectiveRadius = desiredEdgeRadius;
     }
-    
+
     // Determine best direction for semicircle based on FAB position
     double baseAngle;
-    
+
     if (isTop && isLeft) {
       // Top-left corner: spread down and right
       baseAngle = math.pi * 0.25; // 45 degrees
@@ -456,19 +501,21 @@ class _RadialMenu extends StatelessWidget {
       // Center: default to left
       baseAngle = math.pi;
     }
-    
+
     // Use quarter-circle in corners, semicircle elsewhere
     final angleSpan = isCorner ? (math.pi / 2) : math.pi;
     final startAngle = baseAngle - (angleSpan / 2);
     final endAngle = baseAngle + (angleSpan / 2);
-    
+
     final angleRange = endAngle - startAngle;
     final angleStep = items.length > 1 ? angleRange / (items.length - 1) : 0;
 
     for (int i = 0; i < items.length; i++) {
       final angle = startAngle + (angleStep * i);
-      final x = fabCenter.dx + (effectiveRadius * math.cos(angle)) - (_itemSize / 2);
-      final y = fabCenter.dy + (effectiveRadius * math.sin(angle)) - (_itemSize / 2);
+      final x =
+          fabCenter.dx + (effectiveRadius * math.cos(angle)) - (_itemSize / 2);
+      final y =
+          fabCenter.dy + (effectiveRadius * math.sin(angle)) - (_itemSize / 2);
 
       positions.add(Offset(x, y));
     }
@@ -478,12 +525,14 @@ class _RadialMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final resolvedFabColor = isDark
+        ? _nightAccentBlue
+        : (fabColor ?? theme.colorScheme.primary);
+
     final items = _getItems();
     final positions = _calculatePositions();
-    final rotationValue = CurvedAnimation(
-      parent: fadeAnimation,
-      curve: Curves.easeOutCubic,
-    );
 
     return AnimatedBuilder(
       animation: scaleAnimation,
@@ -500,22 +549,27 @@ class _RadialMenu extends StatelessWidget {
                   width: _itemSize,
                   height: _itemSize,
                   decoration: BoxDecoration(
-                    color: fabColor ?? Theme.of(context).colorScheme.primary,
+                    color: resolvedFabColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
+                        color: isDark
+                          ? Colors.black.withValues(alpha: 0.32)
+                          : context.colors.textMuted.withValues(alpha: 0.15),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Transform.rotate(
-                    angle: rotationValue.value * (math.pi / 4),
-                    child: const Icon(
-                      Icons.add,
-                      color: Colors.white,
-                      size: 28,
+                  child: AnimatedBuilder(
+                    animation: rotationAnimation,
+                    builder: (context2, child2) => Transform.rotate(
+                      angle: rotationAnimation.value * (math.pi / 4) * 2,
+                      child: Icon(
+                        Icons.add,
+                        color: context.colors.onPrimary,
+                        size: 28,
+                      ),
                     ),
                   ),
                 ),
@@ -525,7 +579,7 @@ class _RadialMenu extends StatelessWidget {
             ...List.generate(items.length, (index) {
               final item = items[index];
               final position = positions[index];
-              
+
               return Positioned(
                 left: position.dx,
                 top: position.dy,
@@ -536,6 +590,7 @@ class _RadialMenu extends StatelessWidget {
                     child: _RadialItemWidget(
                       item: item,
                       backgroundColor: backgroundColor,
+                      labelOnLeft: fabCenter.dx > screenSize.width / 2,
                     ),
                   ),
                 ),
@@ -563,56 +618,61 @@ class _RadialMenuItem {
 class _RadialItemWidget extends StatelessWidget {
   final _RadialMenuItem item;
   final Color? backgroundColor;
+  final bool labelOnLeft;
 
   const _RadialItemWidget({
     required this.item,
     this.backgroundColor,
+    this.labelOnLeft = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final resolvedBackground =
+        backgroundColor ?? (isDark ? _nightSurface : theme.colorScheme.surface);
+    final resolvedIconColor =
+        isDark ? _nightAccentBlue : theme.colorScheme.primary;
+    final resolvedLabelColor =
+        isDark ? _nightTextPrimary : theme.colorScheme.onSurface;
 
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
         item.onTap();
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: backgroundColor ?? (isDark ? Palette.nightSecondary : Palette.daySecondary),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: resolvedBackground,
+          shape: BoxShape.circle,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
             ),
-            child: Icon(
-              item.icon,
-              color: isDark ? Colors.white : Theme.of(context).colorScheme.primary,
-              size: 24,
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(item.icon, color: resolvedIconColor, size: 20),
+            const SizedBox(height: 3),
+            Text(
+              item.label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: resolvedLabelColor,
+                decoration: TextDecoration.none,
+                height: 1,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            item.label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface,
-              decoration: TextDecoration.none,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

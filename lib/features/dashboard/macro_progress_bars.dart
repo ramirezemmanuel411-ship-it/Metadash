@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import '../../shared/palette.dart';
 
 class MacroProgressBars extends StatelessWidget {
   final int proteinConsumed;
@@ -24,32 +25,32 @@ class MacroProgressBars extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Bars row with labels centered on bars
         Row(
-          spacing: 8,
           children: [
             Expanded(
               child: _MacroBar(
                 label: 'Protein',
                 consumed: proteinConsumed,
                 target: proteinTarget,
-                color: Colors.orange,
+                color: Colors.redAccent,
               ),
             ),
+            const SizedBox(width: 8),
             Expanded(
               child: _MacroBar(
                 label: 'Carbs',
                 consumed: carbsConsumed,
                 target: carbsTarget,
-                color: Colors.blue,
+                color: Colors.teal,
               ),
             ),
+            const SizedBox(width: 8),
             Expanded(
               child: _MacroBar(
                 label: 'Fat',
                 consumed: fatConsumed,
                 target: fatTarget,
-                color: Colors.red,
+                color: Colors.orange,
               ),
             ),
           ],
@@ -82,10 +83,10 @@ class _MacroBar extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: context.colors.textSecondary,
           ),
         ),
         const SizedBox(height: 4),
@@ -94,8 +95,8 @@ class _MacroBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 6,
-            backgroundColor: Colors.grey.shade200,
-            color: exceeded ? color.withOpacity(0.7) : color,
+            backgroundColor: context.colors.surfaceVariant,
+            color: exceeded ? context.colors.cta : color,
           ),
         ),
         const SizedBox(height: 4),
@@ -104,7 +105,7 @@ class _MacroBar extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w500,
-            color: exceeded ? Colors.amber.shade600 : Colors.grey,
+            color: exceeded ? context.colors.cta : context.colors.textSecondary,
           ),
         ),
       ],

@@ -62,8 +62,8 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
   static const _debounceDuration = Duration(milliseconds: 150);
 
   FoodSearchBloc({SearchRepository? repository})
-      : _repository = repository ?? SearchRepository.withFatSecret(),
-        super(const domain.SearchInitial()) {
+    : _repository = repository ?? SearchRepository.withFatSecret(),
+      super(const domain.SearchInitial()) {
     on<LoadInitialData>(_onLoadInitialData);
     on<SearchQueryChanged>(
       _onSearchQueryChanged,
@@ -83,10 +83,7 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
       final recent = await _repository.getRecentSearches(limit: 10);
       final favorites = await _repository.getFavorites(limit: 10);
 
-      emit(domain.SearchInitial(
-        recentSearches: recent,
-        favorites: favorites,
-      ));
+      emit(domain.SearchInitial(recentSearches: recent, favorites: favorites));
 
       // Clean up old data in background
       _repository.cleanupOldData();
@@ -150,12 +147,14 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
     final source = _mapSearchSource(searchResult.source);
 
     // Emit success state
-    emit(domain.SearchSuccess(
-      query: query,
-      results: searchResult.results,
-      source: source,
-      isLoadingMore: !searchResult.isComplete,
-    ));
+    emit(
+      domain.SearchSuccess(
+        query: query,
+        results: searchResult.results,
+        source: source,
+        isLoadingMore: !searchResult.isComplete,
+      ),
+    );
   }
 
   /// Map repository SearchSource to domain SearchSource
@@ -214,9 +213,7 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
   }
 
   /// Custom transformer for debouncing
-  EventTransformer<SearchQueryChanged> _debounceTransformer(
-    Duration duration,
-  ) {
+  EventTransformer<SearchQueryChanged> _debounceTransformer(Duration duration) {
     return (events, mapper) {
       return events
           .distinct((prev, next) => prev.query == next.query)

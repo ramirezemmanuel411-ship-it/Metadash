@@ -21,7 +21,7 @@ class AiCameraScreen extends StatefulWidget {
 class _AiCameraScreenState extends State<AiCameraScreen> {
   CameraController? _cameraController;
   Future<void>? _initializeControllerFuture;
-  
+
   AiService? _aiService;
   bool _isAnalyzing = false;
   bool _showDescriptionInput = false;
@@ -55,9 +55,9 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Camera error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Camera error: $e')));
       }
     }
   }
@@ -76,8 +76,10 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('OpenAI API key required for AI camera. Add OPENAI_API_KEY to .env'),
-              backgroundColor: Colors.orange,
+              content: Text(
+                'OpenAI API key required for AI camera. Add OPENAI_API_KEY to .env',
+              ),
+              backgroundColor: null,
               duration: Duration(seconds: 4),
             ),
           );
@@ -85,9 +87,9 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to initialize AI: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to initialize AI: $e')));
       }
     }
   }
@@ -99,7 +101,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
       await _initializeControllerFuture;
       final picture = await _cameraController!.takePicture();
       final imageFile = File(picture.path);
-      
+
       setState(() {
         _capturedImage = imageFile;
         _showDescriptionInput = true;
@@ -107,9 +109,9 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to capture photo: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to capture photo: $e')));
       }
     }
   }
@@ -118,7 +120,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
     if (_aiService == null || _capturedImage == null) return;
 
     final description = _descriptionController.text.trim();
-    
+
     setState(() => _isAnalyzing = true);
 
     try {
@@ -126,7 +128,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
         _capturedImage!,
         userDescription: description.isNotEmpty ? description : null,
       );
-      
+
       if (mounted) {
         setState(() {
           _currentEstimate = estimate;
@@ -140,7 +142,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('AI analysis failed: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.colors.cta,
           ),
         );
       }
@@ -183,7 +185,9 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
   }
 
   Future<void> _addToDiary() async {
-    if (_currentEstimate == null || widget.userState.currentUser == null) return;
+    if (_currentEstimate == null || widget.userState.currentUser == null) {
+      return;
+    }
 
     try {
       final entry = DiaryEntryFood(
@@ -206,10 +210,10 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Added to diary!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: const Text('Added to diary!'),
+            backgroundColor: context.colors.accent,
+            duration: const Duration(seconds: 2),
           ),
         );
 
@@ -224,13 +228,13 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to add to diary: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.colors.cta,
           ),
         );
       }
     }
   }
-            
+
   @override
   Widget build(BuildContext context) {
     // Show camera view
@@ -238,13 +242,12 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
       return FutureBuilder<void>(
         future: _initializeControllerFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done && _cameraController != null) {
+          if (snapshot.connectionState == ConnectionState.done &&
+              _cameraController != null) {
             return Stack(
               fit: StackFit.expand,
               children: [
-                SizedBox.expand(
-                  child: CameraPreview(_cameraController!),
-                ),
+                SizedBox.expand(child: CameraPreview(_cameraController!)),
                 // Camera overlay with just capture button, no frame or text
                 SafeArea(
                   child: Column(
@@ -263,7 +266,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                               onPressed: _toggleTorch,
                               icon: Icon(
                                 _torchOn ? Icons.flash_on : Icons.flash_off,
-                                color: Colors.white,
+                                color: context.colors.onPrimary,
                                 size: 32,
                               ),
                               tooltip: 'Toggle Flashlight',
@@ -277,13 +280,16 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                                 height: 70,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 4),
+                                  border: Border.all(
+                                    color: context.colors.onPrimary,
+                                    width: 4,
+                                  ),
                                 ),
                                 child: Container(
                                   margin: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white,
+                                    color: context.colors.onPrimary,
                                   ),
                                 ),
                               ),
@@ -301,10 +307,12 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
             );
           } else {
             return Container(
-              color: Colors.black,
-              child: const Center(
+              color: context.colors.background,
+              child: Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    context.colors.onPrimary,
+                  ),
                 ),
               ),
             );
@@ -316,21 +324,19 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
     // Show description input after photo capture
     if (_showDescriptionInput && _capturedImage != null) {
       return GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard on tap outside
+        onTap: () =>
+            FocusScope.of(context).unfocus(), // Dismiss keyboard on tap outside
         child: Container(
-          color: Palette.warmNeutral,
+          color: context.colors.background,
           child: Column(
             children: [
               // Image preview
               Expanded(
                 flex: 2,
                 child: Container(
-                  color: Colors.black,
+                  color: context.colors.background,
                   child: Center(
-                    child: Image.file(
-                      _capturedImage!,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.file(_capturedImage!, fit: BoxFit.contain),
                   ),
                 ),
               ),
@@ -350,25 +356,30 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Adding details improves accuracy',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                        style: TextStyle(
+                          color: context.colors.textMuted,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _descriptionController,
                         maxLines: 2,
                         decoration: InputDecoration(
-                          hintText: 'e.g., "Grilled chicken with rice and vegetables"',
+                          hintText:
+                              'e.g., "Grilled chicken with rice and vegetables"',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: context.colors.surface,
                         ),
                         autofocus: true,
                         textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => FocusScope.of(context).unfocus(), // Dismiss on done
+                        onSubmitted: (_) =>
+                            FocusScope.of(context).unfocus(), // Dismiss on done
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -383,22 +394,32 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                           Expanded(
                             flex: 2,
                             child: ElevatedButton(
-                              onPressed: _isAnalyzing ? null : _analyzeWithDescription,
+                              onPressed: _isAnalyzing
+                                  ? null
+                                  : _analyzeWithDescription,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Palette.vibrantAction,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: context.colors.cta,
+                                foregroundColor: context.colors.onPrimary,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                               child: _isAnalyzing
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       height: 20,
                                       width: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              context.colors.onPrimary,
+                                            ),
                                       ),
                                     )
-                                  : const Text('Analyze', style: TextStyle(fontSize: 14)),
+                                  : const Text(
+                                      'Analyze',
+                                      style: TextStyle(fontSize: 14),
+                                    ),
                             ),
                           ),
                         ],
@@ -417,7 +438,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
     return Container(
       height: double.infinity,
       width: double.infinity,
-      color: Palette.warmNeutral,
+      color: context.colors.background,
       child: Column(
         children: [
           Expanded(
@@ -461,15 +482,20 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _getConfidenceColor(_currentEstimate!.confidence),
+                                    color: _getConfidenceColor(
+                                      _currentEstimate!.confidence,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     '${(_currentEstimate!.confidence * 100).toInt()}% confident',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: context.colors.onPrimary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -484,38 +510,52 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                                 _MacroDisplay(
                                   label: 'Calories',
                                   value: '${_currentEstimate!.calories}',
-                                  color: Colors.orange,
+                                  color: context.colors.cta,
                                 ),
                                 _MacroDisplay(
                                   label: 'Protein',
                                   value: '${_currentEstimate!.proteinG}g',
-                                  color: Colors.blue,
+                                  color: context.colors.accent,
                                 ),
                                 _MacroDisplay(
                                   label: 'Carbs',
                                   value: '${_currentEstimate!.carbsG}g',
-                                  color: Colors.green,
+                                  color: context.colors.accent.withValues(
+                                    alpha: 0.9,
+                                  ),
                                 ),
                                 _MacroDisplay(
                                   label: 'Fat',
                                   value: '${_currentEstimate!.fatG}g',
-                                  color: Colors.red,
+                                  color: context.colors.cta.withValues(
+                                    alpha: 0.95,
+                                  ),
                                 ),
                               ],
                             ),
                             if (_currentEstimate!.assumptions.isNotEmpty) ...[
                               const SizedBox(height: 16),
-                              const Text(
+                              Text(
                                 'Assumptions:',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: context.colors.textMuted,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               ...(_currentEstimate!.assumptions.map(
                                 (assumption) => Padding(
-                                  padding: const EdgeInsets.only(left: 8, top: 2),
+                                  padding: const EdgeInsets.only(
+                                    left: 8,
+                                    top: 2,
+                                  ),
                                   child: Text(
                                     '• $assumption',
-                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: context.colors.textMuted,
+                                    ),
                                   ),
                                 ),
                               )),
@@ -541,8 +581,8 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                             icon: const Icon(Icons.add_circle_outline),
                             label: const Text('Add to Diary'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Palette.forestGreen,
-                              foregroundColor: Colors.white,
+                              backgroundColor: context.colors.accent,
+                              foregroundColor: context.colors.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -563,9 +603,9 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
   }
 
   Color _getConfidenceColor(double confidence) {
-    if (confidence >= 0.8) return Colors.green;
-    if (confidence >= 0.6) return Colors.orange;
-    return Colors.red;
+    if (confidence >= 0.8) return context.colors.accent;
+    if (confidence >= 0.6) return context.colors.cta;
+    return context.colors.cta.withValues(alpha: 0.95);
   }
 }
 
@@ -594,7 +634,7 @@ class _MacroDisplay extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: context.colors.textMuted),
         ),
       ],
     );

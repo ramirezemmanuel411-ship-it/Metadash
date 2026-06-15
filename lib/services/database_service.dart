@@ -17,7 +17,8 @@ class DatabaseService {
 
   DatabaseService._internal() {
     // Initialize sqflite for desktop/web
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
@@ -41,7 +42,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 10, // Incremented version to add user_food_library table
+      version: 13, // v13: wearableFamily in data_inputs_settings
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -93,7 +94,9 @@ class DatabaseService {
         FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
       )
     ''');
-    await db.execute('CREATE INDEX idx_user_food_library_userId_name ON user_food_library(userId, name)');
+    await db.execute(
+      'CREATE INDEX idx_user_food_library_userId_name ON user_food_library(userId, name)',
+    );
 
     // Create DailyLog table
     await db.execute('''
@@ -127,7 +130,9 @@ class DatabaseService {
     ''');
 
     // Create index for faster queries
-    await db.execute('CREATE INDEX idx_daily_logs_user_date ON daily_logs(userId, date)');
+    await db.execute(
+      'CREATE INDEX idx_daily_logs_user_date ON daily_logs(userId, date)',
+    );
 
     // Create Exercises table
     await db.execute('''
@@ -147,7 +152,9 @@ class DatabaseService {
     ''');
 
     // Create index for faster date queries
-    await db.execute('CREATE INDEX idx_exercises_user_date ON exercises(userId, date)');
+    await db.execute(
+      'CREATE INDEX idx_exercises_user_date ON exercises(userId, date)',
+    );
 
     // Create Food Entries table for diary timeline
     await db.execute('''
@@ -170,7 +177,9 @@ class DatabaseService {
     ''');
 
     // Create index for faster timeline queries
-    await db.execute('CREATE INDEX idx_food_entries_user_timestamp ON food_entries(userId, timestamp DESC)');
+    await db.execute(
+      'CREATE INDEX idx_food_entries_user_timestamp ON food_entries(userId, timestamp DESC)',
+    );
 
     // Create Reentry Mode table
     await db.execute('''
@@ -243,13 +252,17 @@ class DatabaseService {
           FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
         )
       ''');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_food_entries_user_timestamp ON food_entries(userId, timestamp DESC)');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_food_entries_user_timestamp ON food_entries(userId, timestamp DESC)',
+      );
     }
 
     // Add macroTargets column if missing
     if (oldVersion < 3) {
       try {
-        await db.execute('ALTER TABLE user_profiles ADD COLUMN macroTargets TEXT');
+        await db.execute(
+          'ALTER TABLE user_profiles ADD COLUMN macroTargets TEXT',
+        );
       } catch (_) {
         // Column may already exist
       }
@@ -324,37 +337,57 @@ class DatabaseService {
 
     if (oldVersion < 7) {
       try {
-        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN appleHealthConnected INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE data_inputs_settings ADD COLUMN appleHealthConnected INTEGER NOT NULL DEFAULT 0',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN googleFitConnected INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE data_inputs_settings ADD COLUMN googleFitConnected INTEGER NOT NULL DEFAULT 0',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN garminConnected INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE data_inputs_settings ADD COLUMN garminConnected INTEGER NOT NULL DEFAULT 0',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN fitbitConnected INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE data_inputs_settings ADD COLUMN fitbitConnected INTEGER NOT NULL DEFAULT 0',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE data_inputs_settings ADD COLUMN stravaConnected INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE data_inputs_settings ADD COLUMN stravaConnected INTEGER NOT NULL DEFAULT 0',
+        );
       } catch (_) {}
     }
 
     if (oldVersion < 8) {
       try {
-        await db.execute('ALTER TABLE daily_logs ADD COLUMN workoutDurationMinutes INTEGER');
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN workoutDurationMinutes INTEGER',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE daily_logs ADD COLUMN sleepMinutes INTEGER');
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN sleepMinutes INTEGER',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE daily_logs ADD COLUMN restingHeartRate INTEGER');
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN restingHeartRate INTEGER',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE daily_logs ADD COLUMN averageHeartRate INTEGER');
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN averageHeartRate INTEGER',
+        );
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE daily_logs ADD COLUMN distanceMeters REAL');
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN distanceMeters REAL',
+        );
       } catch (_) {}
       try {
         await db.execute('ALTER TABLE daily_logs ADD COLUMN vo2Max REAL');
@@ -363,7 +396,9 @@ class DatabaseService {
 
     if (oldVersion < 9) {
       try {
-        await db.execute('ALTER TABLE user_profiles ADD COLUMN manualMacroEntry INTEGER NOT NULL DEFAULT 0');
+        await db.execute(
+          'ALTER TABLE user_profiles ADD COLUMN manualMacroEntry INTEGER NOT NULL DEFAULT 0',
+        );
       } catch (_) {}
     }
 
@@ -386,7 +421,56 @@ class DatabaseService {
             FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE
           )
         ''');
-        await db.execute('CREATE INDEX IF NOT EXISTS idx_user_food_library_userId_name ON user_food_library(userId, name)');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_user_food_library_userId_name ON user_food_library(userId, name)',
+        );
+      } catch (_) {}
+    }
+
+    if (oldVersion < 11) {
+      try {
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN wearableSource TEXT',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN averageMets REAL',
+        );
+      } catch (_) {}
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS passive_learning (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            predictedTDEE REAL NOT NULL,
+            actualWeightChangeLbs REAL,
+            expectedWeightChangeLbs REAL,
+            predictionErrorLbs REAL,
+            wearableFamily TEXT,
+            workoutBucket TEXT,
+            rawWorkoutType TEXT,
+            intakeLogged INTEGER NOT NULL DEFAULT 0,
+            weightLogged INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 12) {
+      try {
+        await db.execute(
+          'ALTER TABLE exercises ADD COLUMN avgHeartRate INTEGER',
+        );
+      } catch (_) {}
+    }
+
+    if (oldVersion < 13) {
+      try {
+        await db.execute(
+          "ALTER TABLE data_inputs_settings ADD COLUMN wearableFamily TEXT NOT NULL DEFAULT 'unknown'",
+        );
       } catch (_) {}
     }
   }
@@ -441,11 +525,7 @@ class DatabaseService {
 
   Future<int> deleteUserProfile(int id) async {
     final db = await database;
-    return db.delete(
-      'user_profiles',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return db.delete('user_profiles', where: 'id = ?', whereArgs: [id]);
   }
 
   // Daily Log Methods
@@ -472,7 +552,11 @@ class DatabaseService {
     return null;
   }
 
-  Future<List<DailyLog>> getDailyLogsByUserAndDateRange(int userId, DateTime startDate, DateTime endDate) async {
+  Future<List<DailyLog>> getDailyLogsByUserAndDateRange(
+    int userId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     final db = await database;
     final maps = await db.query(
       'daily_logs',
@@ -510,11 +594,7 @@ class DatabaseService {
 
   Future<int> deleteDailyLog(int id) async {
     final db = await database;
-    return db.delete(
-      'daily_logs',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return db.delete('daily_logs', where: 'id = ?', whereArgs: [id]);
   }
 
   /// Clear health data for a specific date so it can be re-synced
@@ -581,7 +661,10 @@ class DatabaseService {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getExercisesByUserAndDate(int userId, DateTime date) async {
+  Future<List<Map<String, dynamic>>> getExercisesByUserAndDate(
+    int userId,
+    DateTime date,
+  ) async {
     final db = await database;
     final dateOnly = DateTime(date.year, date.month, date.day);
     return db.query(
@@ -604,26 +687,21 @@ class DatabaseService {
 
   Future<int> deleteExercise(String exerciseId) async {
     final db = await database;
-    return db.delete(
-      'exercises',
-      where: 'id = ?',
-      whereArgs: [exerciseId],
-    );
+    return db.delete('exercises', where: 'id = ?', whereArgs: [exerciseId]);
   }
 
   // Health Data Sync Method
   /// Syncs health data from device (HealthKit/Google Fit) to a DailyLog
   /// Creates or updates the daily log with device health metrics
-  Future<DailyLog?> syncHealthDataToDailyLog(
-    int userId,
-    DateTime date,
-  ) async {
+  Future<DailyLog?> syncHealthDataToDailyLog(int userId, DateTime date) async {
     try {
       final healthService = HealthService();
       final dateOnly = DateTime(date.year, date.month, date.day);
 
       // Fetch health metrics for this date
-      final healthMetrics = await healthService.fetchHealthDataForDate(dateOnly);
+      final healthMetrics = await healthService.fetchHealthDataForDate(
+        dateOnly,
+      );
       if (healthMetrics == null) {
         // Silent fail - health data not always available
         return null;
@@ -691,7 +769,11 @@ class DatabaseService {
 
     try {
       final healthService = HealthService();
-      final dateOnlyStart = DateTime(startDate.year, startDate.month, startDate.day);
+      final dateOnlyStart = DateTime(
+        startDate.year,
+        startDate.month,
+        startDate.day,
+      );
       final dateOnlyEnd = DateTime(endDate.year, endDate.month, endDate.day);
       final metricsByDay = await healthService.fetchDailyMetricsRange(
         dateOnlyStart,
@@ -762,11 +844,14 @@ class DatabaseService {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getFoodEntriesForDay(int userId, DateTime day) async {
+  Future<List<Map<String, dynamic>>> getFoodEntriesForDay(
+    int userId,
+    DateTime day,
+  ) async {
     final db = await database;
     final startOfDay = DateTime(day.year, day.month, day.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
-    
+
     final maps = await db.query(
       'food_entries',
       where: 'userId = ? AND timestamp >= ? AND timestamp < ?',
@@ -777,17 +862,13 @@ class DatabaseService {
       ],
       orderBy: 'timestamp DESC',
     );
-    
+
     return maps;
   }
 
   Future<void> deleteFoodEntry(String id) async {
     final db = await database;
-    await db.delete(
-      'food_entries',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('food_entries', where: 'id = ?', whereArgs: [id]);
   }
 
   // User Food Library Methods (Custom Foods)
@@ -800,7 +881,10 @@ class DatabaseService {
     );
   }
 
-  Future<List<UserFoodItem>> searchUserFoodLibrary(int userId, String query) async {
+  Future<List<UserFoodItem>> searchUserFoodLibrary(
+    int userId,
+    String query,
+  ) async {
     final db = await database;
     final results = await db.query(
       'user_food_library',
@@ -822,7 +906,9 @@ class DatabaseService {
   }
 
   // Data Inputs Settings Methods
-  Future<void> createOrUpdateDataInputsSettings(DataInputsSettings settings) async {
+  Future<void> createOrUpdateDataInputsSettings(
+    DataInputsSettings settings,
+  ) async {
     final db = await database;
     await db.insert(
       'data_inputs_settings',

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_food_item.dart';
 
 class CloudFoodService {
@@ -11,10 +12,10 @@ class CloudFoodService {
     try {
       // Use a normalized ID to prevent duplicates (e.g., lowercase name + brand)
       final String normalizedId = _generateFoodId(food.name, food.brand ?? '');
-      
+
       final docRef = _firestore.collection(_collectionName).doc(normalizedId);
-      
-      // We use set with merge: true so we don't overwrite if multiple people contribute 
+
+      // We use set with merge: true so we don't overwrite if multiple people contribute
       // but we could also check if it exists first.
       await docRef.set({
         'name': food.name,
@@ -31,23 +32,24 @@ class CloudFoodService {
         'searchName': food.name.toLowerCase(),
       }, SetOptions(merge: true));
     } catch (e) {
-      print('Error contributing to global library: $e');
+      debugPrint('Error contributing to global library: $e');
     }
   }
 
   /// Searches the global Firestore library for food items matching the query.
   Future<List<UserFoodItem>> searchGlobalLibrary(String query) async {
     if (query.isEmpty) return [];
-    
+
     try {
       final String searchQuery = query.toLowerCase();
-      
+
       // Firestore doesn't have partial matches like SQL 'LIKE', but we can use >= and <=
-      // for prefix matching. For full text search, people usually use Algolia, 
+      // for prefix matching. For full text search, people usually use Algolia,
       // but this is a simple "starts with" approach.
-      final snapshot = await _firestore.collection(_collectionName)
+      final snapshot = await _firestore
+          .collection(_collectionName)
           .where('searchName', isGreaterThanOrEqualTo: searchQuery)
-          .where('searchName', isLessThanOrEqualTo: searchQuery + '\uf8ff')
+          .where('searchName', isLessThanOrEqualTo: '$searchQuery\uf8ff')
           .limit(20)
           .get();
 
@@ -68,14 +70,20 @@ class CloudFoodService {
         );
       }).toList();
     } catch (e) {
-      print('Error searching global library: $e');
+      debugPrint('Error searching global library: $e');
       return [];
     }
   }
 
   String _generateFoodId(String name, String brand) {
-    final cleanName = name.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    final cleanBrand = brand.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final cleanName = name.trim().toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]'),
+      '',
+    );
+    final cleanBrand = brand.trim().toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]'),
+      '',
+    );
     return '${cleanName}_$cleanBrand';
   }
 }

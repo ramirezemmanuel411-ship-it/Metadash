@@ -33,7 +33,8 @@ bool areSimilarItems(FoodModel a, FoodModel b) {
     return false;
   }
 
-  if (normA.displayBrandLine.toLowerCase() != normB.displayBrandLine.toLowerCase()) {
+  if (normA.displayBrandLine.toLowerCase() !=
+      normB.displayBrandLine.toLowerCase()) {
     return false;
   }
 
@@ -45,7 +46,8 @@ bool areSimilarItems(FoodModel a, FoodModel b) {
   }
 
   // Serving unit must match
-  if ((a.servingUnitRaw ?? '').toLowerCase() != (b.servingUnitRaw ?? '').toLowerCase()) {
+  if ((a.servingUnitRaw ?? '').toLowerCase() !=
+      (b.servingUnitRaw ?? '').toLowerCase()) {
     return false;
   }
 
@@ -68,22 +70,35 @@ double scoreItem(FoodModel food) {
   double score = 0;
 
   // Barcode: highest priority (100)
-  if (food.barcode?.isNotEmpty == true) score += 100;
+  if (food.barcode?.isNotEmpty == true) {
+    score += 100;
+  }
 
   // Has calories (50)
-  if (extractCalories(food) != null && extractCalories(food)! > 0) score += 50;
+  if (extractCalories(food) != null && extractCalories(food)! > 0) {
+    score += 50;
+  }
 
   // Has brand_owner or brand_name (30)
-  if (food.brandOwner?.isNotEmpty == true || food.brandName?.isNotEmpty == true) score += 30;
+  if (food.brandOwner?.isNotEmpty == true ||
+      food.brandName?.isNotEmpty == true) {
+    score += 30;
+  }
 
   // Is branded data type (20)
-  if (food.dataType?.toLowerCase().contains('branded') == true) score += 20;
+  if (food.dataType?.toLowerCase().contains('branded') == true) {
+    score += 20;
+  }
 
   // Has complete macros (15)
-  if (food.protein > 0 && food.carbs > 0 && food.fat > 0) score += 15;
+  if (food.protein > 0 && food.carbs > 0 && food.fat > 0) {
+    score += 15;
+  }
 
   // Has serving info (10)
-  if ((food.servingQty ?? 0) > 0 || (food.servingVolumeMl ?? 0) > 0 || (food.servingWeightGrams ?? 0) > 0) {
+  if ((food.servingQty ?? 0) > 0 ||
+      (food.servingVolumeMl ?? 0) > 0 ||
+      (food.servingWeightGrams ?? 0) > 0) {
     score += 10;
   }
 
@@ -131,7 +146,8 @@ List<FoodModel> deduplicateFoods(List<FoodModel> items) {
       // Check if this item is similar to any item that came before it
       for (final other in result) {
         if (identical(item, other)) continue;
-        if (result.indexOf(item) > result.indexOf(other) && areSimilarItems(item, other)) {
+        if (result.indexOf(item) > result.indexOf(other) &&
+            areSimilarItems(item, other)) {
           return true; // Remove this item as duplicate
         }
       }
@@ -156,12 +172,15 @@ double? _extractCaloriesImpl(FoodModel food) {
   // Try raw_json extraction
   if (food.rawJson != null) {
     try {
-      final json = food.rawJson is String ? jsonDecode(food.rawJson as String) : food.rawJson;
+      final json = food.rawJson is String
+          ? jsonDecode(food.rawJson as String)
+          : food.rawJson;
 
       // USDA format
       if (json['nutrients'] is List) {
         for (var nutrient in json['nutrients']) {
-          if (nutrient['nutrientId'] == 1008 || nutrient['nutrientId'] == '1008') {
+          if (nutrient['nutrientId'] == 1008 ||
+              nutrient['nutrientId'] == '1008') {
             final value = nutrient['value'];
             if (value != null) {
               return double.tryParse(value.toString());

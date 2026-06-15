@@ -89,17 +89,17 @@ class SearchRepository {
   /// Enhanced search with deduplication
   Stream<dynamic> searchFoodsEnhanced(String query) async* {
     // ... existing search code ...
-    
+
     // After ranking results:
     final rankedResults = FoodSearchRanker.rank(mergedResults, query);
-    
+
     // NEW: Deduplicate with enhanced canonical keys
     final deduplicated = FoodDedupNormalizer.deduplicateResults(
       items: rankedResults,
       getCanonicalKey: (food) => food.canonicalKey,
       debug: true, // Shows debug logs
     );
-    
+
     yield deduplicated;
   }
 }
@@ -158,11 +158,11 @@ void test_deduplication_example() {
 
   print('Input: ${results.length} items');
   print('Output: ${deduplicated.length} items');
-  
+
   // Expected output:
   // Input: 3 items
   // Output: 3 items (all different names after normalization)
-  // 
+  //
   // But in real search:
   // - "Diet Coke" (matches query better)
   // - "Coca-Cola Diet" (different word order, lower rank)

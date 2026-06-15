@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import '../../shared/palette.dart';
 import '../../models/exercise_model.dart';
 
 /// Vertical scrollable intensity selector for running
@@ -40,10 +41,7 @@ class _IntensitySelectorState extends State<IntensitySelector> {
       children: [
         const Text(
           'Set Intensity',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -65,19 +63,19 @@ class _IntensitySelectorState extends State<IntensitySelector> {
 
   Widget _buildIntensityOption(ExerciseIntensity intensity) {
     final isSelected = intensity == widget.selectedIntensity;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.blue : Colors.grey[100],
+        color: isSelected ? context.colors.accent : context.colors.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: isSelected
             ? [
                 BoxShadow(
-                  color: Colors.blue.withOpacity(0.3),
+                  color: context.colors.accent.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
-                )
+                ),
               ]
             : null,
       ),
@@ -91,7 +89,9 @@ class _IntensitySelectorState extends State<IntensitySelector> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected
+                    ? context.colors.surface
+                    : context.colors.textPrimary,
               ),
             ),
             const SizedBox(height: 4),
@@ -100,7 +100,9 @@ class _IntensitySelectorState extends State<IntensitySelector> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
-                color: isSelected ? Colors.white70 : Colors.grey[600],
+                color: isSelected
+                    ? context.colors.onPrimary
+                    : context.colors.textSecondary,
               ),
             ),
           ],

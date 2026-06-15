@@ -9,15 +9,17 @@ import '../models/ai_food_estimate.dart';
 /// AI service for exercise parsing and food estimation
 /// Uses Groq (free tier) with OpenAI fallback
 class AiService {
-  static const String _groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-  static const String _openaiApiUrl = 'https://api.openai.com/v1/chat/completions';
-  
+  static const String _groqApiUrl =
+      'https://api.groq.com/openai/v1/chat/completions';
+  static const String _openaiApiUrl =
+      'https://api.openai.com/v1/chat/completions';
+
   final String? _groqApiKey;
   final String? _openaiApiKey;
 
   AiService()
-      : _groqApiKey = dotenv.env['GROQ_API_KEY'],
-        _openaiApiKey = dotenv.env['OPENAI_API_KEY'];
+    : _groqApiKey = dotenv.env['GROQ_API_KEY'],
+      _openaiApiKey = dotenv.env['OPENAI_API_KEY'];
 
   bool get hasGroqKey => _groqApiKey != null && _groqApiKey.isNotEmpty;
   bool get hasOpenAiKey => _openaiApiKey != null && _openaiApiKey.isNotEmpty;
@@ -25,8 +27,11 @@ class AiService {
 
   /// Parse exercise description (e.g., "ran 5k in 30 mins")
   /// Returns: {duration: 30, intensity: 'medium', calories: 350, type: 'run'}
-  Future<Map<String, dynamic>> parseExerciseDescription(String description) async {
-    final prompt = '''
+  Future<Map<String, dynamic>> parseExerciseDescription(
+    String description,
+  ) async {
+    final prompt =
+        '''
 Parse this exercise description and return ONLY valid JSON (no markdown, no explanations):
 
 User input: "$description"
@@ -58,7 +63,8 @@ Rules:
 
   /// Estimate food macros from chat input (e.g., "large pepperoni pizza")
   Future<AiFoodEstimate> estimateFoodFromChat(String userInput) async {
-    final prompt = '''
+    final prompt =
+        '''
 You are a nutrition expert. Estimate nutritional values for this food/meal description.
 
 IMPORTANT GUIDELINES:
@@ -89,10 +95,7 @@ Return ONLY this JSON format (no markdown, no explanations):
       final result = await _callAi(prompt, model: 'llama-3.1-8b-instant');
       final parsed = _parseJsonSafely(result);
       if (parsed != null) {
-        return AiFoodEstimate.fromJson({
-          ...parsed,
-          'raw_input': userInput,
-        });
+        return AiFoodEstimate.fromJson({...parsed, 'raw_input': userInput});
       }
 
       // Fallback if parsing fails
@@ -103,7 +106,9 @@ Return ONLY this JSON format (no markdown, no explanations):
         'carbs_g': 0,
         'fat_g': 0,
         'confidence': 0.2,
-        'assumptions': ['AI response was not valid JSON. Estimate unavailable.'],
+        'assumptions': [
+          'AI response was not valid JSON. Estimate unavailable.',
+        ],
         'raw_input': userInput,
       });
     } catch (e) {
@@ -118,7 +123,9 @@ Return ONLY this JSON format (no markdown, no explanations):
     String? userDescription,
   }) async {
     if (!hasOpenAiKey) {
-      throw Exception('OpenAI API key required for image analysis. Add OPENAI_API_KEY to .env');
+      throw Exception(
+        'OpenAI API key required for image analysis. Add OPENAI_API_KEY to .env',
+      );
     }
 
     try {
@@ -127,10 +134,12 @@ Return ONLY this JSON format (no markdown, no explanations):
       final base64Image = base64Encode(imageBytes);
 
       // Build prompt with optional user description
-      String promptText = '''Analyze this food image and estimate nutritional values.''';
-      
+      String promptText =
+          '''Analyze this food image and estimate nutritional values.''';
+
       if (userDescription != null && userDescription.isNotEmpty) {
-        promptText += '''\n
+        promptText +=
+            '''\n
 User says: "$userDescription"
 
 Use this description to improve accuracy. If the image and description don't match, trust the image but consider portion details from the description.''';
@@ -169,15 +178,10 @@ Return ONLY this JSON format (no markdown, no explanations):
             {
               'role': 'user',
               'content': [
-                {
-                  'type': 'text',
-                  'text': promptText,
-                },
+                {'type': 'text', 'text': promptText},
                 {
                   'type': 'image_url',
-                  'image_url': {
-                    'url': 'data:image/jpeg;base64,$base64Image',
-                  },
+                  'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
                 },
               ],
             },
@@ -188,12 +192,14 @@ Return ONLY this JSON format (no markdown, no explanations):
       );
 
       if (response.statusCode != 200) {
-        throw Exception('OpenAI Vision API error: ${response.statusCode} ${response.body}');
+        throw Exception(
+          'OpenAI Vision API error: ${response.statusCode} ${response.body}',
+        );
       }
 
       final data = jsonDecode(response.body);
       final content = data['choices'][0]['message']['content'].trim();
-      
+
       final parsed = _parseJsonSafely(content);
       if (parsed != null) {
         return AiFoodEstimate.fromJson({
@@ -223,8 +229,10 @@ Return ONLY this JSON format (no markdown, no explanations):
     var trimmed = text.trim();
 
     // Strip ```json ... ``` or ``` ... ``` fences
-    final fenceMatch = RegExp(r'```(?:json)?\s*([\s\S]*?)```', caseSensitive: false)
-        .firstMatch(trimmed);
+    final fenceMatch = RegExp(
+      r'```(?:json)?\s*([\s\S]*?)```',
+      caseSensitive: false,
+    ).firstMatch(trimmed);
     if (fenceMatch != null) {
       trimmed = fenceMatch.group(1)!.trim();
     }
@@ -268,7 +276,9 @@ Return ONLY this JSON format (no markdown, no explanations):
   /// Core AI API caller with Groq → OpenAI fallback
   Future<String> _callAi(String prompt, {String? model}) async {
     if (!hasAnyKey) {
-      throw Exception('No AI API keys configured. Add GROQ_API_KEY or OPENAI_API_KEY to .env file');
+      throw Exception(
+        'No AI API keys configured. Add GROQ_API_KEY or OPENAI_API_KEY to .env file',
+      );
     }
 
     // Try Groq first (free tier)
@@ -299,7 +309,7 @@ Return ONLY this JSON format (no markdown, no explanations):
       body: jsonEncode({
         'model': model,
         'messages': [
-          {'role': 'user', 'content': prompt}
+          {'role': 'user', 'content': prompt},
         ],
         'temperature': 0.3, // Lower temperature for more consistent JSON
         'max_tokens': 500,
@@ -307,7 +317,9 @@ Return ONLY this JSON format (no markdown, no explanations):
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Groq API error: ${response.statusCode} ${response.body}');
+      throw Exception(
+        'Groq API error: ${response.statusCode} ${response.body}',
+      );
     }
 
     final data = jsonDecode(response.body);
@@ -324,7 +336,7 @@ Return ONLY this JSON format (no markdown, no explanations):
       body: jsonEncode({
         'model': model,
         'messages': [
-          {'role': 'user', 'content': prompt}
+          {'role': 'user', 'content': prompt},
         ],
         'temperature': 0.3,
         'max_tokens': 500,
@@ -332,19 +344,75 @@ Return ONLY this JSON format (no markdown, no explanations):
     );
 
     if (response.statusCode != 200) {
-      throw Exception('OpenAI API error: ${response.statusCode} ${response.body}');
+      throw Exception(
+        'OpenAI API error: ${response.statusCode} ${response.body}',
+      );
     }
 
     final data = jsonDecode(response.body);
     return data['choices'][0]['message']['content'].trim();
   }
 
+  // ── Public router-facing wrappers ──────────────────────────────────────────
+
+  /// Call the text-based AI with a raw prompt string.
+  /// Returns the raw response string (JSON expected from caller).
+  Future<String> callTextAi(String prompt) async {
+    return _callAi(prompt, model: 'llama-3.1-8b-instant');
+  }
+
+  /// Call a vision-capable AI with a prompt and a base64-encoded image.
+  /// Returns the raw response string (JSON expected from caller).
+  Future<String> callVisionAi(String prompt, String base64Image) async {
+    if (!hasOpenAiKey) {
+      throw Exception(
+        'OpenAI API key required for image analysis. Add OPENAI_API_KEY to .env',
+      );
+    }
+
+    final response = await http.post(
+      Uri.parse(_openaiApiUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_openaiApiKey',
+      },
+      body: jsonEncode({
+        'model': 'gpt-4o-mini',
+        'messages': [
+          {
+            'role': 'user',
+            'content': [
+              {'type': 'text', 'text': prompt},
+              {
+                'type': 'image_url',
+                'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
+              },
+            ],
+          },
+        ],
+        'max_tokens': 700,
+        'temperature': 0.3,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'OpenAI Vision API error: ${response.statusCode} ${response.body}',
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    return data['choices'][0]['message']['content'].trim() as String;
+  }
+
   /// Fallback regex-based exercise parsing (no AI needed)
   Map<String, dynamic> _fallbackExerciseParsing(String description) {
     final lower = description.toLowerCase();
-    
+
     // Extract duration
-    final durationMatch = RegExp(r'(\d+)\s*(min|minute|minutes|hrs?|hours?)').firstMatch(lower);
+    final durationMatch = RegExp(
+      r'(\d+)\s*(min|minute|minutes|hrs?|hours?)',
+    ).firstMatch(lower);
     int duration = 30;
     if (durationMatch != null) {
       duration = int.parse(durationMatch.group(1)!);
@@ -365,14 +433,25 @@ Return ONLY this JSON format (no markdown, no explanations):
     String intensity = 'medium';
     if (lower.contains('light') || lower.contains('easy')) {
       intensity = 'low';
-    } else if (lower.contains('hard') || lower.contains('intense') || lower.contains('high')) {
+    } else if (lower.contains('hard') ||
+        lower.contains('intense') ||
+        lower.contains('high')) {
       intensity = 'high';
     }
 
     // Rough calorie estimation
-    final intensityMultiplier = intensity == 'low' ? 0.7 : intensity == 'high' ? 1.3 : 1.0;
-    final baseCalories = type == 'run' ? 10 : type == 'weightlifting' ? 5 : 7;
-    final estimatedCalories = (duration * baseCalories * intensityMultiplier).round();
+    final intensityMultiplier = intensity == 'low'
+        ? 0.7
+        : intensity == 'high'
+        ? 1.3
+        : 1.0;
+    final baseCalories = type == 'run'
+        ? 10
+        : type == 'weightlifting'
+        ? 5
+        : 7;
+    final estimatedCalories = (duration * baseCalories * intensityMultiplier)
+        .round();
 
     return {
       'type': type,

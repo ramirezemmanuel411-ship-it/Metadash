@@ -4,47 +4,73 @@ import 'package:metadash/services/universal_food_deduper.dart';
 
 void main() {
   group('FoodDeduplicationService - Brand & Core Normalization', () {
-    
     test('Coca Cola variants normalize to same brand (coca-cola)', () {
-      expect(UniversalFoodDeduper.normalizeBrand('Coca Cola', null), 'coca-cola');
+      expect(
+        UniversalFoodDeduper.normalizeBrand('Coca Cola', null),
+        'coca-cola',
+      );
       expect(UniversalFoodDeduper.normalizeBrand('Coke', null), 'coca-cola');
-      expect(UniversalFoodDeduper.normalizeBrand('Coca-Cola', null), 'coca-cola');
-      expect(UniversalFoodDeduper.normalizeBrand('coca cola company', null), 'coca-cola');
-      expect(UniversalFoodDeduper.normalizeBrand('the coca-cola company', null), 'coca-cola');
+      expect(
+        UniversalFoodDeduper.normalizeBrand('Coca-Cola', null),
+        'coca-cola',
+      );
+      expect(
+        UniversalFoodDeduper.normalizeBrand('coca cola company', null),
+        'coca-cola',
+      );
+      expect(
+        UniversalFoodDeduper.normalizeBrand('the coca-cola company', null),
+        'coca-cola',
+      );
     });
-    
+
     test('USDA and null brand do not become coca-cola', () {
       expect(UniversalFoodDeduper.normalizeBrand('USDA', null), 'generic');
       expect(UniversalFoodDeduper.normalizeBrand('?', null), 'generic');
-      expect(UniversalFoodDeduper.normalizeBrand(null, 'some other name'), 'generic');
+      expect(
+        UniversalFoodDeduper.normalizeBrand(null, 'some other name'),
+        'generic',
+      );
     });
-    
+
     test('Coca Cola variants share consistent family attributes', () {
       final sig1 = UniversalFoodDeduper.buildFamilyKey(
         name: 'Coca Cola Coke Brand',
         brand: 'Coca-Cola',
         query: 'coke',
       );
-      
+
       final sig2 = UniversalFoodDeduper.buildFamilyKey(
         name: 'Coca cola Goût Original',
         brand: 'coke',
         query: 'coke',
       );
-      
+
       print('Sig1: $sig1');
       print('Sig2: $sig2');
-      
-      expect(sig1.startsWith('coca-cola|'), isTrue,
-        reason: 'Coca Cola Coke Brand should normalize to coca-cola');
-      expect(sig2.startsWith('coca-cola|'), isTrue,
-        reason: 'Coca cola Goût Original should normalize to coca-cola');
-      expect(sig1.endsWith('regular|none'), isTrue,
-        reason: 'Coca Cola Coke Brand should be regular/none');
-      expect(sig2.endsWith('regular|none'), isTrue,
-        reason: 'Coca cola Goût Original should be regular/none');
+
+      expect(
+        sig1.startsWith('coca-cola|'),
+        isTrue,
+        reason: 'Coca Cola Coke Brand should normalize to coca-cola',
+      );
+      expect(
+        sig2.startsWith('coca-cola|'),
+        isTrue,
+        reason: 'Coca cola Goût Original should normalize to coca-cola',
+      );
+      expect(
+        sig1.endsWith('regular|none'),
+        isTrue,
+        reason: 'Coca Cola Coke Brand should be regular/none',
+      );
+      expect(
+        sig2.endsWith('regular|none'),
+        isTrue,
+        reason: 'Coca cola Goût Original should be regular/none',
+      );
     });
-    
+
     test('Language variants infer a stable core', () {
       // Test core inference with different language variants
       final variants = ProductVariants(
@@ -55,7 +81,7 @@ void main() {
         fatLevel: '',
         prep: '',
       );
-      
+
       expect(
         UniversalFoodDeduper.inferCoreName(
           'original taste',
@@ -66,7 +92,7 @@ void main() {
         isTrue,
         reason: 'Original Taste should infer a non-empty core',
       );
-      
+
       expect(
         UniversalFoodDeduper.inferCoreName(
           'goût original',
@@ -77,7 +103,7 @@ void main() {
         isTrue,
         reason: 'Goût Original should infer a non-empty core',
       );
-      
+
       expect(
         UniversalFoodDeduper.inferCoreName(
           'sabor original',
@@ -89,7 +115,7 @@ void main() {
         reason: 'Sabor Original should infer a non-empty core',
       );
     });
-    
+
     test('Deduplication collapses all Coke variants into single canonical', () {
       final items = [
         FoodModel(
@@ -149,30 +175,54 @@ void main() {
       );
 
       // Should have at least 2 families: regular coke and diet coke
-      expect(result.groupedResults.length, greaterThanOrEqualTo(2),
-        reason: 'Should collapse regular variants but keep diet separate');
-      
+      expect(
+        result.groupedResults.length,
+        greaterThanOrEqualTo(2),
+        reason: 'Should collapse regular variants but keep diet separate',
+      );
+
       // Verify limited variants with original taste wording
       expect(
-        result.groupedResults.where((item) => 
-          item.name.toLowerCase().contains('original taste') ||
-          item.name.toLowerCase().contains('goût original') ||
-          item.name.toLowerCase().contains('sabor original')
-        ).length,
+        result.groupedResults
+            .where(
+              (item) =>
+                  item.name.toLowerCase().contains('original taste') ||
+                  item.name.toLowerCase().contains('goût original') ||
+                  item.name.toLowerCase().contains('sabor original'),
+            )
+            .length,
         lessThanOrEqualTo(1),
         reason: 'Language variants should largely collapse into canonical',
       );
     });
 
     test('Jaro-Winkler similarity works correctly', () {
-      expect(UniversalFoodDeduper.jaroWinklerSimilarity('coca cola', 'coca cola'), 1.0);
-      expect(UniversalFoodDeduper.jaroWinklerSimilarity('coca cola', 'coke'), greaterThan(0.6));
-      expect(UniversalFoodDeduper.jaroWinklerSimilarity('transformation', 'coke'), lessThan(0.5));
+      expect(
+        UniversalFoodDeduper.jaroWinklerSimilarity('coca cola', 'coca cola'),
+        1.0,
+      );
+      expect(
+        UniversalFoodDeduper.jaroWinklerSimilarity('coca cola', 'coke'),
+        greaterThan(0.6),
+      );
+      expect(
+        UniversalFoodDeduper.jaroWinklerSimilarity('transformation', 'coke'),
+        lessThan(0.5),
+      );
     });
 
     test('Token overlap similarity works correctly', () {
-      expect(UniversalFoodDeduper.tokenOverlapSimilarity('coca cola original', 'coca cola coke'), 0.5);
-      expect(UniversalFoodDeduper.tokenOverlapSimilarity('diet coke', 'diet coke'), 1.0);
+      expect(
+        UniversalFoodDeduper.tokenOverlapSimilarity(
+          'coca cola original',
+          'coca cola coke',
+        ),
+        0.5,
+      );
+      expect(
+        UniversalFoodDeduper.tokenOverlapSimilarity('diet coke', 'diet coke'),
+        1.0,
+      );
     });
 
     test('Diet and Zero variants remain separate families', () {
@@ -220,8 +270,11 @@ void main() {
         query: 'coke',
       );
 
-      expect(result.groupedResults.length, 3,
-        reason: 'Regular, Diet, and Zero should be 3 separate families');
+      expect(
+        result.groupedResults.length,
+        3,
+        reason: 'Regular, Diet, and Zero should be 3 separate families',
+      );
     });
   });
 }

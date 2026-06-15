@@ -11,7 +11,7 @@ class RadialMenu extends StatefulWidget {
   final UserState userState;
   final VoidCallback onLogout;
   final ValueChanged<bool>? onOpenChanged;
-  
+
   const RadialMenu({
     super.key,
     required this.userState,
@@ -36,12 +36,14 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
-    _rotationAnimation = Tween<double>(begin: 0, end: 45).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+    _rotationAnimation = Tween<double>(
+      begin: 0,
+      end: 45,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -82,7 +84,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
             child: GestureDetector(
               onTap: _closeMenu,
               child: Container(
-                color: Colors.transparent,
+                color: context.colors.surface.withValues(alpha: 0),
               ),
             ),
           ),
@@ -103,11 +105,13 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Palette.forestGreen,
+                      color: context.colors.accent,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
+                          color: context.colors.onSurface.withValues(
+                            alpha: 0.2,
+                          ),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -115,7 +119,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
                     ),
                     child: Icon(
                       Icons.add,
-                      color: Palette.warmNeutral,
+                      color: context.colors.background,
                       size: 28,
                     ),
                   ),
@@ -147,9 +151,10 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
     if (!_isOpen) return [];
 
     return items.map((item) {
-      final angle = arcStart + (arcEnd - arcStart) * (item.index / (items.length - 1));
+      final angle =
+          arcStart + (arcEnd - arcStart) * (item.index / (items.length - 1));
       final radians = angle * (math.pi / 180);
-      
+
       // For bottom-right quarter circle: 0° is right, 90° is up
       final offsetX = math.cos(radians) * radius;
       final offsetY = math.sin(radians) * radius;
@@ -157,7 +162,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
       // Final position relative to FAB center
       final itemRight = fabRight + (fabSize - itemSize) / 2 + offsetX;
       final itemBottom = fabBottom + (fabSize - itemSize) / 2 + offsetY;
-      
+
       // Initial position (at FAB center)
       final initialRight = fabRight + (fabSize - itemSize) / 2;
       final initialBottom = fabBottom + (fabSize - itemSize) / 2;
@@ -169,9 +174,11 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
         animation: _scaleAnimation,
         builder: (context, child) {
           final animationProgress = _scaleAnimation.value;
-          final animatedRight = initialRight + (itemRight - initialRight) * animationProgress;
-          final animatedBottom = initialBottom + (itemBottom - initialBottom) * animationProgress;
-          
+          final animatedRight =
+              initialRight + (itemRight - initialRight) * animationProgress;
+          final animatedBottom =
+              initialBottom + (itemBottom - initialBottom) * animationProgress;
+
           return Positioned(
             bottom: animatedBottom,
             right: animatedRight,
@@ -188,9 +195,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
 
             if (item.label == 'Control Center') {
               navigator.push(
-                MaterialPageRoute(
-                  builder: (_) => const ControlCenterScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const ControlCenterScreen()),
               );
             } else if (item.label == 'Workouts') {
               navigator.push(
@@ -216,11 +221,11 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
                 width: itemSize,
                 height: itemSize,
                 decoration: BoxDecoration(
-                  color: Palette.forestGreen,
+                  color: context.colors.accent,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
+                      color: context.colors.onSurface.withValues(alpha: 0.15),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -228,7 +233,7 @@ class _RadialMenuState extends State<RadialMenu> with TickerProviderStateMixin {
                 ),
                 child: Icon(
                   item.icon,
-                  color: Palette.warmNeutral,
+                  color: context.colors.background,
                   size: 20,
                 ),
               ),

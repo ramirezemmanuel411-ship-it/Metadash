@@ -7,7 +7,8 @@ class CalorieMacroGoalsScreen extends StatefulWidget {
   const CalorieMacroGoalsScreen({super.key});
 
   @override
-  State<CalorieMacroGoalsScreen> createState() => _CalorieMacroGoalsScreenState();
+  State<CalorieMacroGoalsScreen> createState() =>
+      _CalorieMacroGoalsScreenState();
 }
 
 class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
@@ -27,7 +28,7 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
       _proteinController.text = (user.macroTargets?['protein'] ?? 0).toString();
       _carbsController.text = (user.macroTargets?['carbs'] ?? 0).toString();
       _fatController.text = (user.macroTargets?['fat'] ?? 0).toString();
-      
+
       _manualEntry = user.manualMacroEntry;
       setState(() {});
     });
@@ -68,16 +69,12 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
       final updatedUser = user.copyWith(
         dailyCaloricGoal: calories,
         manualMacroEntry: _manualEntry,
-        macroTargets: {
-          'protein': protein,
-          'carbs': carbs,
-          'fat': fat,
-        },
+        macroTargets: {'protein': protein, 'carbs': carbs, 'fat': fat},
       );
 
       // Force a UI update first by broadcasting the change
       await userState.updateCurrentUser(updatedUser);
-      
+
       _showSnack('Goals saved successfully!');
     }
 
@@ -87,35 +84,35 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Macro Strategy'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          const Text(
+          Text(
             'Choose how you want MetaDash to set your targets.',
-            style: TextStyle(fontSize: 14, color: Colors.black54),
+            style: TextStyle(fontSize: 14, color: context.colors.textMuted),
           ),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Palette.lightStone,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: context.colors.divider),
             ),
             child: Row(
               children: [
@@ -124,9 +121,13 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
                     label: const Text('Auto Calculate'),
                     selected: !_manualEntry,
                     onSelected: (_) => setState(() => _manualEntry = false),
-                    selectedColor: Palette.forestGreen.withValues(alpha: 0.15),
+                    selectedColor: context.colors.accent.withValues(
+                      alpha: 0.15,
+                    ),
                     labelStyle: TextStyle(
-                      color: !_manualEntry ? Palette.forestGreen : Colors.black87,
+                      color: !_manualEntry
+                          ? context.colors.accent
+                          : context.colors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -137,9 +138,13 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
                     label: const Text('Manual Entry'),
                     selected: _manualEntry,
                     onSelected: (_) => setState(() => _manualEntry = true),
-                    selectedColor: Palette.forestGreen.withValues(alpha: 0.15),
+                    selectedColor: context.colors.accent.withValues(
+                      alpha: 0.15,
+                    ),
                     labelStyle: TextStyle(
-                      color: _manualEntry ? Palette.forestGreen : Colors.black87,
+                      color: _manualEntry
+                          ? context.colors.accent
+                          : context.colors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -152,13 +157,13 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: context.colors.surfaceVariant,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                border: Border.all(color: context.colors.divider),
               ),
-              child: const Text(
+              child: Text(
                 'Auto Calculate uses your onboarding targets and recent activity to update goals automatically.',
-                style: TextStyle(fontSize: 13, color: Colors.black54),
+                style: TextStyle(fontSize: 13, color: context.colors.textMuted),
               ),
             ),
           if (_manualEntry)
@@ -167,7 +172,9 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
               decoration: BoxDecoration(
                 color: Palette.lightStone,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(
+                  color: context.colors.divider.withValues(alpha: 0.08),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,16 +228,19 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
             child: ElevatedButton(
               onPressed: _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Palette.forestGreen,
-                foregroundColor: Colors.white,
+                backgroundColor: context.colors.cta,
+                foregroundColor: context.colors.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'Save Goals',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

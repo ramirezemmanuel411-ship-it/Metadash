@@ -29,10 +29,7 @@ class SearchLoading extends FoodSearchState {
   final String query;
   final List<FoodModel> partialResults; // Show while loading more
 
-  const SearchLoading({
-    required this.query,
-    this.partialResults = const [],
-  });
+  const SearchLoading({required this.query, this.partialResults = const []});
 
   @override
   List<Object?> get props => [query, partialResults];
@@ -85,18 +82,11 @@ class SearchError extends FoodSearchState {
   final String message;
   final List<FoodModel> fallbackResults; // Show local results on error
 
-  const SearchError({
-    required this.message,
-    this.fallbackResults = const [],
-  });
+  const SearchError({required this.message, this.fallbackResults = const []});
 
   @override
   List<Object?> get props => [message, fallbackResults];
 }
 
 /// Source of search results (for UI feedback)
-enum SearchSource {
-  local,
-  cache,
-  remote,
-}
+enum SearchSource { local, cache, remote }

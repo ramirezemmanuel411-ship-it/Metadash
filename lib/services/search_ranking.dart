@@ -9,8 +9,12 @@ double scoreResult(FoodModel item, String query) {
 
   // Tokenize query
   final queryTokens = query.toLowerCase().split(RegExp(r'\s+'));
-  final brandTokens = SearchNormalization.canonicalBrand(item).toLowerCase().split(' ');
-  final productTokens = SearchNormalization.canonicalProductName(item).toLowerCase().split(' ');
+  final brandTokens = SearchNormalization.canonicalBrand(
+    item,
+  ).toLowerCase().split(' ');
+  final productTokens = SearchNormalization.canonicalProductName(
+    item,
+  ).toLowerCase().split(' ');
 
   // Exact brand match boost
   for (final token in queryTokens) {
@@ -27,7 +31,9 @@ double scoreResult(FoodModel item, String query) {
   }
 
   // Penalize fragments unless query includes the fragment
-  final productName = SearchNormalization.canonicalProductName(item).toLowerCase();
+  final productName = SearchNormalization.canonicalProductName(
+    item,
+  ).toLowerCase();
   if (_isFragment(productName)) {
     bool queryHasFragment = queryTokens.contains(productName);
     if (!queryHasFragment) {
@@ -58,7 +64,8 @@ double scoreResult(FoodModel item, String query) {
   }
 
   // Slight boost for USDA if brand is present
-  if (item.source.toLowerCase().contains('usda') && SearchNormalization.canonicalBrand(item).isNotEmpty) {
+  if (item.source.toLowerCase().contains('usda') &&
+      SearchNormalization.canonicalBrand(item).isNotEmpty) {
     score += 5;
   }
 
@@ -163,15 +170,19 @@ bool _isBetterRepresentative(FoodModel a, FoodModel b) {
   }
 
   // Prefer complete nutrition
-  final aHasComplete = a.calories > 0 && a.protein > 0 && a.carbs > 0 && a.fat > 0;
-  final bHasComplete = b.calories > 0 && b.protein > 0 && b.carbs > 0 && b.fat > 0;
+  final aHasComplete =
+      a.calories > 0 && a.protein > 0 && a.carbs > 0 && a.fat > 0;
+  final bHasComplete =
+      b.calories > 0 && b.protein > 0 && b.carbs > 0 && b.fat > 0;
 
   if (aHasComplete && !bHasComplete) return true;
   if (!aHasComplete && bHasComplete) return false;
 
   // Prefer with serving info
-  final aHasServing = (a.servingVolumeMl ?? 0) > 0 || (a.servingWeightGrams ?? 0) > 0;
-  final bHasServing = (b.servingVolumeMl ?? 0) > 0 || (b.servingWeightGrams ?? 0) > 0;
+  final aHasServing =
+      (a.servingVolumeMl ?? 0) > 0 || (a.servingWeightGrams ?? 0) > 0;
+  final bHasServing =
+      (b.servingVolumeMl ?? 0) > 0 || (b.servingWeightGrams ?? 0) > 0;
 
   if (aHasServing && !bHasServing) return true;
   if (!aHasServing && bHasServing) return false;
@@ -189,7 +200,16 @@ bool _isBetterRepresentative(FoodModel a, FoodModel b) {
 }
 
 bool _isFragment(String text) {
-  const fragments = ['lime', 'cherry', 'diet', 'zero', 'vanilla', 'coke', 'diet', 'sugar'];
+  const fragments = [
+    'lime',
+    'cherry',
+    'diet',
+    'zero',
+    'vanilla',
+    'coke',
+    'diet',
+    'sugar',
+  ];
   return fragments.contains(text.toLowerCase());
 }
 
@@ -215,12 +235,16 @@ void debugPrintSearchResults(List<FoodModel> results, String query) {
     final isBranded = item.isBranded == true ? 'Y' : 'N';
     final hasKcal = item.calories > 0 ? 'Y' : 'N';
 
-    print('[${(i + 1).toString().padLeft(2)}] Score: ${score.toStringAsFixed(0).padLeft(4)} | '
-        'Title: ${title.padRight(25)} | '
-        'Subtitle: ${subtitle.padRight(30)} | '
-        'Barcode: $hasBarcode | Branded: $isBranded | Kcal: $hasKcal');
-    print('     Source: ${item.source.padRight(12)} | '
-        'DedupeKey: ${dedupeKey.substring(0, (dedupeKey.length / 2).toInt()).padRight(40)}');
+    print(
+      '[${(i + 1).toString().padLeft(2)}] Score: ${score.toStringAsFixed(0).padLeft(4)} | '
+      'Title: ${title.padRight(25)} | '
+      'Subtitle: ${subtitle.padRight(30)} | '
+      'Barcode: $hasBarcode | Branded: $isBranded | Kcal: $hasKcal',
+    );
+    print(
+      '     Source: ${item.source.padRight(12)} | '
+      'DedupeKey: ${dedupeKey.substring(0, (dedupeKey.length / 2).toInt()).padRight(40)}',
+    );
   }
 
   print('─' * 120);

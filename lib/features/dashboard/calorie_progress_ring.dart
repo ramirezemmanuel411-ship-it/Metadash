@@ -37,7 +37,8 @@ class _CalorieProgressRingState extends State<CalorieProgressRing>
   @override
   void didUpdateWidget(CalorieProgressRing oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.consumed != widget.consumed || oldWidget.target != widget.target) {
+    if (oldWidget.consumed != widget.consumed ||
+        oldWidget.target != widget.target) {
       _controller.reset();
       _setupAnimation();
       _controller.forward();
@@ -45,7 +46,9 @@ class _CalorieProgressRingState extends State<CalorieProgressRing>
   }
 
   void _setupAnimation() {
-    final progress = widget.target > 0 ? (widget.consumed / widget.target).clamp(0.0, 1.0) : 0.0;
+    final progress = widget.target > 0
+        ? (widget.consumed / widget.target).clamp(0.0, 1.0)
+        : 0.0;
     _progressAnimation = Tween<double>(begin: 0, end: progress).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
@@ -57,16 +60,13 @@ class _CalorieProgressRingState extends State<CalorieProgressRing>
     super.dispose();
   }
 
-  Color _getProgressColor(bool exceeded) {
-    if (exceeded) {
-      return Colors.amber.shade600;
-    }
-    return Palette.forestGreen;
-  }
-
   @override
   Widget build(BuildContext context) {
     final exceeded = widget.consumed > widget.target;
+
+    // Determine progress color based on MetaDash tokens
+    final progressColor = exceeded ? context.colors.cta : context.colors.accent;
+    final bgCircleColor = context.colors.surfaceVariant;
 
     return Center(
       child: Column(
@@ -81,7 +81,8 @@ class _CalorieProgressRingState extends State<CalorieProgressRing>
                 return CustomPaint(
                   painter: _RingPainter(
                     progress: _progressAnimation.value,
-                    color: _getProgressColor(exceeded),
+                    backgroundColor: bgCircleColor,
+                    progressColor: progressColor,
                   ),
                   child: Center(
                     child: Column(
@@ -92,14 +93,14 @@ class _CalorieProgressRingState extends State<CalorieProgressRing>
                           style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: context.colors.textPrimary,
                           ),
                         ),
                         Text(
                           'of ${widget.target} kcal',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ],
@@ -123,9 +124,14 @@ class _CalorieProgressRingState extends State<CalorieProgressRing>
 
 class _RingPainter extends CustomPainter {
   final double progress;
-  final Color color;
+  final Color backgroundColor;
+  final Color progressColor;
 
-  _RingPainter({required this.progress, required this.color});
+  _RingPainter({
+    required this.progress,
+    required this.backgroundColor,
+    required this.progressColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -134,17 +140,18 @@ class _RingPainter extends CustomPainter {
 
     // Background ring
     final backgroundPaint = Paint()
-      ..color = color.withOpacity(0.1)
+      ..color = backgroundColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 10;
+      ..strokeWidth = 12;
 
     canvas.drawCircle(center, radius, backgroundPaint);
 
-    // Progress ring
+    if (progress <= 0) return;
+
     final progressPaint = Paint()
-      ..color = color
+      ..color = progressColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 10
+      ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
 
     const startAngle = -math.pi / 2;
@@ -161,7 +168,9 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.color != color;
+    return oldDelegate.progress != progress ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.progressColor != progressColor;
   }
 }
 
@@ -180,15 +189,11 @@ class _RemainingLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final diff = (consumed - target).abs();
     final label = exceeded ? 'Over by' : 'Remaining';
-    final color = exceeded ? Colors.amber.shade600 : Palette.forestGreen;
+    final color = exceeded ? context.colors.cta : context.colors.accent;
 
     return Text(
       '$label: $diff kcal',
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: color,
-      ),
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: color),
     );
   }
 }

@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 
 /// EXAMPLE INTEGRATION CODE
-/// 
+///
 /// This file shows how to integrate the exercise logging system
 /// into the rest of your app. Copy patterns from here into your actual code.
 
@@ -14,11 +14,13 @@ import 'package:flutter/material.dart';
 void _exampleFABIntegration(BuildContext context) {
   // Import at top:
   // import 'presentation/screens/exercise_logging/exercise_main_screen.dart';
-  
+
   Navigator.push(
     context,
     // MaterialPageRoute(builder: (_) => const ExerciseMainScreen()),
-    MaterialPageRoute(builder: (_) => const SizedBox()), // TODO: Replace with ExerciseMainScreen
+    MaterialPageRoute(
+      builder: (_) => const SizedBox(),
+    ), // TODO: Replace with ExerciseMainScreen
   );
 }
 
@@ -29,12 +31,12 @@ void _exampleFABIntegration(BuildContext context) {
 /// TODO: Create lib/data/repositories/exercise_repository.dart
 class ExerciseRepository {
   // TODO: Initialize with local DB (sqflite)
-  
+
   /// Save exercise to local DB and queue for backend sync
   Future<void> saveExercise(Exercise exercise) async {
     // TODO: Save to SQLite
     // await _database.insert('exercises', exercise.toJson());
-    
+
     // TODO: Sync to backend (if online)
     // await _apiService.postExercise(exercise);
   }
@@ -52,7 +54,10 @@ class ExerciseRepository {
   }
 
   /// Get all exercises (with pagination)
-  Future<List<dynamic>> getAllExercises({int limit = 100, int offset = 0}) async {
+  Future<List<dynamic>> getAllExercises({
+    int limit = 100,
+    int offset = 0,
+  }) async {
     // TODO: Implement
     return [];
   }
@@ -73,7 +78,7 @@ Future<int> _calculateTodayCaloriesBurned(
   double? userWeight,
 ) async {
   final exercises = await exerciseRepository.getTodayExercises();
-  
+
   int totalBurned = 0;
   for (final exercise in exercises) {
     // For run exercises, use estimation formula
@@ -88,7 +93,7 @@ Future<int> _calculateTodayCaloriesBurned(
     // TODO: For described exercises, use AI-extracted value
     // TODO: For weight lifting, use estimated based on sets/reps
   }
-  
+
   return totalBurned;
 }
 
@@ -117,12 +122,13 @@ class _ExampleResultsScreenState extends State<ExampleResultsScreen> {
   Future<void> _loadTodayExercises() async {
     try {
       final exercises = await exerciseRepository.getTodayExercises();
-      
+
       // Calculate total burned
       int total = 0;
       for (final ex in exercises) {
         if (ex.type == ExerciseType.run) {
-          total += ((ex.getEstimatedCalories(75) ?? 0) as num).toInt(); // TODO: Get real user weight
+          total += ((ex.getEstimatedCalories(75) ?? 0) as num)
+              .toInt(); // TODO: Get real user weight
         } else if (ex.type == ExerciseType.manual) {
           total += ((ex.caloriesBurned ?? 0) as num).toInt();
         }
@@ -152,10 +158,7 @@ class _ExampleResultsScreenState extends State<ExampleResultsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Calories Burned'),
-                  Text(
-                    '🔥',
-                    style: TextStyle(fontSize: 32),
-                  ),
+                  Text('🔥', style: TextStyle(fontSize: 32)),
                 ],
               ),
               Text(
@@ -168,7 +171,7 @@ class _ExampleResultsScreenState extends State<ExampleResultsScreen> {
             ],
           ),
         ),
-        
+
         // Today's exercises list
         if (todayExercises != null && todayExercises!.isNotEmpty)
           Expanded(
@@ -193,7 +196,8 @@ class _ExampleResultsScreenState extends State<ExampleResultsScreen> {
     };
 
     final title = switch (exercise.type) {
-      ExerciseType.run => '${exercise.intensity?.label} - ${exercise.durationMinutes} min',
+      ExerciseType.run =>
+        '${exercise.intensity?.label} - ${exercise.durationMinutes} min',
       ExerciseType.weightLifting => 'Weight Lifting',
       ExerciseType.described => 'Custom Workout',
       ExerciseType.manual => '${exercise.caloriesBurned} cal',
@@ -230,7 +234,7 @@ extension ExerciseTracking on DailyResults {
   void addExercise(Exercise exercise) {
     // TODO: Add to exercises list
     // _exercises.add(exercise);
-    
+
     // TODO: Update calorie calculation
     // _recalculateStats();
   }
@@ -244,12 +248,7 @@ extension ExerciseTracking on DailyResults {
   /// Get exercise breakdown
   Map<String, int> getExerciseBreakdown() {
     // TODO: Count by type
-    return {
-      'run': 0,
-      'weightLifting': 0,
-      'described': 0,
-      'manual': 0,
-    };
+    return {'run': 0, 'weightLifting': 0, 'described': 0, 'manual': 0};
   }
 }
 
@@ -268,7 +267,7 @@ class AIService {
     // Example response:
     // "HIIT for 20 mins, 5/10 intensity"
     // → (20, medium, 250)
-    
+
     return (null, null, null);
   }
 }
@@ -276,8 +275,9 @@ class AIService {
 // Example usage in ExerciseDescribeScreen:
 Future<void> _parseWithAI(String description) async {
   final aiService = AIService();
-  final (duration, intensity, calories) = await aiService.parseExerciseDescription(description);
-  
+  final (duration, intensity, calories) = await aiService
+      .parseExerciseDescription(description);
+
   // TODO: Create exercise with extracted data
   final exercise = Exercise.described(description: description);
   // Could enhance with: intensity, estimatedCalories from parsing
@@ -340,7 +340,7 @@ void main() {
 
 void testExerciseCreation() {
   print('Testing Exercise Creation...');
-  
+
   // Run
   final run = Exercise.run(
     intensity: ExerciseIntensity.high,
@@ -350,9 +350,7 @@ void testExerciseCreation() {
   print('✓ Run exercise created: ${run.id}');
 
   // Described
-  final described = Exercise.described(
-    description: 'HIIT for 20 mins',
-  );
+  final described = Exercise.described(description: 'HIIT for 20 mins');
   assert(described.type == ExerciseType.described);
   print('✓ Described exercise created');
 
@@ -364,7 +362,7 @@ void testExerciseCreation() {
 
 void testCalorieCalculation() {
   print('Testing Calorie Calculation...');
-  
+
   final low = Exercise.run(
     intensity: ExerciseIntensity.low,
     durationMinutes: 30,
@@ -392,7 +390,7 @@ void testCalorieCalculation() {
 // ============================================================================
 
 /// Copy this checklist to your project management:
-/// 
+///
 /// - [ ] Create ExerciseRepository with DB layer
 /// - [ ] Add Exercise field to DailyResults model
 /// - [ ] Update Results screen to show exercises

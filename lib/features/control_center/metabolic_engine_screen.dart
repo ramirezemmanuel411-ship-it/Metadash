@@ -36,10 +36,10 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Metabolic Engine'),
       ),
@@ -50,7 +50,7 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
             'Configure energy and fat modeling.',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withOpacity(0.5),
+              color: context.colors.textMuted,
               height: 1.4,
             ),
           ),
@@ -60,7 +60,8 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
             children: [
               _SelectableOption(
                 title: 'Static',
-                description: 'Uses a steady baseline with no adaptive adjustments.',
+                description:
+                    'Uses a steady baseline with no adaptive adjustments.',
                 isSelected: _energyModel == 'Static',
                 onTap: () {
                   setState(() => _energyModel = 'Static');
@@ -70,7 +71,8 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
               _buildDivider(),
               _SelectableOption(
                 title: 'Adaptive',
-                description: 'Learns quickly from activity and outcomes to refine targets.',
+                description:
+                    'Learns quickly from activity and outcomes to refine targets.',
                 isSelected: _energyModel == 'Adaptive',
                 onTap: () {
                   setState(() => _energyModel = 'Adaptive');
@@ -80,7 +82,8 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
               _buildDivider(),
               _SelectableOption(
                 title: 'Hybrid (Recommended)',
-                description: 'Balances your baseline metabolism with intelligent adjustments based on activity and progress.',
+                description:
+                    'Balances your baseline metabolism with intelligent adjustments based on activity and progress.',
                 isSelected: _energyModel == 'Hybrid (Recommended)',
                 onTap: () {
                   setState(() => _energyModel = 'Hybrid (Recommended)');
@@ -95,7 +98,8 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
             children: [
               _SelectableOption(
                 title: 'Strict',
-                description: 'Applies the most conservative interpretation of workout calories.',
+                description:
+                    'Applies the most conservative interpretation of workout calories.',
                 isSelected: _workoutAccuracy == 'Strict',
                 onTap: () {
                   setState(() => _workoutAccuracy = 'Strict');
@@ -105,7 +109,8 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
               _buildDivider(),
               _SelectableOption(
                 title: 'Balanced',
-                description: 'Uses a calibrated blend of caution and responsiveness.',
+                description:
+                    'Uses a calibrated blend of caution and responsiveness.',
                 isSelected: _workoutAccuracy == 'Balanced',
                 onTap: () {
                   setState(() => _workoutAccuracy = 'Balanced');
@@ -115,7 +120,8 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
               _buildDivider(),
               _SelectableOption(
                 title: 'Flexible',
-                description: 'Leans into workout data for a more responsive estimate.',
+                description:
+                    'Leans into workout data for a more responsive estimate.',
                 isSelected: _workoutAccuracy == 'Flexible',
                 onTap: () {
                   setState(() => _workoutAccuracy = 'Flexible');
@@ -134,7 +140,7 @@ class _MetabolicEngineScreenState extends State<MetabolicEngineScreen> {
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(vertical: 12),
-      color: Colors.black.withOpacity(0.05),
+      color: context.colors.divider,
     );
   }
 }
@@ -168,10 +174,10 @@ class _SelectableOption extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -180,7 +186,7 @@ class _SelectableOption extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
-                      color: Colors.black.withOpacity(0.5),
+                      color: context.colors.textMuted,
                       height: 1.35,
                     ),
                   ),
@@ -188,15 +194,16 @@ class _SelectableOption extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Radio<bool>(
-              value: true,
-              groupValue: isSelected ? true : false,
-              onChanged: (_) => onTap(),
-              activeColor: Palette.forestGreen,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: const VisualDensity(
-                horizontal: VisualDensity.minimumDensity,
-                vertical: VisualDensity.minimumDensity,
+            InkWell(
+              onTap: onTap,
+              child: Icon(
+                isSelected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_off,
+                color: isSelected
+                    ? context.colors.accent
+                    : context.colors.textMuted,
+                size: 20,
               ),
             ),
           ],
@@ -211,20 +218,17 @@ class _EngineSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
 
-  const _EngineSection({
-    required this.title,
-    required this.children,
-  });
+  const _EngineSection({required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Palette.lightStone,
+        color: context.colors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: context.colors.textMuted.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -237,10 +241,10 @@ class _EngineSection extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: context.colors.textPrimary,
               ),
             ),
           ),
@@ -275,10 +279,10 @@ class _NavigationRow extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+                  color: context.colors.textPrimary,
                 ),
               ),
             ),
@@ -288,14 +292,14 @@ class _NavigationRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
-                color: Colors.black.withOpacity(0.5),
+                color: context.colors.textMuted,
               ),
             ),
             const SizedBox(width: 8),
             Icon(
               Icons.chevron_right,
               size: 18,
-              color: Colors.black.withOpacity(0.25),
+              color: context.colors.textMuted,
             ),
           ],
         ),
@@ -309,10 +313,7 @@ class _FullWidthNavRow extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
 
-  const _FullWidthNavRow({
-    required this.title,
-    required this.onTap,
-  });
+  const _FullWidthNavRow({required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -321,11 +322,11 @@ class _FullWidthNavRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: Palette.lightStone,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: context.colors.textMuted.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -336,17 +337,17 @@ class _FullWidthNavRow extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: context.colors.textPrimary,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right,
               size: 18,
-              color: Colors.black.withOpacity(0.25),
+              color: context.colors.textMuted,
             ),
           ],
         ),
@@ -370,10 +371,10 @@ class _SelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: Text(title),
       ),
@@ -387,7 +388,10 @@ class _SelectionScreen extends StatelessWidget {
               return InkWell(
                 onTap: () => Navigator.pop(context, option),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -399,16 +403,16 @@ class _SelectionScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.black87,
+                                color: context.colors.textPrimary,
                               ),
                             ),
                           ],
                         ),
                       ),
                       if (isSelected)
-                        const Icon(
+                        Icon(
                           Icons.check,
-                          color: Palette.forestGreen,
+                          color: context.colors.accent,
                           size: 18,
                         ),
                     ],
@@ -445,17 +449,17 @@ class _ToggleRow extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: context.colors.textPrimary,
               ),
             ),
           ),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: Palette.forestGreen,
+            activeThumbColor: context.colors.accent,
           ),
         ],
       ),
@@ -472,10 +476,10 @@ class _DetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: Text(title),
       ),
@@ -485,10 +489,7 @@ class _DetailScreen extends StatelessWidget {
           child: Text(
             'Detail configuration for $title',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ),
       ),
@@ -500,10 +501,12 @@ class AdvancedEngineSettingsScreen extends StatefulWidget {
   const AdvancedEngineSettingsScreen({super.key});
 
   @override
-  State<AdvancedEngineSettingsScreen> createState() => _AdvancedEngineSettingsScreenState();
+  State<AdvancedEngineSettingsScreen> createState() =>
+      _AdvancedEngineSettingsScreenState();
 }
 
-class _AdvancedEngineSettingsScreenState extends State<AdvancedEngineSettingsScreen> {
+class _AdvancedEngineSettingsScreenState
+    extends State<AdvancedEngineSettingsScreen> {
   bool _conversionRuleEnabled = true;
   bool _confidenceBandsEnabled = false;
   bool _showTdeeLine = true;
@@ -515,10 +518,10 @@ class _AdvancedEngineSettingsScreenState extends State<AdvancedEngineSettingsScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Advanced Engine Settings'),
       ),
@@ -529,7 +532,7 @@ class _AdvancedEngineSettingsScreenState extends State<AdvancedEngineSettingsScr
             'Fine-tune modeling behavior.',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withOpacity(0.5),
+              color: context.colors.textMuted,
               height: 1.4,
             ),
           ),
@@ -546,7 +549,8 @@ class _AdvancedEngineSettingsScreenState extends State<AdvancedEngineSettingsScr
               _ToggleRow(
                 title: '3500 Conversion Rule',
                 value: _conversionRuleEnabled,
-                onChanged: (val) => setState(() => _conversionRuleEnabled = val),
+                onChanged: (val) =>
+                    setState(() => _conversionRuleEnabled = val),
               ),
               _buildDivider(),
               _NavigationRow(
@@ -564,7 +568,8 @@ class _AdvancedEngineSettingsScreenState extends State<AdvancedEngineSettingsScr
               _ToggleRow(
                 title: 'Confidence Bands',
                 value: _confidenceBandsEnabled,
-                onChanged: (val) => setState(() => _confidenceBandsEnabled = val),
+                onChanged: (val) =>
+                    setState(() => _confidenceBandsEnabled = val),
               ),
               _buildDivider(),
               _ToggleRow(
@@ -590,16 +595,14 @@ class _AdvancedEngineSettingsScreenState extends State<AdvancedEngineSettingsScr
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(vertical: 12),
-      color: Colors.black.withOpacity(0.05),
+      color: context.colors.divider,
     );
   }
 
   void _navigateTo(BuildContext context, String title) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => _DetailScreen(title: title),
-      ),
+      MaterialPageRoute(builder: (_) => _DetailScreen(title: title)),
     );
   }
 }

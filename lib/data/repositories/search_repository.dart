@@ -12,6 +12,7 @@ import '../models/food_search_result_raw.dart';
 import '../../services/raw_search_debug_store.dart';
 import '../../services/canonical_food_service.dart'; // Canonical food parsing
 import '../../services/food_dedup_service.dart'; // Deduplication service
+import '../../services/food_quality_engine.dart'; // Quality pipeline & ranking
 
 /// Repository coordinating local-first search strategy
 /// Returns results in stages: local → cached → remote (USDA/OFF) → FatSecret
@@ -34,24 +35,24 @@ class SearchRepository {
 
   /// Factory constructor that automatically initializes FatSecret when available
   /// This makes FatSecret the primary database for all searches
-  factory SearchRepository.withFatSecret({
-    String? backendUrl,
-  }) {
+  factory SearchRepository.withFatSecret({String? backendUrl}) {
     FatSecretRemoteDatasource? fatSecretDatasource;
-    
+
     try {
       // Try to initialize FatSecret if credentials are available
       fatSecretDatasource = FatSecretRemoteDatasource(
-        backendUrl: backendUrl ?? 'https://fatsecret-proxy-production-d58c.up.railway.app',
+        backendUrl:
+            backendUrl ??
+            'https://fatsecret-proxy-production-d58c.up.railway.app',
       );
       print('✅ FatSecret datasource initialized successfully');
     } catch (e) {
-      print('❌ FatSecret initialization failed: $e - will use fallback databases');
+      print(
+        '❌ FatSecret initialization failed: $e - will use fallback databases',
+      );
     }
 
-    return SearchRepository(
-      fatSecretDatasource: fatSecretDatasource,
-    );
+    return SearchRepository(fatSecretDatasource: fatSecretDatasource);
   }
 
   /// Search foods with FatSecret-first strategy (returns Stream for progressive updates)
@@ -74,20 +75,27 @@ class SearchRepository {
     try {
       // ===== STAGE 1: Fetch Fresh from APIs (FatSecret primary) =====
       List<FoodModel> remoteResults = [];
-      
-      print('🔍 FatSecret datasource available: ${_fatSecretDatasource != null}');
-      
+
+      print(
+        '🔍 FatSecret datasource available: ${_fatSecretDatasource != null}',
+      );
+
       if (_fatSecretDatasource != null) {
         try {
           print('🔍 Attempting FatSecret search for: $query');
           _debugLogRawResults('FATSECRET', query);
-          final rawFatSecretData = await _fatSecretDatasource.searchFoods(query);
-          final fatSecretResults = FatSecretRemoteDatasource.parseFoodsFromSearch(rawFatSecretData);
+          final rawFatSecretData = await _fatSecretDatasource.searchFoods(
+            query,
+          );
+          final fatSecretResults =
+              FatSecretRemoteDatasource.parseFoodsFromSearch(rawFatSecretData);
           print('✅ FatSecret returned ${fatSecretResults.length} results');
           remoteResults.addAll(fatSecretResults);
           _debugLogResults('FATSECRET', query, fatSecretResults);
         } catch (e) {
-          print('❌ FatSecret search error: $e - Falling back to USDA/OpenFoodFacts');
+          print(
+            '❌ FatSecret search error: $e - Falling back to USDA/OpenFoodFacts',
+          );
         }
       } else {
         print('⚠️ FatSecret datasource is null - will use fallback');
@@ -109,21 +117,27 @@ class SearchRepository {
           print('USDA/OpenFoodFacts fallback error: $e');
         }
       } else {
-        // If FatSecret succeeded, still fetch fallback data in background for better coverage
-        try {
-          _activeCancelToken = _remoteDatasource.createCancelToken();
-          final fallbackResults = await _remoteDatasource.searchBoth(
-            query,
-            pageSize: 15, // Less from fallback since we have FatSecret
-            cancelToken: _activeCancelToken,
-          );
-          if (fallbackResults.isNotEmpty) {
-            _debugLogRawResults('USDA/OFF_SUPPLEMENT', query);
-            remoteResults.addAll(fallbackResults);
-            _debugLogResults('USDA/OFF_SUPPLEMENT', query, fallbackResults);
+        // Only supplement with USDA/OFF when FatSecret returned few results.
+        // With ≥ 10 FatSecret (per-serving) entries the per-100g USDA entries
+        // would just pollute results and confuse users with duplicate foods
+        // that require manual gram math to use.
+        final fatSecretCount = remoteResults.length;
+        if (fatSecretCount < 10) {
+          try {
+            _activeCancelToken = _remoteDatasource.createCancelToken();
+            final fallbackResults = await _remoteDatasource.searchBoth(
+              query,
+              pageSize: 15,
+              cancelToken: _activeCancelToken,
+            );
+            if (fallbackResults.isNotEmpty) {
+              _debugLogRawResults('USDA/OFF_SUPPLEMENT', query);
+              remoteResults.addAll(fallbackResults);
+              _debugLogResults('USDA/OFF_SUPPLEMENT', query, fallbackResults);
+            }
+          } catch (e) {
+            print('USDA/OpenFoodFacts supplement error (non-critical): $e');
           }
-        } catch (e) {
-          print('USDA/OpenFoodFacts supplement error (non-critical): $e');
         }
       }
 
@@ -152,16 +166,25 @@ class SearchRepository {
           query: query,
           maxResults: 50,
         );
-        _debugLogResults('FINAL', query, canonicalAll);
+
+        // Quality pipeline: re-rank by verification level + nutrition validation
+        final qualityRanked =
+            FoodQualityEngine.sortByQuality(canonicalAll, query: query);
+
+        // Final guard: drop any entry whose food name is still a bare corporate
+        // record (ends with Inc / LLC / Corp / Ltd). These are manufacturer
+        // master records that slipped through from any source or stale cache.
+        final finalResults = _dropCorporateNameEntries(qualityRanked);
+        _debugLogResults('FINAL', query, finalResults);
 
         yield SearchResult(
-          results: canonicalAll,
+          results: finalResults,
           source: SearchSource.remote,
           isComplete: true,
         );
 
         // Prefetch details for top 10 results
-        _prefetchTopResults(canonicalAll.take(10).toList());
+        _prefetchTopResults(qualityRanked.take(10).toList());
       } else {
         // No remote results, fallback to cache/local for anything available
         List<FoodModel> localResults = [];
@@ -191,9 +214,12 @@ class SearchRepository {
             query: query,
             maxResults: 50,
           );
+          final qualityLocal =
+              FoodQualityEngine.sortByQuality(canonicalLocal, query: query);
+          final finalLocal = _dropCorporateNameEntries(qualityLocal);
 
           yield SearchResult(
-            results: canonicalLocal,
+            results: finalLocal,
             source: SearchSource.local,
             isComplete: true,
           );
@@ -261,6 +287,23 @@ class SearchRepository {
   }
 
   /// Cancel any active search request
+  /// Drop entries whose food name is a bare corporate/manufacturer record
+  /// with no real food descriptor attached.
+  /// Matches names ending in: Inc, Inc., LLC, Corp, Corp., Ltd, Ltd.
+  static final _corpEndRegex = RegExp(
+    r'\b(inc\.?|llc\.?|corp\.?|ltd\.?)$',
+    caseSensitive: false,
+  );
+
+  static List<FoodModel> _dropCorporateNameEntries(List<FoodModel> foods) {
+    return foods.where((food) {
+      final n = food.name.trim();
+      if (n.isEmpty || n.toLowerCase() == 'unknown') return false;
+      if (_corpEndRegex.hasMatch(n)) return false;
+      return true;
+    }).toList();
+  }
+
   void _cancelPreviousRequest() {
     if (_activeCancelToken != null && !_activeCancelToken!.isCancelled) {
       _activeCancelToken!.cancel('New search started');
