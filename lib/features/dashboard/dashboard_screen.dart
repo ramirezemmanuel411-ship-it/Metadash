@@ -375,6 +375,41 @@ class _DashboardBody extends StatelessWidget {
               ),
             );
           }
+        case 'goal_projection':
+          {
+            final goalWeight = profileUser?.goalWeight ?? 0;
+            final weeklyRateLbs = weekTotalDeficit / 3500;
+            final hasGoal = userWeight > 0 && goalWeight > 0;
+            final needToLose = userWeight > goalWeight;
+            final towardRate = needToLose ? -weeklyRateLbs : weeklyRateLbs;
+            final reached = hasGoal && (userWeight - goalWeight).abs() < 0.5;
+            final onPace = towardRate > 0.05;
+            return _CardSection(
+              title: 'Goal Projection',
+              tintColor: Palette.widgetTDEEDay,
+              statusBadge: !hasGoal
+                  ? null
+                  : reached
+                  ? 'Reached'
+                  : onPace
+                  ? 'On pace'
+                  : 'Off pace',
+              statusColor: (reached || onPace)
+                  ? Palette.widgetActivityDay
+                  : const Color(0xFFB03030),
+              child: !hasGoal
+                  ? const _EmptyMetricCard(
+                      hint: 'Set a goal weight',
+                      icon: Icons.flag_outlined,
+                      color: Palette.widgetTDEEDay,
+                    )
+                  : _GoalProjectionCard(
+                      currentWeight: userWeight,
+                      goalWeight: goalWeight,
+                      weeklyChangeLbs: weeklyRateLbs,
+                    ),
+            );
+          }
         case 'water_intake':
           return _CardSection(
             title: 'Water Intake',
@@ -641,6 +676,19 @@ class _DashboardBody extends StatelessWidget {
             subtitle: 'active days',
             progress: weeklyTDEE.where((v) => v > 0).length / 7,
           );
+        case 'goal_projection':
+          {
+            final goalWeight = profileUser?.goalWeight ?? 0;
+            final has = userWeight > 0 && goalWeight > 0;
+            final remaining = (userWeight - goalWeight).abs();
+            return _CompactCard(
+              title: 'Goal',
+              icon: Icons.flag_outlined,
+              color: Palette.widgetTDEEDay,
+              value: has ? remaining.toStringAsFixed(1) : '—',
+              subtitle: has ? 'lb to goal' : 'Set a goal',
+            );
+          }
         case 'meal_timing':
           {
             final firstMeal = data.firstMealTime;
@@ -1303,6 +1351,104 @@ String _formatTimeOfDay(DateTime t) {
   final ampm = t.hour < 12 ? 'AM' : 'PM';
   final h12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
   return '$h12:${t.minute.toString().padLeft(2, '0')} $ampm';
+}
+
+const List<String> _kMonthAbbr = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+String _formatShortDate(DateTime d) {
+  final base = '${_kMonthAbbr[d.month - 1]} ${d.day}';
+  return d.year == DateTime.now().year ? base : '$base, ${d.year}';
+}
+
+/// Projects the date the user reaches their goal weight at the current weekly
+/// pace (derived from the rolling 7-day calorie deficit/surplus).
+class _GoalProjectionCard extends StatelessWidget {
+  final double currentWeight;
+  final double goalWeight;
+  final double weeklyChangeLbs; // signed; negative = losing weight
+  const _GoalProjectionCard({
+    required this.currentWeight,
+    required this.goalWeight,
+    required this.weeklyChangeLbs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    const tint = Palette.widgetTDEEDay;
+    final needToLose = currentWeight > goalWeight;
+    final remaining = (currentWeight - goalWeight).abs();
+    final towardRate = needToLose ? -weeklyChangeLbs : weeklyChangeLbs;
+    final reached = remaining < 0.5;
+    final onPace = towardRate > 0.05;
+
+    String headline;
+    String sub;
+    if (reached) {
+      headline = 'Reached';
+      sub = "You're at your goal weight";
+    } else if (!onPace) {
+      headline = '${remaining.toStringAsFixed(1)} lb to go';
+      sub = needToLose ? 'Not in a deficit this week' : 'Not in a surplus this week';
+    } else {
+      final weeks = remaining / towardRate;
+      if (weeks > 104) {
+        headline = '2+ yrs';
+        sub =
+            '${remaining.toStringAsFixed(1)} lb · ${towardRate.toStringAsFixed(1)} lb/wk';
+      } else {
+        final date = DateTime.now().add(Duration(days: (weeks * 7).round()));
+        headline = _formatShortDate(date);
+        sub =
+            '${remaining.toStringAsFixed(1)} lb to go · ${towardRate.toStringAsFixed(1)} lb/wk';
+      }
+    }
+
+    return Row(
+      children: [
+        const _ConceptIconTile(
+          color: tint,
+          icon: Icons.flag_rounded,
+          size: 46,
+          iconSize: 24,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                headline,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                sub,
+                style: TextStyle(fontSize: 12, color: colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          '${goalWeight.toStringAsFixed(0)} lb',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: tint,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Meal timing widget — eating window between the first and last logged meal,

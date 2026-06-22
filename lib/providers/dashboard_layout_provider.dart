@@ -84,9 +84,10 @@ class DashboardLayoutProvider extends ChangeNotifier {
   static const List<String> kDefaultActiveIds = [
     'calorie_balance',
     'macros',
-    'water_intake',
-    'steps',
+    'goal_projection',
     'weekly_deficit',
+    'steps',
+    'water_intake',
     'sleep_score',
     'workout_performance',
   ];
@@ -114,6 +115,14 @@ class DashboardLayoutProvider extends ChangeNotifier {
       name: 'Weekly Deficit',
       icon: Icons.trending_down_outlined,
       description: '7-day cumulative calorie deficit or surplus.',
+      category: DashWidgetCategory.performance,
+    ),
+    DashWidgetInfo(
+      id: 'goal_projection',
+      name: 'Goal Projection',
+      icon: Icons.flag_outlined,
+      description:
+          "Projected date you'll reach your goal weight at your current pace.",
       category: DashWidgetCategory.performance,
     ),
     // ── Nutrition ─────────────────────────────────────────────────────────────
