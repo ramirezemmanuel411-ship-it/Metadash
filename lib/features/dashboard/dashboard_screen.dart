@@ -539,23 +539,64 @@ class _DashboardBody extends StatelessWidget {
             ),
           );
         case 'recovery_index':
-          return _CardSection(
-            title: 'Recovery Index',
-            child: const _EmptyMetricCard(
-              hint: 'No data yet',
-              icon: Icons.battery_charging_full_outlined,
-              color: Color(0xFF0EA5E9),
-            ),
-          );
+          {
+            final hrv = data.hrv ?? 0;
+            if (hrv <= 0) {
+              return _CardSection(
+                title: 'Recovery Index',
+                tintColor: const Color(0xFF0EA5E9),
+                child: const _EmptyMetricCard(
+                  hint: 'Connect Apple Health (HRV)',
+                  icon: Icons.battery_charging_full_outlined,
+                  color: Color(0xFF0EA5E9),
+                ),
+              );
+            }
+            final r = _recoveryScore(hrv, data.sleepMinutes, data.restingHR);
+            final sleepH = (data.sleepMinutes ?? 0) / 60;
+            return _CardSection(
+              title: 'Recovery Index',
+              tintColor: const Color(0xFF0EA5E9),
+              statusBadge: r.label,
+              statusColor: r.color,
+              child: _ScoreMetricCard(
+                icon: Icons.battery_charging_full_rounded,
+                color: r.color,
+                score: r.score,
+                caption:
+                    'HRV ${hrv.round()}ms · ${sleepH.toStringAsFixed(1)}h sleep',
+              ),
+            );
+          }
         case 'stress_level':
-          return _CardSection(
-            title: 'Stress Level',
-            child: const _EmptyMetricCard(
-              hint: 'No data yet',
-              icon: Icons.self_improvement_outlined,
-              color: Color(0xFF8B5CF6),
-            ),
-          );
+          {
+            final hrv = data.hrv ?? 0;
+            if (hrv <= 0) {
+              return _CardSection(
+                title: 'Stress',
+                tintColor: const Color(0xFF8B5CF6),
+                child: const _EmptyMetricCard(
+                  hint: 'Connect Apple Health (HRV)',
+                  icon: Icons.self_improvement_outlined,
+                  color: Color(0xFF8B5CF6),
+                ),
+              );
+            }
+            final st = _stressScore(hrv, data.restingHR, data.workoutCalories);
+            return _CardSection(
+              title: 'Stress',
+              tintColor: const Color(0xFF8B5CF6),
+              statusBadge: st.label,
+              statusColor: st.color,
+              child: _ScoreMetricCard(
+                icon: Icons.self_improvement_rounded,
+                color: st.color,
+                score: st.score,
+                caption:
+                    'HRV ${hrv.round()}ms · RHR ${data.restingHR ?? '—'} bpm',
+              ),
+            );
+          }
         case 'mindfulness':
           return _CardSection(
             title: 'Mindfulness',
@@ -676,6 +717,36 @@ class _DashboardBody extends StatelessWidget {
             subtitle: 'active days',
             progress: weeklyTDEE.where((v) => v > 0).length / 7,
           );
+        case 'recovery_index':
+          {
+            final hrv = data.hrv ?? 0;
+            final r = hrv > 0
+                ? _recoveryScore(hrv, data.sleepMinutes, data.restingHR)
+                : null;
+            return _CompactCard(
+              title: 'Recovery',
+              icon: Icons.battery_charging_full_outlined,
+              color: const Color(0xFF0EA5E9),
+              value: r != null ? '${r.score}' : '—',
+              subtitle: r != null ? r.label : 'No HRV data',
+              progress: r != null ? r.score / 100 : null,
+            );
+          }
+        case 'stress_level':
+          {
+            final hrv = data.hrv ?? 0;
+            final st = hrv > 0
+                ? _stressScore(hrv, data.restingHR, data.workoutCalories)
+                : null;
+            return _CompactCard(
+              title: 'Stress',
+              icon: Icons.self_improvement_outlined,
+              color: const Color(0xFF8B5CF6),
+              value: st != null ? '${st.score}' : '—',
+              subtitle: st != null ? st.label : 'No HRV data',
+              progress: st != null ? st.score / 100 : null,
+            );
+          }
         case 'goal_projection':
           {
             final goalWeight = profileUser?.goalWeight ?? 0;
@@ -1361,6 +1432,144 @@ const List<String> _kMonthAbbr = [
 String _formatShortDate(DateTime d) {
   final base = '${_kMonthAbbr[d.month - 1]} ${d.day}';
   return d.year == DateTime.now().year ? base : '$base, ${d.year}';
+}
+
+// ── Recovery & stress scoring (from Apple Health HRV + sleep + resting HR) ────
+
+double _hrvScore(double hrv) {
+  if (hrv >= 70) return 1.0;
+  if (hrv >= 50) return 0.8;
+  if (hrv >= 35) return 0.6;
+  if (hrv >= 20) return 0.4;
+  return 0.25;
+}
+
+double _rhrScore(int? rhr) {
+  if (rhr == null || rhr == 0) return 0.6; // neutral when unknown
+  if (rhr < 55) return 1.0;
+  if (rhr <= 65) return 0.85;
+  if (rhr <= 75) return 0.65;
+  if (rhr <= 85) return 0.45;
+  return 0.3;
+}
+
+/// Readiness: weighted blend of HRV, sleep and resting HR.
+({int score, String label, Color color}) _recoveryScore(
+  double hrv,
+  int? sleepMinutes,
+  int? restingHR,
+) {
+  final sleepScore = ((sleepMinutes ?? 0) / 480).clamp(0.0, 1.0);
+  final s =
+      0.4 * _hrvScore(hrv) + 0.4 * sleepScore + 0.2 * _rhrScore(restingHR);
+  final score = (s * 100).round();
+  final label = score >= 80
+      ? 'Primed'
+      : score >= 60
+      ? 'Ready'
+      : score >= 40
+      ? 'Moderate'
+      : 'Strained';
+  final color = score >= 60
+      ? Palette.widgetActivityDay
+      : score >= 40
+      ? Palette.widgetWeightDay
+      : const Color(0xFFB03030);
+  return (score: score, label: label, color: color);
+}
+
+/// Physiological strain: low HRV + elevated resting HR + training load.
+({int score, String label, Color color}) _stressScore(
+  double hrv,
+  int? restingHR,
+  int? workoutCalories,
+) {
+  final load = ((workoutCalories ?? 0) / 700).clamp(0.0, 1.0);
+  final s =
+      0.5 * (1 - _hrvScore(hrv)) +
+      0.3 * (1 - _rhrScore(restingHR)) +
+      0.2 * load;
+  final score = (s * 100).round();
+  final label = score >= 70
+      ? 'High'
+      : score >= 45
+      ? 'Elevated'
+      : score >= 25
+      ? 'Moderate'
+      : 'Low';
+  final color = score >= 70
+      ? const Color(0xFFB03030)
+      : score >= 45
+      ? Palette.widgetWeightDay
+      : Palette.widgetActivityDay;
+  return (score: score, label: label, color: color);
+}
+
+/// A 0–100 score widget with an icon tile, value, progress bar and caption.
+class _ScoreMetricCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final int score;
+  final String caption;
+  const _ScoreMetricCard({
+    required this.icon,
+    required this.color,
+    required this.score,
+    required this.caption,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      children: [
+        _ConceptIconTile(color: color, icon: icon, size: 46, iconSize: 24),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$score',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                      color: colors.textPrimary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  Text(
+                    ' /100',
+                    style: TextStyle(fontSize: 12, color: colors.textMuted),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: (score / 100).clamp(0.0, 1.0),
+                  minHeight: 6,
+                  backgroundColor: color.withValues(alpha: 0.14),
+                  valueColor: AlwaysStoppedAnimation(color),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                caption,
+                style: TextStyle(fontSize: 11, color: colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Projects the date the user reaches their goal weight at the current weekly
