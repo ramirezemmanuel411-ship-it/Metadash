@@ -25,6 +25,8 @@ class DashboardDayData {
   final double? tdee;
   final DateTime? firstMealTime;
   final DateTime? lastMealTime;
+  final double? hrv;
+  final int? mindfulnessMinutes;
 
   const DashboardDayData({
     required this.caloriesConsumed,
@@ -46,6 +48,8 @@ class DashboardDayData {
     this.tdee,
     this.firstMealTime,
     this.lastMealTime,
+    this.hrv,
+    this.mindfulnessMinutes,
   });
 }
 
@@ -180,6 +184,8 @@ class DashboardState extends ChangeNotifier {
           tdee: todayTDEE,
           firstMealTime: firstMeal,
           lastMealTime: lastMeal,
+          hrv: log.hrv,
+          mindfulnessMinutes: log.mindfulnessMinutes,
         );
       } else {
         _cachedData[_selectedDate] = DashboardDayData(

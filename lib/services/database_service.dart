@@ -42,7 +42,7 @@ class DatabaseService {
 
     return openDatabase(
       path,
-      version: 13, // v13: wearableFamily in data_inputs_settings
+      version: 14, // v14: hrv + mindfulnessMinutes in daily_logs
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
@@ -122,6 +122,10 @@ class DatabaseService {
         vo2Max REAL,
         weight REAL,
         tdeeAdjustment REAL,
+        wearableSource TEXT,
+        averageMets REAL,
+        hrv REAL,
+        mindfulnessMinutes INTEGER,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         FOREIGN KEY (userId) REFERENCES user_profiles(id) ON DELETE CASCADE,
@@ -473,6 +477,17 @@ class DatabaseService {
         );
       } catch (_) {}
     }
+
+    if (oldVersion < 14) {
+      try {
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN hrv REAL');
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE daily_logs ADD COLUMN mindfulnessMinutes INTEGER',
+        );
+      } catch (_) {}
+    }
   }
 
   // User Profile Methods
@@ -723,6 +738,8 @@ class DatabaseService {
           averageHeartRate: healthMetrics.averageHeartRate,
           distanceMeters: healthMetrics.distanceMeters,
           vo2Max: healthMetrics.vo2Max,
+          hrv: healthMetrics.hrv,
+          mindfulnessMinutes: healthMetrics.mindfulnessMinutes,
         );
         await updateDailyLog(dailyLog);
       } else {
@@ -741,6 +758,8 @@ class DatabaseService {
           averageHeartRate: healthMetrics.averageHeartRate,
           distanceMeters: healthMetrics.distanceMeters,
           vo2Max: healthMetrics.vo2Max,
+          hrv: healthMetrics.hrv,
+          mindfulnessMinutes: healthMetrics.mindfulnessMinutes,
           waterIntake: 0,
           workoutActivities: [],
           protein: 0,
@@ -797,6 +816,8 @@ class DatabaseService {
             averageHeartRate: metrics.averageHeartRate,
             distanceMeters: metrics.distanceMeters,
             vo2Max: metrics.vo2Max,
+            hrv: metrics.hrv,
+            mindfulnessMinutes: metrics.mindfulnessMinutes,
           );
           await updateDailyLog(dailyLog);
         } else {
@@ -814,6 +835,8 @@ class DatabaseService {
             averageHeartRate: metrics.averageHeartRate,
             distanceMeters: metrics.distanceMeters,
             vo2Max: metrics.vo2Max,
+            hrv: metrics.hrv,
+            mindfulnessMinutes: metrics.mindfulnessMinutes,
             waterIntake: 0,
             workoutActivities: [],
             protein: 0,

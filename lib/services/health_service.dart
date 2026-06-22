@@ -53,6 +53,7 @@ class HealthService {
 
   /// iOS-only types (HealthKit specific)
   static const List<HealthDataType> _iosExtraTypes = [
+    HealthDataType.MINDFULNESS,
     HealthDataType.WAIST_CIRCUMFERENCE,
     HealthDataType.BLOOD_OXYGEN,
     HealthDataType.WALKING_SPEED,
@@ -266,6 +267,9 @@ class HealthService {
     final avgHrSumByDay = <DateTime, int>{};
     final avgHrCountByDay = <DateTime, int>{};
     final distanceByDay = <DateTime, double>{};
+    final hrvSumByDay = <DateTime, double>{};
+    final hrvCountByDay = <DateTime, int>{};
+    final mindfulnessByDay = <DateTime, int>{};
 
     var usedTotals = false;
     try {
@@ -489,6 +493,42 @@ class HealthService {
       } catch (_) {}
     }
 
+    try {
+      final hrvData = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN],
+        startTime: start,
+        endTime: endExclusive,
+      );
+      for (final point in hrvData) {
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
+        hrvSumByDay[day] = (hrvSumByDay[day] ?? 0) + _extractDoubleValue(point);
+        hrvCountByDay[day] = (hrvCountByDay[day] ?? 0) + 1;
+      }
+    } catch (_) {}
+
+    if (Platform.isIOS) {
+      try {
+        final mindData = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.MINDFULNESS],
+          startTime: start,
+          endTime: endExclusive,
+        );
+        for (final point in mindData) {
+          final day = DateTime(
+            point.dateFrom.year,
+            point.dateFrom.month,
+            point.dateFrom.day,
+          );
+          mindfulnessByDay[day] = (mindfulnessByDay[day] ?? 0) +
+              point.dateTo.difference(point.dateFrom).inMinutes;
+        }
+      } catch (_) {}
+    }
+
     final results = <DateTime, HealthMetrics>{};
     DateTime current = start;
     while (current.isBefore(endExclusive)) {
@@ -510,10 +550,16 @@ class HealthService {
           : 0;
       final distanceMeters = distanceByDay[current] ?? 0;
       const vo2Max = 0.0;
+      final hrv = (hrvCountByDay[current] ?? 0) > 0
+          ? hrvSumByDay[current]! / hrvCountByDay[current]!
+          : 0.0;
+      final mindfulness = mindfulnessByDay[current] ?? 0;
       if (steps > 0 ||
           calories > 0 ||
           workoutCalories > 0 ||
-          workoutType.isNotEmpty) {
+          workoutType.isNotEmpty ||
+          hrv > 0 ||
+          mindfulness > 0) {
         final runningSteps =
             runningStepsByDay[current] ??
             _inferRunningSteps(steps, workoutType);
@@ -530,6 +576,8 @@ class HealthService {
           averageHeartRate: avgHr,
           distanceMeters: distanceMeters,
           vo2Max: vo2Max,
+          hrv: hrv,
+          mindfulnessMinutes: mindfulness,
         );
       }
       current = current.add(const Duration(days: 1));
@@ -806,6 +854,35 @@ class HealthService {
       } catch (_) {}
     }
 
+    double hrv = 0;
+    try {
+      final hrvData = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN],
+        startTime: startOfDay,
+        endTime: endOfDay,
+      );
+      if (hrvData.isNotEmpty) {
+        final sum =
+            hrvData.fold<double>(0, (s, p) => s + _extractDoubleValue(p));
+        hrv = sum / hrvData.length;
+      }
+    } catch (_) {}
+
+    int mindfulnessMinutes = 0;
+    if (Platform.isIOS) {
+      try {
+        final mindData = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.MINDFULNESS],
+          startTime: startOfDay,
+          endTime: endOfDay,
+        );
+        for (final point in mindData) {
+          mindfulnessMinutes +=
+              point.dateTo.difference(point.dateFrom).inMinutes;
+        }
+      } catch (_) {}
+    }
+
     return HealthMetrics(
       totalSteps: totalSteps,
       runningSteps: runningSteps,
@@ -819,6 +896,8 @@ class HealthService {
       averageHeartRate: averageHeartRate,
       distanceMeters: distanceMeters,
       vo2Max: vo2Max,
+      hrv: hrv,
+      mindfulnessMinutes: mindfulnessMinutes,
     );
   }
 
@@ -861,6 +940,14 @@ class HealthService {
       }
     }
     return false;
+  }
+
+  double _extractDoubleValue(HealthDataPoint data) {
+    final value = data.value;
+    if (value is NumericHealthValue) {
+      return value.numericValue.toDouble();
+    }
+    return 0;
   }
 
   int _extractNumericValue(HealthDataPoint data) {
@@ -973,6 +1060,8 @@ class HealthMetrics {
   final int averageHeartRate;
   final double distanceMeters;
   final double vo2Max;
+  final double hrv;
+  final int mindfulnessMinutes;
 
   HealthMetrics({
     required this.totalSteps,
@@ -987,6 +1076,8 @@ class HealthMetrics {
     required this.averageHeartRate,
     required this.distanceMeters,
     required this.vo2Max,
+    this.hrv = 0,
+    this.mindfulnessMinutes = 0,
   });
 
   @override

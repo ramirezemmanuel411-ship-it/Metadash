@@ -27,6 +27,8 @@ class DailyLog {
   /// Average METs for the workout session (when exposed by Apple Health).
   /// Used by the hybrid MET/wearable energy model.
   final double? averageMets;
+  final double? hrv; // Heart-rate variability (SDNN, ms) from HealthKit
+  final int? mindfulnessMinutes; // Mindful minutes from Apple Health
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -54,6 +56,8 @@ class DailyLog {
     this.tdeeAdjustment,
     this.wearableSource,
     this.averageMets,
+    this.hrv,
+    this.mindfulnessMinutes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -85,6 +89,8 @@ class DailyLog {
       'tdeeAdjustment': tdeeAdjustment,
       'wearableSource': wearableSource,
       'averageMets': averageMets,
+      'hrv': hrv,
+      'mindfulnessMinutes': mindfulnessMinutes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -123,6 +129,8 @@ class DailyLog {
       averageMets: map['averageMets'] != null
           ? (map['averageMets'] as num).toDouble()
           : null,
+      hrv: map['hrv'] != null ? (map['hrv'] as num).toDouble() : null,
+      mindfulnessMinutes: map['mindfulnessMinutes'] as int?,
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );
@@ -152,6 +160,8 @@ class DailyLog {
     double? tdeeAdjustment,
     String? wearableSource,
     double? averageMets,
+    double? hrv,
+    int? mindfulnessMinutes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -180,6 +190,8 @@ class DailyLog {
       tdeeAdjustment: tdeeAdjustment ?? this.tdeeAdjustment,
       wearableSource: wearableSource ?? this.wearableSource,
       averageMets: averageMets ?? this.averageMets,
+      hrv: hrv ?? this.hrv,
+      mindfulnessMinutes: mindfulnessMinutes ?? this.mindfulnessMinutes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
