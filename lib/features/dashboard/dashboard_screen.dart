@@ -215,8 +215,12 @@ class _DashboardBody extends StatelessWidget {
     // ── Pre-computed derived values ─────────────────────────────────────────────────
     final profileUser = context.read<UserState>().currentUser;
     double? profileBMI;
-    if (profileUser != null && profileUser.weight > 0 && profileUser.height > 0) {
-      profileBMI = (profileUser.weight / (profileUser.height * profileUser.height)) * 703;
+    if (profileUser != null &&
+        profileUser.weight > 0 &&
+        profileUser.height > 0) {
+      profileBMI =
+          (profileUser.weight / (profileUser.height * profileUser.height)) *
+          703;
     }
     int movementStreakDays = 0;
     for (int i = weeklyDeficit.length - 1; i >= 0; i--) {
@@ -237,7 +241,7 @@ class _DashboardBody extends StatelessWidget {
     final buf = <String>[];
     final seenWidgetIds = <String>{};
 
-    String _normalizeWidgetId(String id) {
+    String normalizeWidgetId(String id) {
       if (id == 'calories') return 'calorie_balance';
       if (id == 'weight_trend') return 'weight';
       return id;
@@ -246,139 +250,127 @@ class _DashboardBody extends StatelessWidget {
     Widget fullCard(String id) {
       switch (id) {
         case 'calorie_balance':
-        case 'calories': {
-          final remaining = data.caloriesGoal - data.caloriesConsumed;
-          final inDeficit = remaining > 0;
-          final statusText = inDeficit
-              ? '−$remaining kcal remaining'
-              : '+${(-remaining)} kcal over';
-          return GestureDetector(
-            onTap: onOpenDiary,
-            child: _CardSection(
-              title: 'Nutrition',
-              tintColor: Palette.widgetEnergyDay,
-              statusBadge: inDeficit ? 'In Deficit' : 'Over Goal',
-              statusColor: inDeficit
+        case 'calories':
+          {
+            final remaining = data.caloriesGoal - data.caloriesConsumed;
+            final isOverGoal = remaining < 0;
+            final onPaceThreshold = math.max(75, data.caloriesGoal * 0.05);
+            final isOnPace = !isOverGoal && remaining <= onPaceThreshold;
+            final statusBadge = isOverGoal
+                ? 'Over Goal'
+                : isOnPace
+                ? 'On Pace'
+                : 'In Deficit';
+            final statusColor = isOverGoal
+                ? const Color(0xFFB03030)
+                : Palette.forestGreen;
+            return _CalorieBalanceCard(
+              onTap: onOpenDiary,
+              consumed: data.caloriesConsumed,
+              target: data.caloriesGoal,
+              statusBadge: statusBadge,
+              statusColor: statusColor,
+              accentColor: context.colors.accent,
+            );
+          }
+        case 'macros':
+          {
+            final pPct = data.proteinGoal > 0
+                ? (data.proteinConsumed / data.proteinGoal * 100).round()
+                : 0;
+            final statusText = pPct >= 90
+                ? 'Protein on track'
+                : pPct >= 60
+                ? 'Needs more protein'
+                : 'Protein gap';
+            return GestureDetector(
+              onTap: onOpenDiary,
+              child: _CardSection(
+                title: 'Macros',
+                tintColor: Palette.widgetProteinDay,
+                statusBadge: statusText,
+                statusColor: pPct >= 90
+                    ? Palette.widgetActivityDay
+                    : Palette.widgetProteinDay,
+                child: _MacrosCard(
+                  proteinConsumed: data.proteinConsumed,
+                  proteinGoal: data.proteinGoal,
+                  carbsConsumed: data.carbsConsumed,
+                  carbsGoal: data.carbsGoal,
+                  fatConsumed: data.fatConsumed,
+                  fatGoal: data.fatGoal,
+                ),
+              ),
+            );
+          }
+        case 'steps':
+          {
+            final stepPct = data.stepsGoal > 0
+                ? data.stepsTaken / data.stepsGoal
+                : 0.0;
+            final stepStatus = stepPct >= 1.0
+                ? 'Goal reached!'
+                : stepPct >= 0.75
+                ? 'Almost there'
+                : stepPct >= 0.5
+                ? 'Halfway'
+                : 'Keep moving';
+            return _CardSection(
+              title: 'Activity',
+              tintColor: Palette.widgetStepsDay,
+              statusBadge: stepStatus,
+              statusColor: stepPct >= 1.0
                   ? Palette.widgetActivityDay
-                  : const Color(0xFFB03030),
+                  : Palette.widgetStepsDay,
+              child: _StepsCard(
+                stepsTaken: data.stepsTaken,
+                stepsGoal: data.stepsGoal,
+              ),
+            );
+          }
+        case 'weekly_deficit':
+          {
+            final weekLbs = weekTotalDeficit / 3500;
+            final weekStatus = weekLbs < -0.05
+                ? '${weekLbs.abs().toStringAsFixed(2)} lb deficit pace'
+                : weekLbs > 0.05
+                ? '+${weekLbs.abs().toStringAsFixed(2)} lb surplus pace'
+                : 'Maintenance pace';
+            return _CardSection(
+              title: 'Energy Balance',
+              tintColor: Palette.widgetEnergyDay,
+              statusBadge: weekLbs < -0.02
+                  ? 'In Deficit'
+                  : weekLbs > 0.02
+                  ? 'In Surplus'
+                  : 'Maintenance',
+              statusColor: weekLbs < -0.02
+                  ? Palette.widgetActivityDay
+                  : weekLbs > 0.02
+                  ? const Color(0xFFB03030)
+                  : Palette.widgetEnergyDay,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CalorieProgressRing(
-                    consumed: data.caloriesConsumed,
-                    target: data.caloriesGoal,
-                  ),
-                  const SizedBox(height: 12),
                   Text(
-                    statusText,
+                    weekStatus,
                     style: TextStyle(
                       fontSize: 13,
-                      color: inDeficit
-                          ? Palette.widgetActivityDay
-                          : const Color(0xFFB03030),
                       fontWeight: FontWeight.w600,
+                      color: context.colors.textSecondary,
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  _WeeklyDeficitChart(
+                    dailyDeficit: weeklyDeficit,
+                    dailyTDEE: weeklyTDEE,
+                    endDate: state.selectedDate,
+                    isLoading: loadingWeekly,
                   ),
                 ],
               ),
-            ),
-          );
-        }
-        case 'macros': {
-          final pPct = data.proteinGoal > 0
-              ? (data.proteinConsumed / data.proteinGoal * 100).round()
-              : 0;
-          final statusText = pPct >= 90
-              ? 'Protein on track'
-              : pPct >= 60
-              ? 'Needs more protein'
-              : 'Protein gap';
-          return GestureDetector(
-            onTap: onOpenDiary,
-            child: _CardSection(
-              title: 'Macros',
-              tintColor: Palette.widgetProteinDay,
-              statusBadge: statusText,
-              statusColor: pPct >= 90
-                  ? Palette.widgetActivityDay
-                  : Palette.widgetProteinDay,
-              child: _MacrosCard(
-                proteinConsumed: data.proteinConsumed,
-                proteinGoal: data.proteinGoal,
-                carbsConsumed: data.carbsConsumed,
-                carbsGoal: data.carbsGoal,
-                fatConsumed: data.fatConsumed,
-                fatGoal: data.fatGoal,
-              ),
-            ),
-          );
-        }
-        case 'steps': {
-          final stepPct = data.stepsGoal > 0
-              ? data.stepsTaken / data.stepsGoal
-              : 0.0;
-          final stepStatus = stepPct >= 1.0
-              ? 'Goal reached!'
-              : stepPct >= 0.75
-              ? 'Almost there'
-              : stepPct >= 0.5
-              ? 'Halfway'
-              : 'Keep moving';
-          return _CardSection(
-            title: 'Activity',
-            tintColor: Palette.widgetStepsDay,
-            statusBadge: stepStatus,
-            statusColor: stepPct >= 1.0
-                ? Palette.widgetActivityDay
-                : Palette.widgetStepsDay,
-            child: _StepsCard(
-              stepsTaken: data.stepsTaken,
-              stepsGoal: data.stepsGoal,
-            ),
-          );
-        }
-        case 'weekly_deficit': {
-          final weekLbs = weekTotalDeficit / 3500;
-          final weekStatus = weekLbs < -0.05
-              ? '${weekLbs.abs().toStringAsFixed(2)} lb deficit pace'
-              : weekLbs > 0.05
-              ? '+${weekLbs.abs().toStringAsFixed(2)} lb surplus pace'
-              : 'Maintenance pace';
-          return _CardSection(
-            title: 'Energy Balance',
-            tintColor: Palette.widgetEnergyDay,
-            statusBadge: weekLbs < -0.02
-                ? 'In Deficit'
-                : weekLbs > 0.02
-                ? 'In Surplus'
-                : 'Maintenance',
-            statusColor: weekLbs < -0.02
-                ? Palette.widgetActivityDay
-                : weekLbs > 0.02
-                ? const Color(0xFFB03030)
-                : Palette.widgetEnergyDay,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  weekStatus,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _WeeklyDeficitChart(
-                  dailyDeficit: weeklyDeficit,
-                  dailyTDEE: weeklyTDEE,
-                  endDate: state.selectedDate,
-                  isLoading: loadingWeekly,
-                ),
-              ],
-            ),
-          );
-        }
+            );
+          }
         case 'water_intake':
           return _CardSection(
             title: 'Water Intake',
@@ -410,29 +402,33 @@ class _DashboardBody extends StatelessWidget {
                 : context.colors.textMuted,
             child: _WeightCard(currentWeight: userWeight),
           );
-        case 'tdee': {
-          final lastTDEE = weeklyTDEE.lastWhere((v) => v > 0, orElse: () => 0);
-          final delta = avgWeeklyTDEE > 0 ? lastTDEE - avgWeeklyTDEE : 0;
-          final hasTrend = avgWeeklyTDEE > 0 && lastTDEE > 0;
-          final trendBadge = !hasTrend
-              ? (data.tdee != null && data.tdee! > 0 ? 'Active' : 'No data')
-              : delta > 50
-                  ? 'Rising'
-                  : delta < -50
-                      ? 'Trending down'
-                      : 'Stable';
-          return _CardSection(
-            title: 'Metabolism',
-            tintColor: Palette.widgetTDEEDay,
-            statusBadge: trendBadge,
-            statusColor: Palette.widgetTDEEDay,
-            child: _TDEECard(
-              tdee: data.tdee,
-              avgTDEE: avgWeeklyTDEE,
-              weeklyTDEE: weeklyTDEE,
-            ),
-          );
-        }
+        case 'tdee':
+          {
+            final lastTDEE = weeklyTDEE.lastWhere(
+              (v) => v > 0,
+              orElse: () => 0,
+            );
+            final delta = avgWeeklyTDEE > 0 ? lastTDEE - avgWeeklyTDEE : 0;
+            final hasTrend = avgWeeklyTDEE > 0 && lastTDEE > 0;
+            final trendBadge = !hasTrend
+                ? (data.tdee != null && data.tdee! > 0 ? 'Active' : 'No data')
+                : delta > 50
+                ? 'Rising'
+                : delta < -50
+                ? 'Trending down'
+                : 'Stable';
+            return _CardSection(
+              title: 'Metabolism',
+              tintColor: Palette.widgetTDEEDay,
+              statusBadge: trendBadge,
+              statusColor: Palette.widgetTDEEDay,
+              child: _TDEECard(
+                tdee: data.tdee,
+                avgTDEE: avgWeeklyTDEE,
+                weeklyTDEE: weeklyTDEE,
+              ),
+            );
+          }
         case 'resting_hr':
           return _CardSection(
             title: 'Resting Heart Rate',
@@ -444,28 +440,29 @@ class _DashboardBody extends StatelessWidget {
             tintColor: const Color(0xFF6B42A0),
             child: _BodyCompositionCard(bmi: profileBMI),
           );
-        case 'workout_consistency': {
-          final activeDaysCount = weeklyTDEE.where((v) => v > 0).length;
-          final consistStatus = activeDaysCount >= 6
-              ? 'Outstanding'
-              : activeDaysCount >= 4
-              ? 'Strong week'
-              : activeDaysCount >= 2
-              ? 'Keep pushing'
-              : 'Just getting started';
-          return _CardSection(
-            title: 'Consistency',
-            tintColor: Palette.widgetConsistDay,
-            statusBadge: consistStatus,
-            statusColor: activeDaysCount >= 4
-                ? Palette.widgetActivityDay
-                : Palette.widgetConsistDay,
-            child: _WorkoutConsistencyCard(
-              weeklyTDEE: weeklyTDEE,
-              streakDays: movementStreakDays,
-            ),
-          );
-        }
+        case 'workout_consistency':
+          {
+            final activeDaysCount = weeklyTDEE.where((v) => v > 0).length;
+            final consistStatus = activeDaysCount >= 6
+                ? 'Outstanding'
+                : activeDaysCount >= 4
+                ? 'Strong week'
+                : activeDaysCount >= 2
+                ? 'Keep pushing'
+                : 'Just getting started';
+            return _CardSection(
+              title: 'Consistency',
+              tintColor: Palette.widgetConsistDay,
+              statusBadge: consistStatus,
+              statusColor: activeDaysCount >= 4
+                  ? Palette.widgetActivityDay
+                  : Palette.widgetConsistDay,
+              child: _WorkoutConsistencyCard(
+                weeklyTDEE: weeklyTDEE,
+                streakDays: movementStreakDays,
+              ),
+            );
+          }
         case 'meal_timing':
           return _CardSection(
             title: 'Meal Timing',
@@ -529,15 +526,10 @@ class _DashboardBody extends StatelessWidget {
       switch (id) {
         case 'calorie_balance':
         case 'calories':
-          return _CompactCard(
-            title: 'Calories',
-            icon: Icons.bolt,
-            color: colors.accent,
-            value: '${data.caloriesConsumed}',
-            subtitle: 'of ${data.caloriesGoal} kcal',
-            progress: data.caloriesGoal > 0
-                ? (data.caloriesConsumed / data.caloriesGoal).clamp(0, 1)
-                : 0,
+          return _CompactCalorieBalanceCard(
+            consumed: data.caloriesConsumed,
+            target: data.caloriesGoal,
+            accentColor: context.colors.accent,
           );
         case 'macros':
           return _CompactCard(
@@ -653,30 +645,34 @@ class _DashboardBody extends StatelessWidget {
     void flushBuf() {
       if (buf.isEmpty) return;
       if (buf.length == 1) {
-        rows.add(Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: compactCard(buf[0])),
-            const SizedBox(width: 12),
-            const Expanded(child: SizedBox.shrink()),
-          ],
-        ));
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: compactCard(buf[0])),
+              const SizedBox(width: 12),
+              const Expanded(child: SizedBox.shrink()),
+            ],
+          ),
+        );
       } else {
-        rows.add(Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: compactCard(buf[0])),
-            const SizedBox(width: 12),
-            Expanded(child: compactCard(buf[1])),
-          ],
-        ));
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: compactCard(buf[0])),
+              const SizedBox(width: 12),
+              Expanded(child: compactCard(buf[1])),
+            ],
+          ),
+        );
       }
       rows.add(const SizedBox(height: 12));
       buf.clear();
     }
 
     for (final rawId in layout.activeIds) {
-      final id = _normalizeWidgetId(rawId);
+      final id = normalizeWidgetId(rawId);
       if (!seenWidgetIds.add(id)) continue;
 
       final sz = layout.sizeOf(id);
@@ -693,11 +689,13 @@ class _DashboardBody extends StatelessWidget {
       }
     }
     flushBuf();
-    rows.add(_CardSection(
-      title: 'Quick Actions',
-      tintColor: context.colors.accent,
-      child: _QuickActionsRow(),
-    ));
+    rows.add(
+      _CardSection(
+        title: 'Quick Actions',
+        tintColor: context.colors.accent,
+        child: _QuickActionsRow(),
+      ),
+    );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -837,6 +835,420 @@ class _CompactCard extends StatelessWidget {
   }
 }
 
+// ── Concept A baseline card ──────────────────────────────────────────────────
+// This is the first concrete Meta Dash widget language: calm biometric surface,
+// centered data instrument, status pill, and a lower inset metrics panel.
+
+class _CalorieBalanceCard extends StatelessWidget {
+  final int consumed;
+  final int target;
+  final String statusBadge;
+  final Color statusColor;
+  final Color accentColor;
+  final VoidCallback? onTap;
+
+  const _CalorieBalanceCard({
+    required this.consumed,
+    required this.target,
+    required this.statusBadge,
+    required this.statusColor,
+    required this.accentColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = math.max(target - consumed, 0);
+    final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final conceptText = colors.textPrimary;
+    final conceptSecondary = colors.textSecondary;
+    final rimColor = isDark
+        ? accentColor.withValues(alpha: 0.22)
+        : colors.textMuted.withValues(alpha: 0.16);
+    final insetSurface = isDark ? colors.surfaceVariant : colors.surface;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.12),
+            blurRadius: 32,
+            offset: const Offset(0, 18),
+          ),
+          BoxShadow(
+            color: accentColor.withValues(alpha: isDark ? 0.18 : 0.10),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [colors.background, colors.surface],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: rimColor, width: 1.2),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(28),
+            splashColor: accentColor.withValues(alpha: 0.08),
+            highlightColor: accentColor.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _ConceptIconTile(color: accentColor),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Calorie Balance',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            height: 1.0,
+                            color: conceptText,
+                          ),
+                        ),
+                      ),
+                      _ConceptStatusPill(
+                        label: statusBadge,
+                        color: statusColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  CalorieProgressRing(
+                    consumed: consumed,
+                    target: target,
+                    accentColor: accentColor,
+                    statusColor: statusColor,
+                    textColor: conceptText,
+                    secondaryTextColor: conceptSecondary,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                    decoration: BoxDecoration(
+                      color: insetSurface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: rimColor,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ConceptMetric(
+                            label: 'Remaining',
+                            value: _formatCompactInt(remaining),
+                            unit: 'kcal',
+                            color: statusColor,
+                            textColor: conceptText,
+                            secondaryTextColor: conceptSecondary,
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 38,
+                          color: rimColor,
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 18),
+                            child: _ConceptMetric(
+                              label: 'Goal',
+                              value: _formatCompactInt(target),
+                              unit: 'kcal',
+                              color: conceptText,
+                              textColor: conceptText,
+                              secondaryTextColor: conceptSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactCalorieBalanceCard extends StatelessWidget {
+  final int consumed;
+  final int target;
+  final Color accentColor;
+
+  const _CompactCalorieBalanceCard({
+    required this.consumed,
+    required this.target,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+    final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final conceptText = colors.textPrimary;
+    final conceptSecondary = colors.textSecondary;
+    final rim = isDark
+        ? accentColor.withValues(alpha: 0.20)
+        : colors.textMuted.withValues(alpha: 0.15);
+
+    return AspectRatio(
+      aspectRatio: 1.0,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [colors.background, colors.surface],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: rim),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.10),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _ConceptIconTile(color: accentColor, size: 32, iconSize: 17),
+                const Spacer(),
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: accentColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              _formatCompactInt(consumed),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                height: 0.92,
+                color: conceptText,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'of ${_formatCompactInt(target)} kcal goal',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: conceptSecondary,
+              ),
+            ),
+            const SizedBox(height: 11),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: colors.textMuted.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation(accentColor),
+              ),
+            ),
+            const SizedBox(height: 9),
+            Text(
+              'CALORIE BALANCE',
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                color: accentColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConceptIconTile extends StatelessWidget {
+  final Color color;
+  final double size;
+  final double iconSize;
+
+  const _ConceptIconTile({
+    required this.color,
+    this.size = 50,
+    this.iconSize = 25,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(
+              Colors.white.withValues(alpha: 0.44),
+              color.withValues(alpha: 0.10),
+            ),
+            color.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(size * 0.28),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.local_fire_department_rounded,
+        color: color,
+        size: iconSize,
+      ),
+    );
+  }
+}
+
+class _ConceptStatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _ConceptStatusPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, size: 7, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConceptMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final String unit;
+  final Color color;
+  final Color textColor;
+  final Color secondaryTextColor;
+
+  const _ConceptMetric({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+    required this.textColor,
+    required this.secondaryTextColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: secondaryTextColor,
+          ),
+        ),
+        const SizedBox(height: 3),
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: value,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              TextSpan(
+                text: ' $unit',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _formatCompactInt(int value) {
+  final raw = value.toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < raw.length; i++) {
+    if (i > 0 && (raw.length - i) % 3 == 0) buffer.write(',');
+    buffer.write(raw[i]);
+  }
+  return buffer.toString();
+}
 
 // ── Tinted full-width card section ───────────────────────────────────────────
 // Used for all named full-width dashboard widgets.
@@ -893,11 +1305,14 @@ class _CardSection extends StatelessWidget {
               if (statusBadge != null) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
-                    color: (statusColor ?? context.colors.accent)
-                        .withValues(alpha: 0.12),
+                    color: (statusColor ?? context.colors.accent).withValues(
+                      alpha: 0.12,
+                    ),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -940,8 +1355,8 @@ class _StepsCard extends StatelessWidget {
     final statusStr = isGoalMet
         ? 'Goal reached!'
         : stepsGoal > 0
-            ? '${((1 - progress) * stepsGoal).round().toString()} steps to go'
-            : 'No goal set';
+        ? '${((1 - progress) * stepsGoal).round().toString()} steps to go'
+        : 'No goal set';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -956,33 +1371,39 @@ class _StepsCard extends StatelessWidget {
                 color: tint.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: const Icon(Icons.directions_walk_rounded, size: 24, color: tint),
+              child: const Icon(
+                Icons.directions_walk_rounded,
+                size: 24,
+                color: tint,
+              ),
             ),
             const SizedBox(width: 14),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 RichText(
-                  text: TextSpan(children: [
-                    TextSpan(
-                      text: stepsStr,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: context.colors.textPrimary,
-                        height: 1.0,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: stepsStr,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: context.colors.textPrimary,
+                          height: 1.0,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
-                    ),
-                    TextSpan(
-                      text: '  steps',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: context.colors.textMuted,
+                      TextSpan(
+                        text: '  steps',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: context.colors.textMuted,
+                        ),
                       ),
-                    ),
-                  ]),
+                    ],
+                  ),
                 ),
                 Text(
                   statusStr,
@@ -1340,8 +1761,11 @@ class _ComingSoonCard extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
-  const _ComingSoonCard(
-      {required this.label, required this.icon, required this.color});
+  const _ComingSoonCard({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1364,15 +1788,15 @@ class _ComingSoonCard extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textPrimary),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.textPrimary,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 'Coming soon',
-                style:
-                    TextStyle(fontSize: 12, color: context.colors.textMuted),
+                style: TextStyle(fontSize: 12, color: context.colors.textMuted),
               ),
             ],
           ),
@@ -1552,10 +1976,7 @@ class _MacroRow extends StatelessWidget {
             Container(
               width: 10,
               height: 10,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 8),
             Text(
@@ -1568,31 +1989,33 @@ class _MacroRow extends StatelessWidget {
             ),
             const Spacer(),
             RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                  text: '$consumed',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary,
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$consumed',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: context.colors.textPrimary,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: ' / ${goal}g',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: context.colors.textMuted,
+                  TextSpan(
+                    text: ' / ${goal}g',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.colors.textMuted,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: '  $pct%',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: color,
-                    fontWeight: FontWeight.w600,
+                  TextSpan(
+                    text: '  $pct%',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
           ],
         ),
@@ -1629,7 +2052,11 @@ class _WaterIntakeCard extends StatelessWidget {
     final cups = (waterOz / 8).round();
     return Row(
       children: [
-        const Icon(Icons.water_drop_rounded, color: Color(0xFF0EA5E9), size: 28),
+        const Icon(
+          Icons.water_drop_rounded,
+          color: Color(0xFF0EA5E9),
+          size: 28,
+        ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -1638,9 +2065,10 @@ class _WaterIntakeCard extends StatelessWidget {
               Text(
                 '$cups cups · ${waterOz.toStringAsFixed(0)} oz',
                 style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                ),
               ),
               const SizedBox(height: 6),
               ClipRRect(
@@ -1648,10 +2076,10 @@ class _WaterIntakeCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 7,
-                  backgroundColor:
-                      const Color(0xFF0EA5E9).withValues(alpha: 0.12),
-                  valueColor:
-                      const AlwaysStoppedAnimation(Color(0xFF0EA5E9)),
+                  backgroundColor: const Color(
+                    0xFF0EA5E9,
+                  ).withValues(alpha: 0.12),
+                  valueColor: const AlwaysStoppedAnimation(Color(0xFF0EA5E9)),
                 ),
               ),
               const SizedBox(height: 4),
@@ -1708,13 +2136,16 @@ class _SleepCard extends StatelessWidget {
               CircularProgressIndicator(
                 value: progress,
                 strokeWidth: 5,
-                backgroundColor:
-                    const Color(0xFF0EA5E9).withValues(alpha: 0.12),
-                valueColor:
-                    const AlwaysStoppedAnimation(Color(0xFF0EA5E9)),
+                backgroundColor: const Color(
+                  0xFF0EA5E9,
+                ).withValues(alpha: 0.12),
+                valueColor: const AlwaysStoppedAnimation(Color(0xFF0EA5E9)),
               ),
-              const Icon(Icons.bedtime_rounded,
-                  size: 18, color: Color(0xFF0EA5E9)),
+              const Icon(
+                Icons.bedtime_rounded,
+                size: 18,
+                color: Color(0xFF0EA5E9),
+              ),
             ],
           ),
         ),
@@ -1722,18 +2153,24 @@ class _SleepCard extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${hours}h ${mins}m',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: context.colors.textPrimary,
-                    height: 1.1,
-                    fontFeatures: const [FontFeature.tabularFigures()])),
-            Text(quality,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: qualityColor,
-                    fontWeight: FontWeight.w600)),
+            Text(
+              '${hours}h ${mins}m',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: context.colors.textPrimary,
+                height: 1.1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            Text(
+              quality,
+              style: TextStyle(
+                fontSize: 12,
+                color: qualityColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ],
@@ -1745,8 +2182,11 @@ class _WorkoutPerformanceCard extends StatelessWidget {
   final int? calories;
   final int? durationMinutes;
   final String? workoutType;
-  const _WorkoutPerformanceCard(
-      {this.calories, this.durationMinutes, this.workoutType});
+  const _WorkoutPerformanceCard({
+    this.calories,
+    this.durationMinutes,
+    this.workoutType,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1766,8 +2206,11 @@ class _WorkoutPerformanceCard extends StatelessWidget {
             color: const Color(0xFFEF8C2E).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Icon(Icons.fitness_center_rounded,
-              size: 26, color: Color(0xFFEF8C2E)),
+          child: const Icon(
+            Icons.fitness_center_rounded,
+            size: 26,
+            color: Color(0xFFEF8C2E),
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -1777,30 +2220,46 @@ class _WorkoutPerformanceCard extends StatelessWidget {
               Text(
                 workoutType ?? 'Workout',
                 style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                ),
               ),
               const SizedBox(height: 3),
-              Row(children: [
-                if (durationMinutes != null) ...[
-                  Icon(Icons.timer_outlined,
-                      size: 12, color: context.colors.textMuted),
-                  const SizedBox(width: 3),
-                  Text('${durationMinutes}min',
+              Row(
+                children: [
+                  if (durationMinutes != null) ...[
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 12,
+                      color: context.colors.textMuted,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${durationMinutes}min',
                       style: TextStyle(
-                          fontSize: 12, color: context.colors.textMuted)),
-                  const SizedBox(width: 8),
-                ],
-                const Icon(Icons.local_fire_department_outlined,
-                    size: 12, color: Color(0xFFEF8C2E)),
-                const SizedBox(width: 3),
-                Text('$calories kcal',
-                    style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFFEF8C2E),
-                        fontWeight: FontWeight.w600)),
-              ]),
+                        color: context.colors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  const Icon(
+                    Icons.local_fire_department_outlined,
+                    size: 12,
+                    color: Color(0xFFEF8C2E),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$calories kcal',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFEF8C2E),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -1826,7 +2285,11 @@ class _WeightCard extends StatelessWidget {
             color: tint.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Icon(Icons.monitor_weight_outlined, size: 24, color: tint),
+          child: const Icon(
+            Icons.monitor_weight_outlined,
+            size: 24,
+            color: tint,
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -1835,26 +2298,30 @@ class _WeightCard extends StatelessWidget {
             children: [
               currentWeight > 0
                   ? RichText(
-                      text: TextSpan(children: [
-                        TextSpan(
-                          text: currentWeight.toStringAsFixed(1),
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
-                            color: context.colors.textPrimary,
-                            height: 1.0,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: currentWeight.toStringAsFixed(1),
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              color: context.colors.textPrimary,
+                              height: 1.0,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
                           ),
-                        ),
-                        TextSpan(
-                          text: ' lb',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: context.colors.textMuted,
+                          TextSpan(
+                            text: ' lb',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: context.colors.textMuted,
+                            ),
                           ),
-                        ),
-                      ]),
+                        ],
+                      ),
                     )
                   : Text(
                       '— lb',
@@ -1867,10 +2334,7 @@ class _WeightCard extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 currentWeight > 0 ? 'Tap to update' : 'Not yet logged',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.colors.textMuted,
-                ),
+                style: TextStyle(fontSize: 12, color: context.colors.textMuted),
               ),
             ],
           ),
@@ -1895,11 +2359,7 @@ class _TDEECard extends StatelessWidget {
   final double? tdee;
   final double avgTDEE;
   final List<double> weeklyTDEE;
-  const _TDEECard({
-    this.tdee,
-    this.avgTDEE = 0,
-    this.weeklyTDEE = const [],
-  });
+  const _TDEECard({this.tdee, this.avgTDEE = 0, this.weeklyTDEE = const []});
 
   @override
   Widget build(BuildContext context) {
@@ -1935,8 +2395,11 @@ class _TDEECard extends StatelessWidget {
                 color: tint.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.local_fire_department_rounded,
-                  size: 24, color: tint),
+              child: const Icon(
+                Icons.local_fire_department_rounded,
+                size: 24,
+                color: tint,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1944,33 +2407,37 @@ class _TDEECard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   RichText(
-                    text: TextSpan(children: [
-                      TextSpan(
-                        text: '$tdeeVal',
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          color: context.colors.textPrimary,
-                          height: 1.0,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '$tdeeVal',
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            color: context.colors.textPrimary,
+                            height: 1.0,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
-                      ),
-                      TextSpan(
-                        text: ' kcal/day',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: context.colors.textMuted,
+                        TextSpan(
+                          text: ' kcal/day',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: context.colors.textMuted,
+                          ),
                         ),
-                      ),
-                    ]),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: tint.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(6),
@@ -2110,27 +2577,36 @@ class _RestingHRCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                  text: '$bpm',
-                  style: TextStyle(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$bpm',
+                    style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                       color: context.colors.textPrimary,
-                      height: 1.0),
-                ),
-                TextSpan(
-                  text: ' bpm',
-                  style: TextStyle(
+                      height: 1.0,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' bpm',
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: context.colors.textMuted),
-                ),
-              ]),
+                      color: context.colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Text(hrLabel,
-                style: TextStyle(
-                    fontSize: 12, color: hrColor, fontWeight: FontWeight.w600)),
+            Text(
+              hrLabel,
+              style: TextStyle(
+                fontSize: 12,
+                color: hrColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ],
@@ -2172,37 +2648,47 @@ class _BodyCompositionCard extends StatelessWidget {
             color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Icon(Icons.accessibility_new_outlined,
-              size: 26, color: Color(0xFF8B5CF6)),
+          child: const Icon(
+            Icons.accessibility_new_outlined,
+            size: 26,
+            color: Color(0xFF8B5CF6),
+          ),
         ),
         const SizedBox(width: 14),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                  text: bmi!.toStringAsFixed(1),
-                  style: TextStyle(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: bmi!.toStringAsFixed(1),
+                    style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                       color: context.colors.textPrimary,
-                      height: 1.0),
-                ),
-                TextSpan(
-                  text: ' BMI',
-                  style: TextStyle(
+                      height: 1.0,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' BMI',
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: context.colors.textMuted),
-                ),
-              ]),
+                      color: context.colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Text(bmiLabel,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: bmiColor,
-                    fontWeight: FontWeight.w600)),
+            Text(
+              bmiLabel,
+              style: TextStyle(
+                fontSize: 12,
+                color: bmiColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ],
@@ -2240,36 +2726,35 @@ class _WorkoutConsistencyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                  text: '$activeDays',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w800,
-                    color: context.colors.textPrimary,
-                    height: 1.0,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$activeDays',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      color: context.colors.textPrimary,
+                      height: 1.0,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: ' / 7',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: context.colors.textMuted,
+                  TextSpan(
+                    text: ' / 7',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: context.colors.textMuted,
+                    ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
             const SizedBox(width: 10),
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
                 'days logged',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.colors.textMuted,
-                ),
+                style: TextStyle(fontSize: 12, color: context.colors.textMuted),
               ),
             ),
             const Spacer(),
@@ -2277,8 +2762,10 @@ class _WorkoutConsistencyCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: tint.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
@@ -2286,8 +2773,11 @@ class _WorkoutConsistencyCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_fire_department_rounded,
-                          size: 13, color: tint),
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 13,
+                        color: tint,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         '$streakDays day${streakDays == 1 ? '' : 's'}',
@@ -2358,4 +2848,3 @@ class _WorkoutConsistencyCard extends StatelessWidget {
     );
   }
 }
-
