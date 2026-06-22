@@ -331,6 +331,10 @@ class _DashboardBody extends StatelessWidget {
         case 'weekly_deficit':
           {
             final weekLbs = weekTotalDeficit / 3500;
+            final energyTint =
+                Theme.of(context).brightness == Brightness.dark
+                ? Palette.widgetEnergyDay
+                : Palette.forestGreen;
             final weekStatus = weekLbs < -0.05
                 ? '${weekLbs.abs().toStringAsFixed(2)} lb deficit pace'
                 : weekLbs > 0.05
@@ -338,7 +342,7 @@ class _DashboardBody extends StatelessWidget {
                 : 'Maintenance pace';
             return _CardSection(
               title: 'Energy Balance',
-              tintColor: Palette.widgetEnergyDay,
+              tintColor: energyTint,
               statusBadge: weekLbs < -0.02
                   ? 'In Deficit'
                   : weekLbs > 0.02
@@ -348,7 +352,7 @@ class _DashboardBody extends StatelessWidget {
                   ? Palette.widgetActivityDay
                   : weekLbs > 0.02
                   ? const Color(0xFFB03030)
-                  : Palette.widgetEnergyDay,
+                  : energyTint,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
