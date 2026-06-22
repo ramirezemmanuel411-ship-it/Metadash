@@ -2228,18 +2228,11 @@ class _WorkoutPerformanceCard extends StatelessWidget {
     }
     return Row(
       children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEF8C2E).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(
-            Icons.fitness_center_rounded,
-            size: 26,
-            color: Color(0xFFEF8C2E),
-          ),
+        const _ConceptIconTile(
+          color: Color(0xFFEF8C2E),
+          icon: Icons.fitness_center_rounded,
+          size: 52,
+          iconSize: 26,
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -2307,18 +2300,11 @@ class _WeightCard extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: tint.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(
-            Icons.monitor_weight_outlined,
-            size: 24,
-            color: tint,
-          ),
+        const _ConceptIconTile(
+          color: tint,
+          icon: Icons.monitor_weight_outlined,
+          size: 48,
+          iconSize: 24,
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -2417,18 +2403,11 @@ class _TDEECard extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: tint.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.local_fire_department_rounded,
-                size: 24,
-                color: tint,
-              ),
+            const _ConceptIconTile(
+              color: tint,
+              icon: Icons.local_fire_department_rounded,
+              size: 48,
+              iconSize: 24,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -2592,14 +2571,11 @@ class _RestingHRCard extends StatelessWidget {
         : 'High';
     return Row(
       children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: hrColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(Icons.favorite_rounded, size: 26, color: hrColor),
+        _ConceptIconTile(
+          color: hrColor,
+          icon: Icons.favorite_rounded,
+          size: 52,
+          iconSize: 26,
         ),
         const SizedBox(width: 14),
         Column(
@@ -2670,18 +2646,11 @@ class _BodyCompositionCard extends StatelessWidget {
         : const Color(0xFFEF8C2E);
     return Row(
       children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: const Icon(
-            Icons.accessibility_new_outlined,
-            size: 26,
-            color: Color(0xFF8B5CF6),
-          ),
+        const _ConceptIconTile(
+          color: Color(0xFF8B5CF6),
+          icon: Icons.accessibility_new_outlined,
+          size: 52,
+          iconSize: 26,
         ),
         const SizedBox(width: 14),
         Column(
