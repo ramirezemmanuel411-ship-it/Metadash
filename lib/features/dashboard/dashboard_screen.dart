@@ -758,31 +758,47 @@ class _CompactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tintBg = color.withValues(alpha: isDark ? 0.13 : 0.09);
 
     return AspectRatio(
       aspectRatio: 1.0,
       child: Container(
         decoration: BoxDecoration(
-          color: tintBg,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: isDark ? 0.16 : 0.11),
+              colors.surface,
+            ],
+          ),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: color.withValues(alpha: isDark ? 0.22 : 0.15),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: color.withValues(alpha: isDark ? 0.12 : 0.07),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(icon, size: 15, color: color),
+            _ConceptIconTile(
+              color: color,
+              icon: icon,
+              size: 30,
+              iconSize: 16,
             ),
             const Spacer(),
             Text(
@@ -790,7 +806,7 @@ class _CompactCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: context.colors.textPrimary,
+                color: colors.textPrimary,
                 height: 1.0,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -800,7 +816,7 @@ class _CompactCard extends StatelessWidget {
               subtitle,
               style: TextStyle(
                 fontSize: 10,
-                color: context.colors.textSecondary,
+                color: colors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,
@@ -809,11 +825,11 @@ class _CompactCard extends StatelessWidget {
             if (progress != null) ...[
               const SizedBox(height: 7),
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(999),
                 child: LinearProgressIndicator(
                   value: (progress!).clamp(0.0, 1.0),
-                  minHeight: 3,
-                  backgroundColor: color.withValues(alpha: 0.12),
+                  minHeight: 4,
+                  backgroundColor: color.withValues(alpha: 0.14),
                   valueColor: AlwaysStoppedAnimation(color),
                 ),
               ),
@@ -1102,11 +1118,13 @@ class _ConceptIconTile extends StatelessWidget {
   final Color color;
   final double size;
   final double iconSize;
+  final IconData icon;
 
   const _ConceptIconTile({
     required this.color,
     this.size = 50,
     this.iconSize = 25,
+    this.icon = Icons.local_fire_department_rounded,
   });
 
   @override
@@ -1137,7 +1155,7 @@ class _ConceptIconTile extends StatelessWidget {
         ],
       ),
       child: Icon(
-        Icons.local_fire_department_rounded,
+        icon,
         color: color,
         size: iconSize,
       ),
@@ -1274,18 +1292,35 @@ class _CardSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final tc = tintColor;
-    final bgColor = tc != null
-        ? tc.withValues(alpha: isDark ? 0.11 : 0.08)
-        : context.colors.surface;
+    final surface = context.colors.surface;
     final borderColor = tc != null
         ? tc.withValues(alpha: isDark ? 0.20 : 0.14)
         : context.colors.divider;
 
     return Container(
       decoration: BoxDecoration(
-        color: bgColor,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: tc != null
+              ? [tc.withValues(alpha: isDark ? 0.16 : 0.11), surface]
+              : [surface, surface],
+        ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: borderColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+          if (tc != null)
+            BoxShadow(
+              color: tc.withValues(alpha: isDark ? 0.10 : 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
