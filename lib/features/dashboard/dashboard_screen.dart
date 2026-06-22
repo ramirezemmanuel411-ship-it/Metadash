@@ -470,8 +470,8 @@ class _DashboardBody extends StatelessWidget {
         case 'meal_timing':
           return _CardSection(
             title: 'Meal Timing',
-            child: const _ComingSoonCard(
-              label: 'Meal Timing',
+            child: const _EmptyMetricCard(
+              hint: 'No meals logged yet',
               icon: Icons.schedule_outlined,
               color: Color(0xFF2E8B57),
             ),
@@ -479,8 +479,8 @@ class _DashboardBody extends StatelessWidget {
         case 'fiber':
           return _CardSection(
             title: 'Fiber & Micronutrients',
-            child: const _ComingSoonCard(
-              label: 'Fiber & Micronutrients',
+            child: const _EmptyMetricCard(
+              hint: 'No data yet',
               icon: Icons.grass_outlined,
               color: Color(0xFF2E8B57),
             ),
@@ -488,8 +488,8 @@ class _DashboardBody extends StatelessWidget {
         case 'measurements':
           return _CardSection(
             title: 'Body Measurements',
-            child: const _ComingSoonCard(
-              label: 'Body Measurements',
+            child: const _EmptyMetricCard(
+              hint: 'No measurements yet',
               icon: Icons.straighten_outlined,
               color: Color(0xFF8B5CF6),
             ),
@@ -497,8 +497,8 @@ class _DashboardBody extends StatelessWidget {
         case 'recovery_index':
           return _CardSection(
             title: 'Recovery Index',
-            child: const _ComingSoonCard(
-              label: 'Recovery Index',
+            child: const _EmptyMetricCard(
+              hint: 'No data yet',
               icon: Icons.battery_charging_full_outlined,
               color: Color(0xFF0EA5E9),
             ),
@@ -506,8 +506,8 @@ class _DashboardBody extends StatelessWidget {
         case 'stress_level':
           return _CardSection(
             title: 'Stress Level',
-            child: const _ComingSoonCard(
-              label: 'Stress Level',
+            child: const _EmptyMetricCard(
+              hint: 'No data yet',
               icon: Icons.self_improvement_outlined,
               color: Color(0xFF8B5CF6),
             ),
@@ -515,8 +515,8 @@ class _DashboardBody extends StatelessWidget {
         case 'mindfulness':
           return _CardSection(
             title: 'Mindfulness',
-            child: const _ComingSoonCard(
-              label: 'Mindfulness Streak',
+            child: const _EmptyMetricCard(
+              hint: 'No sessions logged',
               icon: Icons.spa_outlined,
               color: Color(0xFF0EA5E9),
             ),
@@ -560,29 +560,36 @@ class _DashboardBody extends StatelessWidget {
                 : 0,
           );
         case 'water_intake':
-          return const _CompactCard(
+          return _CompactCard(
             title: 'Water',
             icon: Icons.water_drop,
-            color: Color(0xFF0EA5E9),
-            value: '—',
-            subtitle: 'Coming soon',
+            color: const Color(0xFF0EA5E9),
+            value: '${data.waterOz.round()}',
+            subtitle: 'of 64 oz',
+            progress: (data.waterOz / 64).clamp(0.0, 1.0),
           );
         case 'sleep_score':
-          return const _CompactCard(
-            title: 'Sleep',
-            icon: Icons.bedtime,
-            color: Color(0xFF0EA5E9),
-            value: '—',
-            subtitle: 'Coming soon',
-          );
+          {
+            final sm = data.sleepMinutes ?? 0;
+            return _CompactCard(
+              title: 'Sleep',
+              icon: Icons.bedtime,
+              color: const Color(0xFF0EA5E9),
+              value: sm > 0 ? '${sm ~/ 60}h ${sm % 60}m' : '—',
+              subtitle: sm > 0 ? 'last night' : 'No data yet',
+            );
+          }
         case 'workout_performance':
-          return const _CompactCard(
-            title: 'Workout',
-            icon: Icons.fitness_center,
-            color: Color(0xFFEF8C2E),
-            value: '—',
-            subtitle: 'Coming soon',
-          );
+          {
+            final wc = data.workoutCalories ?? 0;
+            return _CompactCard(
+              title: 'Workout',
+              icon: Icons.fitness_center,
+              color: const Color(0xFFEF8C2E),
+              value: wc > 0 ? '$wc' : '—',
+              subtitle: wc > 0 ? 'kcal burned' : 'No data yet',
+            );
+          }
         case 'weight':
         case 'weight_trend':
           return _CompactCard(
@@ -1789,12 +1796,15 @@ class _ComboChartPainter extends CustomPainter {
       oldDelegate.tdeeValues != tdeeValues;
 }
 
-class _ComingSoonCard extends StatelessWidget {
-  final String label;
+/// Polished empty state for a widget that has no data yet — shows the widget's
+/// gradient icon tile, a dash placeholder, and a short helper hint. Looks like
+/// a finished, ready-to-use widget that will populate once data exists.
+class _EmptyMetricCard extends StatelessWidget {
+  final String hint;
   final IconData icon;
   final Color color;
-  const _ComingSoonCard({
-    required this.label,
+  const _EmptyMetricCard({
+    required this.hint,
     required this.icon,
     required this.color,
   });
@@ -1803,50 +1813,27 @@ class _ComingSoonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, size: 22, color: color.withValues(alpha: 0.45)),
-        ),
+        _ConceptIconTile(color: color, icon: icon, size: 46, iconSize: 24),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                label,
+                '—',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: context.colors.textPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: context.colors.textMuted,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
-                'Coming soon',
+                hint,
                 style: TextStyle(fontSize: 12, color: context.colors.textMuted),
               ),
             ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: context.colors.surfaceVariant,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            'SOON',
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-              color: context.colors.textMuted,
-            ),
           ),
         ),
       ],
@@ -2073,13 +2060,6 @@ class _WaterIntakeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const goalOz = 64.0;
-    if (waterOz == 0) {
-      return const _ComingSoonCard(
-        label: 'Water Intake — Log to track',
-        icon: Icons.water_drop_outlined,
-        color: Color(0xFF0EA5E9),
-      );
-    }
     final progress = (waterOz / goalOz).clamp(0.0, 1.0);
     final cups = (waterOz / 8).round();
     return Row(
@@ -2135,8 +2115,8 @@ class _SleepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (sleepMinutes == null || sleepMinutes == 0) {
-      return const _ComingSoonCard(
-        label: 'Sleep — Connect Apple Health',
+      return const _EmptyMetricCard(
+        hint: 'Connect Apple Health',
         icon: Icons.bedtime_outlined,
         color: Color(0xFF0EA5E9),
       );
@@ -2224,8 +2204,8 @@ class _WorkoutPerformanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if ((calories ?? 0) == 0) {
-      return const _ComingSoonCard(
-        label: 'Workout — Sync Apple Health',
+      return const _EmptyMetricCard(
+        hint: 'No workout logged',
         icon: Icons.fitness_center_rounded,
         color: Color(0xFFEF8C2E),
       );
@@ -2384,8 +2364,8 @@ class _TDEECard extends StatelessWidget {
   Widget build(BuildContext context) {
     const tint = Palette.widgetTDEEDay;
     if (tdee == null || tdee == 0) {
-      return const _ComingSoonCard(
-        label: 'Log food & activity to calculate TDEE',
+      return const _EmptyMetricCard(
+        hint: 'Log food & activity',
         icon: Icons.local_fire_department_outlined,
         color: tint,
       );
@@ -2553,8 +2533,8 @@ class _RestingHRCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (bpm == null || bpm == 0) {
-      return const _ComingSoonCard(
-        label: 'Resting HR — Connect Apple Health',
+      return const _EmptyMetricCard(
+        hint: 'Connect Apple Health',
         icon: Icons.favorite_outline,
         color: Color(0xFFD0021B),
       );
@@ -2630,8 +2610,8 @@ class _BodyCompositionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (bmi == null) {
-      return const _ComingSoonCard(
-        label: 'Body Composition',
+      return const _EmptyMetricCard(
+        hint: 'Add height & weight',
         icon: Icons.accessibility_new_outlined,
         color: Color(0xFF8B5CF6),
       );
