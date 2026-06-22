@@ -1399,18 +1399,11 @@ class _StepsCard extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: tint.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: const Icon(
-                Icons.directions_walk_rounded,
-                size: 24,
-                color: tint,
-              ),
+            const _ConceptIconTile(
+              color: tint,
+              icon: Icons.directions_walk_rounded,
+              size: 46,
+              iconSize: 24,
             ),
             const SizedBox(width: 14),
             Column(
@@ -1460,7 +1453,7 @@ class _StepsCard extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 7,
@@ -2056,7 +2049,7 @@ class _MacroRow extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 8,
@@ -2087,10 +2080,11 @@ class _WaterIntakeCard extends StatelessWidget {
     final cups = (waterOz / 8).round();
     return Row(
       children: [
-        const Icon(
-          Icons.water_drop_rounded,
+        const _ConceptIconTile(
           color: Color(0xFF0EA5E9),
-          size: 28,
+          icon: Icons.water_drop_rounded,
+          size: 46,
+          iconSize: 24,
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -2107,7 +2101,7 @@ class _WaterIntakeCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(999),
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 7,
