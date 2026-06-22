@@ -23,6 +23,8 @@ class DashboardDayData {
   final String? workoutType;
   final double waterOz;
   final double? tdee;
+  final DateTime? firstMealTime;
+  final DateTime? lastMealTime;
 
   const DashboardDayData({
     required this.caloriesConsumed,
@@ -42,6 +44,8 @@ class DashboardDayData {
     this.workoutType,
     this.waterOz = 0,
     this.tdee,
+    this.firstMealTime,
+    this.lastMealTime,
   });
 }
 
@@ -119,6 +123,16 @@ class DashboardState extends ChangeNotifier {
         foodFat += (map['fatG'] as int?) ?? 0;
       }
 
+      // First & last meal times for the Meal Timing widget.
+      DateTime? firstMeal;
+      DateTime? lastMeal;
+      for (final map in foodEntryMaps) {
+        final ts = DateTime.tryParse(map['timestamp'] as String? ?? '');
+        if (ts == null) continue;
+        if (firstMeal == null || ts.isBefore(firstMeal)) firstMeal = ts;
+        if (lastMeal == null || ts.isAfter(lastMeal)) lastMeal = ts;
+      }
+
       // Debugging: Log values for calories calculation
       debugPrint('Log caloriesConsumed: \\${log?.caloriesConsumed ?? 0}');
       debugPrint('Food calories: \\$foodCalories');
@@ -164,6 +178,8 @@ class DashboardState extends ChangeNotifier {
           workoutType: log.workoutType,
           waterOz: log.waterIntake,
           tdee: todayTDEE,
+          firstMealTime: firstMeal,
+          lastMealTime: lastMeal,
         );
       } else {
         _cachedData[_selectedDate] = DashboardDayData(
@@ -179,6 +195,8 @@ class DashboardState extends ChangeNotifier {
           fatGoal: user.macroTargets?['fat'] ?? (user.dailyCaloricGoal ~/ 4),
           stepsTaken: 0,
           stepsGoal: settings.stepGoal,
+          firstMealTime: firstMeal,
+          lastMealTime: lastMeal,
         );
       }
     } finally {

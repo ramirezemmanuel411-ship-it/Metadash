@@ -468,14 +468,23 @@ class _DashboardBody extends StatelessWidget {
             );
           }
         case 'meal_timing':
-          return _CardSection(
-            title: 'Meal Timing',
-            child: const _EmptyMetricCard(
-              hint: 'No meals logged yet',
-              icon: Icons.schedule_outlined,
-              color: Color(0xFF2E8B57),
-            ),
-          );
+          {
+            final firstMeal = data.firstMealTime;
+            final lastMeal = data.lastMealTime;
+            return _CardSection(
+              title: 'Meal Timing',
+              tintColor: const Color(0xFF2E8B57),
+              statusBadge: firstMeal != null ? 'Tracking' : null,
+              statusColor: const Color(0xFF2E8B57),
+              child: (firstMeal == null || lastMeal == null)
+                  ? const _EmptyMetricCard(
+                      hint: 'No meals logged yet',
+                      icon: Icons.schedule_outlined,
+                      color: Color(0xFF2E8B57),
+                    )
+                  : _MealTimingCard(first: firstMeal, last: lastMeal),
+            );
+          }
         case 'fiber':
           return _CardSection(
             title: 'Fiber & Micronutrients',
@@ -632,6 +641,17 @@ class _DashboardBody extends StatelessWidget {
             subtitle: 'active days',
             progress: weeklyTDEE.where((v) => v > 0).length / 7,
           );
+        case 'meal_timing':
+          {
+            final firstMeal = data.firstMealTime;
+            return _CompactCard(
+              title: 'Meal Timing',
+              icon: Icons.schedule_outlined,
+              color: const Color(0xFF2E8B57),
+              value: firstMeal != null ? _formatTimeOfDay(firstMeal) : '—',
+              subtitle: firstMeal != null ? 'first meal' : 'No data yet',
+            );
+          }
         default:
           final info = DashboardLayoutProvider.catalog.firstWhere(
             (w) => w.id == id,
@@ -1277,6 +1297,69 @@ String _formatCompactInt(int value) {
     buffer.write(raw[i]);
   }
   return buffer.toString();
+}
+
+String _formatTimeOfDay(DateTime t) {
+  final ampm = t.hour < 12 ? 'AM' : 'PM';
+  final h12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  return '$h12:${t.minute.toString().padLeft(2, '0')} $ampm';
+}
+
+/// Meal timing widget — eating window between the first and last logged meal,
+/// derived from the day's food entries.
+class _MealTimingCard extends StatelessWidget {
+  final DateTime first;
+  final DateTime last;
+  const _MealTimingCard({required this.first, required this.last});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final single = !last.isAfter(first);
+    final window = last.difference(first);
+    final wH = window.inHours;
+    final wM = window.inMinutes % 60;
+    return Row(
+      children: [
+        const _ConceptIconTile(
+          color: Color(0xFF2E8B57),
+          icon: Icons.schedule_rounded,
+          size: 46,
+          iconSize: 24,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                single ? _formatTimeOfDay(first) : '${wH}h ${wM}m',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                single
+                    ? 'First meal logged'
+                    : '${_formatTimeOfDay(first)} – ${_formatTimeOfDay(last)}',
+                style: TextStyle(fontSize: 12, color: colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        if (!single)
+          Text(
+            'window',
+            style: TextStyle(fontSize: 11, color: colors.textMuted),
+          ),
+      ],
+    );
+  }
 }
 
 // ── Tinted full-width card section ───────────────────────────────────────────
