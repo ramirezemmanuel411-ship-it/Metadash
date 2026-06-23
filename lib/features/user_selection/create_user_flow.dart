@@ -6,8 +6,15 @@ import '../../services/health_service.dart';
 
 class CreateUserFlow extends StatefulWidget {
   final UserState userState;
+  final String? initialEmail;
+  final String? initialName;
 
-  const CreateUserFlow({super.key, required this.userState});
+  const CreateUserFlow({
+    super.key,
+    required this.userState,
+    this.initialEmail,
+    this.initialName,
+  });
 
   @override
   State<CreateUserFlow> createState() => _CreateUserFlowState();
@@ -47,6 +54,19 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
   // Page 5 variables (health permissions)
   bool _healthPermissionsRequested = false;
   bool _healthPermissionsGranted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill from the signed-in account so the local profile's email matches
+    // the auth account (used to re-link the profile on subsequent launches).
+    if (widget.initialName != null && widget.initialName!.isNotEmpty) {
+      _nameController.text = widget.initialName!;
+    }
+    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
+      _emailController.text = widget.initialEmail!;
+    }
+  }
 
   void _dismissKeyboard() {
     FocusScope.of(context).unfocus();
@@ -1326,7 +1346,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? Palette.vibrantAction : Colors.grey[300]!,
+            color: isSelected ? Palette.forestGreen : Colors.grey[300]!,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -1341,7 +1361,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                      color: isSelected ? Palette.vibrantAction : Colors.black87,
+                      color: isSelected ? Palette.forestGreen : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1349,7 +1369,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isSelected ? Palette.vibrantAction.withValues(alpha: 0.8) : Colors.grey[600],
+                      color: isSelected ? Palette.forestGreen.withValues(alpha: 0.8) : Colors.grey[600],
                     ),
                   ),
                 ],
@@ -1358,7 +1378,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             if (isSelected)
               const Icon(
                 Icons.check_circle,
-                color: Palette.vibrantAction,
+                color: Palette.forestGreen,
                 size: 20,
               ),
           ],

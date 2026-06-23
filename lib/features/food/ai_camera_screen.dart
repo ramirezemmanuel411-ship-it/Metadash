@@ -385,7 +385,7 @@ class _AiCameraScreenState extends State<AiCameraScreen> {
                             child: ElevatedButton(
                               onPressed: _isAnalyzing ? null : _analyzeWithDescription,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Palette.vibrantAction,
+                                backgroundColor: Palette.forestGreen,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                               ),

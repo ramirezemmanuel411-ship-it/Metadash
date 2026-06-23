@@ -117,6 +117,20 @@ class UserState extends ChangeNotifier {
     return false;
   }
 
+  // Login by email — re-links a Firebase account to its existing local profile
+  // on subsequent launches (the profile's email matches the auth account).
+  Future<bool> loginByEmail(String email) async {
+    final user = await _db.getUserProfileByEmail(email);
+    if (user != null) {
+      _currentUser = user;
+      await _loadMetabolicSettings();
+      await _loadDataInputsSettings();
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
   // Logout current user
   void logout() {
     _currentUser = null;
