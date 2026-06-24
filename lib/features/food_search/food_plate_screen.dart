@@ -196,9 +196,10 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
                               item: items[i],
                               colors: colors,
                               onDelete: () => context.read<FoodPlateProvider>().remove(items[i].id),
-                              onServingChanged: (val) => context.read<FoodPlateProvider>().update(
+                              onServingChanged: (qty, unit) =>
+                                  context.read<FoodPlateProvider>().update(
                                 items[i].id,
-                                items[i].copyWith(serving: val),
+                                items[i].rescaled(qty, unit),
                               ),
                             ),
                           ],
@@ -283,7 +284,7 @@ class _PlateItemTile extends StatefulWidget {
   final FoodPlateItem item;
   final MetaDashColors colors;
   final VoidCallback onDelete;
-  final ValueChanged<String> onServingChanged;
+  final void Function(double qty, String unit) onServingChanged;
 
   const _PlateItemTile({
     super.key,
@@ -346,8 +347,8 @@ class _PlateItemTileState extends State<_PlateItemTile> {
   }
 
   void _commit(String qty, String unit) {
-    final q = qty.isEmpty || qty == '0' ? '1' : qty;
-    widget.onServingChanged('$q $unit');
+    final q = double.tryParse(qty.isEmpty || qty == '0' ? '1' : qty) ?? 1.0;
+    widget.onServingChanged(q, unit);
   }
 
   void _openNumpad() {
@@ -360,6 +361,7 @@ class _PlateItemTileState extends State<_PlateItemTile> {
         initialUnit: _unitStr,
         units: _commonUnits,
         dividerIndex: _unitDividerIndex,
+        baseGrams: widget.item.baseGrams,
         colors: widget.colors,
         onConfirm: (qty, unit) {
           setState(() {
@@ -487,6 +489,7 @@ class _ServingNumpad extends StatefulWidget {
   final String initialUnit;
   final List<String> units;
   final int dividerIndex;
+  final double? baseGrams;
   final MetaDashColors colors;
   final void Function(String qty, String unit) onConfirm;
 
@@ -495,6 +498,7 @@ class _ServingNumpad extends StatefulWidget {
     required this.initialUnit,
     required this.units,
     required this.dividerIndex,
+    this.baseGrams,
     required this.colors,
     required this.onConfirm,
   });
@@ -512,6 +516,12 @@ class _ServingNumpadState extends State<_ServingNumpad> {
     super.initState();
     _qty = widget.initialQty;
     _unit = widget.initialUnit;
+  }
+
+  double _gramsForUnit(String u) {
+    final w = FoodPlateItem.unitGrams[u.toLowerCase()];
+    if (w != null) return w;
+    return widget.baseGrams ?? 0;
   }
 
   void _press(String key) {
@@ -621,7 +631,19 @@ class _ServingNumpadState extends State<_ServingNumpad> {
                           color: c.accent,
                         ),
                       GestureDetector(
-                        onTap: () => setState(() => _unit = widget.units[i]),
+                        onTap: () => setState(() {
+                          // Preserve the gram amount when switching units.
+                          final og = _gramsForUnit(_unit);
+                          final ng = _gramsForUnit(widget.units[i]);
+                          final q = double.tryParse(_qty) ?? 1;
+                          if (og > 0 && ng > 0 && q > 0) {
+                            final newQ = q * og / ng;
+                            _qty = newQ == newQ.truncateToDouble()
+                                ? newQ.truncate().toString()
+                                : newQ.toStringAsFixed(1);
+                          }
+                          _unit = widget.units[i];
+                        }),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 140),
                           margin: const EdgeInsets.only(right: 8),

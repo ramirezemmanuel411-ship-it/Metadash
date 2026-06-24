@@ -14,6 +14,14 @@ class FoodPlateItem {
   final String? serving;
   final DateTime addedAt;
 
+  // Base (one-serving) macros + serving weight, so the plate can rescale macros
+  // by weight when the serving/unit changes — not just relabel.
+  final double baseCalories;
+  final double baseProtein;
+  final double baseCarbs;
+  final double baseFat;
+  final double? baseGrams;
+
   FoodPlateItem({
     required this.id,
     required this.name,
@@ -24,7 +32,16 @@ class FoodPlateItem {
     required this.source,
     this.serving,
     DateTime? addedAt,
-  }) : addedAt = addedAt ?? DateTime.now();
+    double? baseCalories,
+    double? baseProtein,
+    double? baseCarbs,
+    double? baseFat,
+    this.baseGrams,
+  })  : addedAt = addedAt ?? DateTime.now(),
+        baseCalories = baseCalories ?? calories.toDouble(),
+        baseProtein = baseProtein ?? proteinG.toDouble(),
+        baseCarbs = baseCarbs ?? carbsG.toDouble(),
+        baseFat = baseFat ?? fatG.toDouble();
 
   FoodPlateItem copyWith({
     int? calories,
@@ -43,6 +60,52 @@ class FoodPlateItem {
       source: source,
       serving: serving ?? this.serving,
       addedAt: addedAt,
+      baseCalories: baseCalories,
+      baseProtein: baseProtein,
+      baseCarbs: baseCarbs,
+      baseFat: baseFat,
+      baseGrams: baseGrams,
+    );
+  }
+
+  /// Grams per one unit (named units resolve to one base serving's weight).
+  static const unitGrams = <String, double>{
+    'g': 1.0,
+    'oz': 28.3495,
+    'lb': 453.592,
+    'ml': 1.0,
+    'fl oz': 29.5735,
+    'cup': 236.588,
+    'tbsp': 14.787,
+    'tsp': 4.929,
+  };
+
+  /// Grams represented by [quantity] of [unit].
+  double? gramsFor(double quantity, String unit) {
+    final w = unitGrams[unit.toLowerCase()];
+    if (w != null) return quantity * w;
+    if (baseGrams != null && baseGrams! > 0) return quantity * baseGrams!;
+    return null;
+  }
+
+  /// A copy rescaled to [quantity]/[unit], recomputing macros by weight. Falls
+  /// back to a label-only update when there's no gram weight to scale against.
+  FoodPlateItem rescaled(double quantity, String unit) {
+    final qtyStr = quantity == quantity.truncateToDouble()
+        ? quantity.truncate().toString()
+        : quantity.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
+    final servingStr = '$qtyStr $unit';
+    final grams = gramsFor(quantity, unit);
+    if (baseGrams == null || baseGrams! <= 0 || grams == null) {
+      return copyWith(serving: servingStr);
+    }
+    final m = grams / baseGrams!;
+    return copyWith(
+      calories: (baseCalories * m).round(),
+      proteinG: (baseProtein * m).round(),
+      carbsG: (baseCarbs * m).round(),
+      fatG: (baseFat * m).round(),
+      serving: servingStr,
     );
   }
 

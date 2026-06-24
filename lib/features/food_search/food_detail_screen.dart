@@ -211,6 +211,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             : _quantity == 1.0
                 ? _servings[_servingIdx].label
                 : '${_fmtD(_quantity)} × ${_servings[_servingIdx].label}',
+        baseCalories: food.calories.toDouble(),
+        baseProtein: food.protein,
+        baseCarbs: food.carbs,
+        baseFat: food.fat,
+        baseGrams: food.servingWeightGrams,
       ),
     );
     if (!context.mounted) return;
