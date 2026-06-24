@@ -362,6 +362,7 @@ class _PlateItemTileState extends State<_PlateItemTile> {
         units: _commonUnits,
         dividerIndex: _unitDividerIndex,
         baseGrams: widget.item.baseGrams,
+        baseCalories: widget.item.baseCalories,
         colors: widget.colors,
         onConfirm: (qty, unit) {
           setState(() {
@@ -490,6 +491,7 @@ class _ServingNumpad extends StatefulWidget {
   final List<String> units;
   final int dividerIndex;
   final double? baseGrams;
+  final double baseCalories;
   final MetaDashColors colors;
   final void Function(String qty, String unit) onConfirm;
 
@@ -499,6 +501,7 @@ class _ServingNumpad extends StatefulWidget {
     required this.units,
     required this.dividerIndex,
     this.baseGrams,
+    this.baseCalories = 0,
     required this.colors,
     required this.onConfirm,
   });
@@ -523,6 +526,26 @@ class _ServingNumpadState extends State<_ServingNumpad> {
     if (w != null) return w;
     return widget.baseGrams ?? 0;
   }
+
+  double get _qtyNum =>
+      double.tryParse(_qty.isEmpty || _qty == '0' ? '1' : _qty) ?? 1;
+
+  double? get _grams {
+    final g = _gramsForUnit(_unit);
+    return g > 0 ? _qtyNum * g : null;
+  }
+
+  double get _liveCal {
+    final grams = _grams;
+    final base = widget.baseGrams;
+    if (grams != null && base != null && base > 0) {
+      return widget.baseCalories * grams / base;
+    }
+    return widget.baseCalories * _qtyNum;
+  }
+
+  String _fmtGrams(double g) =>
+      '${g >= 10 ? g.round().toString() : g.toStringAsFixed(1)} g';
 
   void _press(String key) {
     setState(() {
@@ -606,11 +629,34 @@ class _ServingNumpadState extends State<_ServingNumpad> {
               width: 36, height: 4,
               decoration: BoxDecoration(color: c.divider, borderRadius: BorderRadius.circular(2)),
             ),
-            const SizedBox(height: 20),
-            // Large quantity display
-            Text(
-              _qty,
-              style: TextStyle(fontSize: 44, fontWeight: FontWeight.w700, color: c.textPrimary),
+            const SizedBox(height: 16),
+            // Quantity + unit (left) and live calories + grams (right)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _qty,
+                    style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        color: c.textPrimary),
+                  ),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(_unit,
+                        style: TextStyle(fontSize: 18, color: c.accent)),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_liveCal.round()} cal'
+                    '${_grams != null ? '  ·  ${_fmtGrams(_grams!)}' : ''}',
+                    style: TextStyle(fontSize: 13, color: c.textMuted),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             // Horizontal unit chips
