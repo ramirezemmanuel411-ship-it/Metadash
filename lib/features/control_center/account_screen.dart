@@ -4,9 +4,39 @@ import 'package:provider/provider.dart';
 import '../../shared/palette.dart';
 import '../../providers/user_state.dart';
 import '../../models/user_profile.dart';
+import '../../services/auth_service.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
+
+  static const _danger = Color(0xFFB3261E);
+
+  Future<void> _signOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text(
+            "You'll need to sign in again to access your dashboard."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign out', style: TextStyle(color: _danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final userState = context.read<UserState>();
+    await AuthService().signOut();
+    userState.logout();
+    // The auth-state stream in AuthGate now routes back to the sign-in screen.
+  }
 
   static const _months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -475,7 +505,7 @@ class AccountScreen extends StatelessWidget {
           const SizedBox(height: 28),
           _AccCard(
             child: InkWell(
-              onTap: () => userState.logout(),
+              onTap: () => _signOut(context),
               borderRadius: BorderRadius.circular(14),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

@@ -4,15 +4,14 @@ import 'providers/dashboard_layout_provider.dart';
 import 'providers/food_plate_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 import 'shared/palette.dart';
 import 'providers/user_state.dart';
-import 'features/user_selection/user_selection_screen.dart';
+import 'features/auth/auth_gate.dart';
 import 'shared/user_settings.dart';
-import 'app_shell.dart';
 import 'splash_screen.dart';
 
 void main() async {
@@ -75,32 +74,11 @@ void main() async {
     );
   }
 
-  final firebaseApp = await Firebase.initializeApp();
+  final firebaseApp = await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   // ignore: avoid_print
   print('Firebase initialized: ${firebaseApp.name}');
-
-  final auth = FirebaseAuth.instance;
-  if (auth.currentUser == null) {
-    try {
-      final cred = await auth.signInAnonymously();
-      // ignore: avoid_print
-      print('Signed in anonymously: ${cred.user?.uid}');
-    } catch (e) {
-      // Improved logging for Firebase auth failures
-      // ignore: avoid_print
-      print('Anonymous auth failed: $e');
-      try {
-        // If it's a FirebaseAuthException, log code and message
-        if (e is FirebaseAuthException) {
-          // ignore: avoid_print
-          print('FirebaseAuthException.code=${e.code} message=${e.message}');
-        }
-      } catch (_) {}
-      // also print a stack trace hint if available
-      // ignore: avoid_print
-      print(StackTrace.current);
-    }
-  }
 
   final remoteConfig = FirebaseRemoteConfig.instance;
   await remoteConfig.setConfigSettings(
@@ -273,9 +251,7 @@ class _MyAppState extends State<MyApp> {
             home: AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
               child: _showApp
-                  ? (_userState.isLoggedIn
-                        ? AppShell(userState: _userState)
-                        : UserSelectionScreen(userState: _userState))
+                  ? AuthGate(userState: _userState)
                   : const SplashScreen(),
             ),
           ),

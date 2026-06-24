@@ -8,8 +8,15 @@ import '../../services/health_service.dart';
 
 class CreateUserFlow extends StatefulWidget {
   final UserState userState;
+  final String? initialEmail;
+  final String? initialName;
 
-  const CreateUserFlow({super.key, required this.userState});
+  const CreateUserFlow({
+    super.key,
+    required this.userState,
+    this.initialEmail,
+    this.initialName,
+  });
 
   @override
   State<CreateUserFlow> createState() => _CreateUserFlowState();
@@ -46,6 +53,19 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
   // Page 6 variable (wearable device)
   String _selectedWearableFamily = 'unknown';
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill from the signed-in account so the local profile's email matches
+    // the auth account (used to re-link the profile on subsequent launches).
+    if (widget.initialName != null && widget.initialName!.isNotEmpty) {
+      _nameController.text = widget.initialName!;
+    }
+    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
+      _emailController.text = widget.initialEmail!;
+    }
+  }
 
   void _dismissKeyboard() {
     FocusScope.of(context).unfocus();

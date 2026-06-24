@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// MetaDash Firestore security rules.
+//
+// Auth model: anonymous sign-in (see lib/main.dart). Every device/user is
+// assigned a Firebase anonymous UID and owns their data under users/{uid}.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A user owns their profile document and everything beneath it
+    // (e.g. users/{uid}/daily_logs/{date}).
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /{subPath=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Community-shared food library: any signed-in user may read and contribute.
+    match /global_food_library/{foodId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    // Deny everything else (also the default for unmatched paths).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
