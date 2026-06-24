@@ -301,11 +301,14 @@ class _PlateItemTileState extends State<_PlateItemTile> {
   String _qty = '1';
   String _unitStr = 'serving';
 
+  // serving + the two most common weights first (left of the keypad divider),
+  // then every other unit available (right of the divider).
   static const _commonUnits = [
-    'g', 'oz', 'lb', 'ml',
-    'cup', 'tbsp', 'tsp',
-    'serving', 'piece', 'slice', 'item',
+    'serving', 'g', 'oz',
+    'lb', 'ml', 'fl oz', 'cup', 'tbsp', 'tsp',
+    'piece', 'slice', 'item',
   ];
+  static const _unitDividerIndex = 3;
 
   static ({String num, String unit}) _parse(String serving) {
     final stripped = serving.trim().replaceFirst(RegExp(r'^\d+\.?\d*\s*[x×]\s*'), '');
@@ -356,6 +359,7 @@ class _PlateItemTileState extends State<_PlateItemTile> {
         initialQty: _qty,
         initialUnit: _unitStr,
         units: _commonUnits,
+        dividerIndex: _unitDividerIndex,
         colors: widget.colors,
         onConfirm: (qty, unit) {
           setState(() {
@@ -482,6 +486,7 @@ class _ServingNumpad extends StatefulWidget {
   final String initialQty;
   final String initialUnit;
   final List<String> units;
+  final int dividerIndex;
   final MetaDashColors colors;
   final void Function(String qty, String unit) onConfirm;
 
@@ -489,6 +494,7 @@ class _ServingNumpad extends StatefulWidget {
     required this.initialQty,
     required this.initialUnit,
     required this.units,
+    required this.dividerIndex,
     required this.colors,
     required this.onConfirm,
   });
@@ -546,7 +552,7 @@ class _ServingNumpadState extends State<_ServingNumpad> {
             height: 60,
             decoration: BoxDecoration(
               color: isDone
-                  ? c.textPrimary
+                  ? c.accent
                   : isGray || isBack
                       ? c.surfaceVariant
                       : c.background,
@@ -562,7 +568,7 @@ class _ServingNumpadState extends State<_ServingNumpad> {
                           style: TextStyle(
                             fontSize: isDone ? 15 : 22,
                             fontWeight: isDone ? FontWeight.w700 : FontWeight.w500,
-                            color: isDone ? c.background : c.textPrimary,
+                            color: isDone ? c.onPrimary : c.textPrimary,
                           ),
                         ),
             ),
@@ -600,34 +606,48 @@ class _ServingNumpadState extends State<_ServingNumpad> {
             // Horizontal unit chips
             SizedBox(
               height: 38,
-              child: ListView.separated(
+              child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: widget.units.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final u = widget.units[i];
-                  final active = u == _unit;
-                  return GestureDetector(
-                    onTap: () => setState(() => _unit = u),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 140),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: active ? c.textPrimary : c.surfaceVariant,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        u,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: active ? c.background : c.textSecondary,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    for (int i = 0; i < widget.units.length; i++) ...[
+                      if (i == widget.dividerIndex)
+                        Container(
+                          width: 2,
+                          height: 22,
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          color: c.accent,
+                        ),
+                      GestureDetector(
+                        onTap: () => setState(() => _unit = widget.units[i]),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 140),
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: widget.units[i] == _unit
+                                ? c.accent
+                                : c.surfaceVariant,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            widget.units[i],
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: widget.units[i] == _unit
+                                  ? c.onPrimary
+                                  : c.textSecondary,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),
