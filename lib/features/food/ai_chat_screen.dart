@@ -652,6 +652,49 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
   }
 
+  /// Stage all of a router result's entries onto the Food Plate so the user can
+  /// tweak servings (and batch them) before logging — the text-logging analogue
+  /// of the single-estimate "Add to Food Plate".
+  void _addRouterEntriesToPlate(List<AiStructuredFoodEntry> entries) {
+    final plate = context.read<FoodPlateProvider>();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (var i = 0; i < entries.length; i++) {
+      final e = entries[i];
+      plate.add(
+        FoodPlateItem(
+          id: '${now}_ai_$i',
+          name: e.name,
+          calories: e.calories,
+          proteinG: e.protein,
+          carbsG: e.carbs,
+          fatG: e.fat,
+          source: 'ai_chat',
+          serving: e.serving,
+          baseCalories: e.calories.toDouble(),
+          baseProtein: e.protein.toDouble(),
+          baseCarbs: e.carbs.toDouble(),
+          baseFat: e.fat.toDouble(),
+        ),
+      );
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          entries.length == 1
+              ? '✓ Added to Food Plate'
+              : '✓ Added ${entries.length} items to Food Plate',
+        ),
+        backgroundColor: context.colors.accent,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+    setState(() {
+      _controller.clear();
+      _routerResult = null;
+      _currentEstimate = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Show camera overlay
@@ -1163,6 +1206,30 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ],
 
         const SizedBox(height: 14),
+
+        // Add to Food Plate — stage to tweak servings before logging
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              final entries = hasAlternatives
+                  ? [result.alternatives[_selectedAlternative].entry]
+                  : result.entries;
+              _addRouterEntriesToPlate(entries);
+            },
+            icon: const Icon(Icons.add_to_photos_outlined, size: 18),
+            label: const Text('Add to Food Plate'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: accent,
+              side: BorderSide(color: accent),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
 
         // Action buttons
         Row(
