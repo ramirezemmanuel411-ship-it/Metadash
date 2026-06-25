@@ -332,7 +332,12 @@ class FoodRemoteDatasource {
     try {
       final rawDescription = food['description'] ?? 'Unknown';
       final dataType = food['dataType']?.toString();
-      final parsed = _parseUSDABrandAndName(rawDescription, dataType: dataType);
+      final parsed = _parseUSDABrandAndName(
+        rawDescription,
+        dataType: dataType,
+        brandOwner: food['brandOwner']?.toString(),
+        brandName: food['brandName']?.toString(),
+      );
       final productName = parsed['name'] ?? 'Unknown';
       final brandName = parsed['brand'];
 
@@ -719,9 +724,20 @@ class FoodRemoteDatasource {
   ///                  (commas are preparation qualifiers, not brand)
   ///
   /// Junk qualifier tokens (NFS = Not Further Specified, etc.) are dropped.
+  /// Store / private-label brands that show up as the *first* comma-part of a
+  /// USDA branded description, ahead of the real food name.
+  static const _usdaStoreBrands = {
+    'kirkland', 'kirkland signature', 'great value', "sam's choice", 'equate',
+    'good & gather', 'market pantry', 'simple truth', 'signature select',
+    '365', '365 everyday value', "member's mark", 'private selection',
+    "trader joe's", 'up & up', 'kroger', 'open nature', 'lucerne',
+  };
+
   Map<String, String?> _parseUSDABrandAndName(
     String rawName, {
     String? dataType,
+    String? brandOwner,
+    String? brandName,
   }) {
     const junkQualifiers = {'nfs', 'ns', 'varied', 'nr', 'nsp'};
     final isBranded = dataType?.toLowerCase().contains('branded') == true;
@@ -734,11 +750,50 @@ class FoodRemoteDatasource {
           .toList();
       if (parts.isEmpty) return {'name': rawName, 'brand': null};
 
-      final foodName = parts[0]; // Food descriptor is ALWAYS first.
+      final foodName = parts[0]; // Food descriptor is usually first.
       if (parts.length == 1) return {'name': foodName, 'brand': null};
 
       if (isBranded) {
-        // Branded: "CHICKEN BREAST, TYSON FOODS INC" → food + brand
+        // Usually the food descriptor is first ("CHICKEN BREAST, TYSON FOODS
+        // INC"), but some USDA entries lead with the brand ("Kirkland Signature,
+        // Perdue, Fit & Easy Chicken Breasts"). Separate brand-like parts (the
+        // USDA brand fields, known store brands, or corporate names) from the
+        // real food descriptor.
+        final brandTokens = <String>{
+          if (brandOwner != null && brandOwner.trim().isNotEmpty)
+            brandOwner.trim().toLowerCase(),
+          if (brandName != null && brandName.trim().isNotEmpty)
+            brandName.trim().toLowerCase(),
+        };
+        bool looksLikeBrand(String p) {
+          final l = p.trim().toLowerCase();
+          return brandTokens.contains(l) ||
+              _usdaStoreBrands.contains(l) ||
+              RegExp(r'\b(inc|llc|corp|ltd|co)\b').hasMatch(l);
+        }
+
+        final foodParts = parts.where((p) => !looksLikeBrand(p)).toList();
+        final brandParts = parts.where(looksLikeBrand).toList();
+
+        if (foodParts.isNotEmpty) {
+          // The most descriptive non-brand part is the food name.
+          var food = foodParts.reduce((a, b) => b.length > a.length ? b : a);
+          // Drop a trailing "by <brand>" suffix.
+          food = food
+              .replaceAll(RegExp(r'\s+by\s+.+$', caseSensitive: false), '')
+              .trim();
+          final resolvedBrand =
+              (brandName != null && brandName.trim().isNotEmpty)
+                  ? brandName.trim()
+                  : (brandOwner != null && brandOwner.trim().isNotEmpty)
+                      ? brandOwner.trim()
+                      : (brandParts.isNotEmpty ? brandParts.first : null);
+          return {
+            'name': food.isEmpty ? foodName : food,
+            'brand': resolvedBrand,
+          };
+        }
+        // Every part looked like a brand — keep the original behaviour.
         return {'name': foodName, 'brand': parts.skip(1).join(', ')};
       }
 
