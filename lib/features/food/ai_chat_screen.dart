@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../shared/palette.dart';
 import '../../models/ai_food_estimate.dart';
 import '../../models/ai_suggestion.dart';
@@ -14,6 +15,7 @@ import '../../services/food_text_normalizer.dart';
 import '../../data/repositories/ai_suggestion_repository.dart';
 import '../../models/ai_router_result.dart';
 import '../../providers/user_state.dart';
+import '../../providers/food_plate_provider.dart';
 
 /// Unified AI screen for food estimation via text, camera, or gallery
 class AiChatScreen extends StatefulWidget {
@@ -608,6 +610,46 @@ class _AiChatScreenState extends State<AiChatScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to add to diary: $e')));
     }
+  }
+
+  /// Stage the current estimate onto the Food Plate so the user can tweak the
+  /// serving (and batch it with other items) before logging. AI estimates have
+  /// no gram weight, so the plate keypad scales by serving count off these
+  /// one-serving base macros.
+  void _onAddToPlate() {
+    final est = _currentEstimate;
+    if (est == null) return;
+
+    context.read<FoodPlateProvider>().add(
+          FoodPlateItem(
+            id: '${DateTime.now().millisecondsSinceEpoch}_ai',
+            name: est.itemName,
+            calories: est.calories,
+            proteinG: est.proteinG,
+            carbsG: est.carbsG,
+            fatG: est.fatG,
+            source: _capturedImage != null ? 'ai_camera' : 'ai_chat',
+            serving: _resolveServingFromAssumptions(est.assumptions),
+            baseCalories: est.calories.toDouble(),
+            baseProtein: est.proteinG.toDouble(),
+            baseCarbs: est.carbsG.toDouble(),
+            baseFat: est.fatG.toDouble(),
+          ),
+        );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('✓ Added to Food Plate'),
+        backgroundColor: context.colors.accent,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    setState(() {
+      _controller.clear();
+      _currentEstimate = null;
+      _capturedImage = null;
+    });
   }
 
   @override
@@ -1299,8 +1341,27 @@ class _AiChatScreenState extends State<AiChatScreen> {
               ),
             ],
 
-            // Add to Diary button
+            // Add to Food Plate (stage to tweak serving before logging)
             const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _onAddToPlate,
+                icon: const Icon(Icons.add_to_photos_outlined),
+                label: const Text('Add to Food Plate'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: context.colors.accent,
+                  side: BorderSide(color: context.colors.accent),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+
+            // Add to Diary button
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(

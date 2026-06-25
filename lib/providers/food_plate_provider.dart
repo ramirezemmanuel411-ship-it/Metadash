@@ -88,18 +88,21 @@ class FoodPlateItem {
     return null;
   }
 
-  /// A copy rescaled to [quantity]/[unit], recomputing macros by weight. Falls
-  /// back to a label-only update when there's no gram weight to scale against.
+  /// A copy rescaled to [quantity]/[unit], recomputing macros. Uses the gram
+  /// ratio when a serving weight is known, else scales by the serving count.
   FoodPlateItem rescaled(double quantity, String unit) {
     final qtyStr = quantity == quantity.truncateToDouble()
         ? quantity.truncate().toString()
         : quantity.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
     final servingStr = '$qtyStr $unit';
     final grams = gramsFor(quantity, unit);
-    if (baseGrams == null || baseGrams! <= 0 || grams == null) {
-      return copyWith(serving: servingStr);
-    }
-    final m = grams / baseGrams!;
+    // Scale by the gram ratio when we have a weight basis; otherwise treat the
+    // quantity as a serving-count multiplier (1 unit == one base serving). This
+    // mirrors the keypad's live preview so grams-less items (AI estimates, foods
+    // without a serving weight) still rescale instead of only relabeling.
+    final m = (grams != null && baseGrams != null && baseGrams! > 0)
+        ? grams / baseGrams!
+        : quantity;
     return copyWith(
       calories: (baseCalories * m).round(),
       proteinG: (baseProtein * m).round(),

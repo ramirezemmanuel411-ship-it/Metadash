@@ -10,7 +10,6 @@ import '../../models/user_food_item.dart';
 import '../../models/diary_entry_food.dart';
 import '../../services/cloud_food_service.dart';
 import '../food/barcode_scanner_screen.dart';
-import '../food/food_detail_page.dart';
 import 'models.dart';
 import 'food_manual_entry.dart';
 import 'food_detail_screen.dart';
@@ -937,24 +936,54 @@ class _ScannerStubState extends State<_ScannerStub> {
     setState(() => _isLoading = true);
     try {
       final food = await _foodService.searchByBarcode(barcode);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        if (food != null) {
-          // Navigate to food detail page to show full nutrition info
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => FoodDetailPage(food: food)),
-          );
-
-          // If user added food to log, return the result
-          if (result != null && mounted) {
-            Navigator.pop(context, result);
-          }
-        }
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      if (food != null) {
+        // Route through the same detail → Food Plate flow as a tapped search
+        // result, so the user can tweak the serving before logging.
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => FoodDetailScreen(food: _foodModelFromLegacy(food)),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No product found for that barcode')),
+        );
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Adapt a legacy [Food] (barcode lookup) into the [FoodModel] used by the
+  /// search → detail → Food Plate flow. When the serving is expressed in grams
+  /// or millilitres, carry that as the serving weight so the plate keypad can
+  /// rescale macros by weight.
+  FoodModel _foodModelFromLegacy(Food f) {
+    final unit = f.servingUnit.toLowerCase();
+    final isWeightOrVolume = unit == 'g' ||
+        unit == 'gram' ||
+        unit == 'grams' ||
+        unit == 'ml' ||
+        unit == 'milliliter' ||
+        unit == 'milliliters';
+    final fm = FoodModel.create(
+      id: f.id,
+      name: f.name,
+      brand: f.brand,
+      servingSize: f.servingSize,
+      servingUnit: f.servingUnit,
+      calories: f.calories,
+      protein: f.protein,
+      carbs: f.carbs,
+      fat: f.fat,
+      source: f.source,
+    );
+    if (isWeightOrVolume && f.servingSize > 0) {
+      return fm.copyWith(servingWeightGrams: f.servingSize);
+    }
+    return fm;
   }
 
   @override
