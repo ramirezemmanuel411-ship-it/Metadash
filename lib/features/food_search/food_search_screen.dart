@@ -75,6 +75,13 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       fatG: food.fat.toInt(),
       source: 'search',
       serving: food.displayBrand.isNotEmpty ? food.displayBrand : food.servingUnit,
+      // Carry the one-serving base macros + weight so the plate keypad can
+      // rescale by weight (matches the food-detail add path).
+      baseCalories: food.calories.toDouble(),
+      baseProtein: food.protein,
+      baseCarbs: food.carbs,
+      baseFat: food.fat,
+      baseGrams: food.servingWeightGrams,
     );
     context.read<FoodPlateProvider>().add(item);
   }
