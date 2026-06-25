@@ -48,6 +48,7 @@ class AiStructuredFoodEntry {
   final int carbs;
   final int fat;
   final int fiber;
+  final int? grams; // estimated weight of one [serving] in grams (AI-estimated)
   final String confidence; // 'high' | 'medium' | 'low'
   final String source; // 'AI estimate' | 'AI photo' | 'Restaurant data'
 
@@ -60,6 +61,7 @@ class AiStructuredFoodEntry {
     required this.carbs,
     required this.fat,
     this.fiber = 0,
+    this.grams,
     required this.confidence,
     required this.source,
   });
@@ -73,6 +75,7 @@ class AiStructuredFoodEntry {
     int? carbs,
     int? fat,
     int? fiber,
+    int? grams,
     String? confidence,
     String? source,
   }) {
@@ -85,6 +88,7 @@ class AiStructuredFoodEntry {
       carbs: carbs ?? this.carbs,
       fat: fat ?? this.fat,
       fiber: fiber ?? this.fiber,
+      grams: grams ?? this.grams,
       confidence: confidence ?? this.confidence,
       source: source ?? this.source,
     );
@@ -107,6 +111,7 @@ class AiStructuredFoodEntry {
       carbs: parseInt(json['carbs']),
       fat: parseInt(json['fat']),
       fiber: parseInt(json['fiber']),
+      grams: json['grams'] != null ? parseInt(json['grams']) : null,
       confidence: json['confidence'] ?? 'medium',
       source: json['source'] ?? 'AI estimate',
     );

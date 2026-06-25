@@ -153,7 +153,8 @@ Return ONLY valid JSON — no markdown, no text outside the JSON:
       "protein": <int>,
       "carbs": <int>,
       "fat": <int>,
-      "fiber": <int>
+      "fiber": <int>,
+      "grams": <int, weight in grams of this item's serving>
     }
   ],
   "assumptions": ["<key assumption 1>", "<key assumption 2>"]
@@ -161,6 +162,7 @@ Return ONLY valid JSON — no markdown, no text outside the JSON:
 
 Rules:
 - List each component separately when clearly distinguishable.
+- "grams" is the weight of this item's serving in grams (your best estimate).
 - Use realistic restaurant/home portion sizing.
 - confidence should be "medium" for most photos, "low" if very obscured.
 - Never claim exact accuracy. This is an estimate.
@@ -431,13 +433,15 @@ Return ONLY valid JSON:
       "protein": <int>,
       "carbs": <int>,
       "fat": <int>,
-      "fiber": <int>
+      "fiber": <int>,
+      "grams": <int, weight in grams of this item's serving>
     }
   ]
 }
 
 Rules:
 - Be realistic with portions. Default to standard serving if not specified.
+- "grams" is the weight of this item's serving in grams (your best estimate).
 - Separate distinct items (e.g., "chicken and rice" = 2 entries).
 - confidence: "high" if item is well-known, "low" if vague.
 - Never output markdown. JSON only.

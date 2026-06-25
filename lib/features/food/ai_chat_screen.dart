@@ -674,6 +674,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
           baseProtein: e.protein.toDouble(),
           baseCarbs: e.carbs.toDouble(),
           baseFat: e.fat.toDouble(),
+          // AI-estimated serving weight (when provided) so the plate keypad
+          // shows "cal · g" and converts between units.
+          baseGrams: e.grams?.toDouble(),
         ),
       );
     }
