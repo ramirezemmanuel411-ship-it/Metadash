@@ -57,7 +57,8 @@ class FoodDisplayNormalizer {
   /// Extract clean product title from food model
   static String _normalizeTitle(FoodModel food) {
     // Prefer foodName, fallback to name
-    var title = (food.foodName?.isNotEmpty == true ? food.foodName : food.name) ?? '';
+    var title =
+        (food.foodName?.isNotEmpty == true ? food.foodName : food.name) ?? '';
 
     if (title.isEmpty) return 'Unknown Product';
 
@@ -147,7 +148,11 @@ class FoodDisplayNormalizer {
   static String _cleanCommaText(String text) {
     // Pattern: "COKE WITH LIME FLAVOR, LIME" => "Coke With Lime Flavor"
     // Take everything before the last comma if it's a repeat/descriptor
-    final parts = text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    final parts = text
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
 
     if (parts.isEmpty) return text;
 
@@ -158,7 +163,8 @@ class FoodDisplayNormalizer {
     final last = parts.last.toLowerCase();
     final first = parts[0].toLowerCase();
 
-    if (last.length < 4 && (first.contains(last) || last == 'flavored' || last == 'cola')) {
+    if (last.length < 4 &&
+        (first.contains(last) || last == 'flavored' || last == 'cola')) {
       return parts.sublist(0, parts.length - 1).join(' ');
     }
 
@@ -172,7 +178,13 @@ class FoodDisplayNormalizer {
 
     // Remove common corporate suffixes
     var cleaned = text
-        .replaceAll(RegExp(r',?\s*(Inc|LLC|Ltd|Corp|Corporation|USA|US)\.?\s*$', caseSensitive: false), '')
+        .replaceAll(
+          RegExp(
+            r',?\s*(Inc|LLC|Ltd|Corp|Corporation|USA|US)\.?\s*$',
+            caseSensitive: false,
+          ),
+          '',
+        )
         .replaceAll(RegExp(r',?\s*Company\s*$', caseSensitive: false), '')
         .trim();
 
@@ -182,7 +194,10 @@ class FoodDisplayNormalizer {
   /// Remove leading brand from title if present
   static String _removeLeadingBrand(String title, String brand) {
     // Check if title starts with brand name
-    final brandPattern = RegExp('^${RegExp.escape(brand)}\\s+', caseSensitive: false);
+    final brandPattern = RegExp(
+      '^${RegExp.escape(brand)}\\s+',
+      caseSensitive: false,
+    );
     return title.replaceFirst(brandPattern, '').trim();
   }
 
@@ -193,11 +208,14 @@ class FoodDisplayNormalizer {
     // List of acronyms to preserve
     const acronyms = {'USDA', 'BBQ', 'USA', 'UK', 'ml', 'g', 'oz', 'lb', 'FDA'};
 
-    return text.split(' ').map((word) {
-      if (acronyms.contains(word)) return word;
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return text
+        .split(' ')
+        .map((word) {
+          if (acronyms.contains(word)) return word;
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
 }
 
@@ -216,7 +234,8 @@ double? extractCalories(FoodModel food) {
       // USDA format: nutrients array with nutrientId 1008 (Energy)
       if (json['nutrients'] is List) {
         for (var nutrient in json['nutrients']) {
-          if (nutrient['nutrientId'] == 1008 || nutrient['nutrientId'] == '1008') {
+          if (nutrient['nutrientId'] == 1008 ||
+              nutrient['nutrientId'] == '1008') {
             final value = nutrient['value'];
             if (value != null) {
               return double.tryParse(value.toString());
@@ -250,7 +269,11 @@ double? extractProtein(FoodModel food) {
 
   if (food.rawJson != null) {
     final raw = food.rawJson!;
-    final fromNutrients = _extractNutrientValue(raw, ['protein', 'prot'], [1003]);
+    final fromNutrients = _extractNutrientValue(
+      raw,
+      ['protein', 'prot'],
+      [1003],
+    );
     if (fromNutrients != null) return fromNutrients;
   }
 
@@ -264,7 +287,11 @@ double? extractCarbs(FoodModel food) {
 
   if (food.rawJson != null) {
     final raw = food.rawJson!;
-    final fromNutrients = _extractNutrientValue(raw, ['carb', 'carbohydrate'], [1005]);
+    final fromNutrients = _extractNutrientValue(
+      raw,
+      ['carb', 'carbohydrate'],
+      [1005],
+    );
     if (fromNutrients != null) return fromNutrients;
   }
 
@@ -278,7 +305,11 @@ double? extractFat(FoodModel food) {
 
   if (food.rawJson != null) {
     final raw = food.rawJson!;
-    final fromNutrients = _extractNutrientValue(raw, ['fat', 'total lipid'], [1004]);
+    final fromNutrients = _extractNutrientValue(
+      raw,
+      ['fat', 'total lipid'],
+      [1004],
+    );
     if (fromNutrients != null) return fromNutrients;
   }
 
@@ -298,7 +329,8 @@ double? _extractNutrientValue(
       final isIdMatch = parsedId != null && nutrientIds.contains(parsedId);
       final isNameMatch = nameHints.any((hint) => name.contains(hint));
       if (isIdMatch || isNameMatch) {
-        final value = nutrient['value'] ?? nutrient['amount'] ?? nutrient['qty'];
+        final value =
+            nutrient['value'] ?? nutrient['amount'] ?? nutrient['qty'];
         if (value != null) {
           return double.tryParse(value.toString());
         }
@@ -321,7 +353,9 @@ double? _extractNutrientValue(
 String? extractServing(FoodModel food) {
   // Try quantity + unit first
   if ((food.servingQty ?? 0) > 0 && (food.servingUnitRaw?.isNotEmpty == true)) {
-    final qty = food.servingQty!.toStringAsFixed(food.servingQty! % 1 == 0 ? 0 : 1);
+    final qty = food.servingQty!.toStringAsFixed(
+      food.servingQty! % 1 == 0 ? 0 : 1,
+    );
     final unit = _normalizeUnit(food.servingUnitRaw!);
     return '$qty $unit';
   }

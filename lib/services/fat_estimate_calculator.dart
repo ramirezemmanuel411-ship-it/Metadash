@@ -97,13 +97,19 @@ class FatEstimateCalculator {
   }) {
     // Calculate raw estimate using current data
     List<double> rateRange = _getRateRange(
-      _calculateDeltaScore(intakeDelta: intakeDelta, activityDelta: activityDelta),
+      _calculateDeltaScore(
+        intakeDelta: intakeDelta,
+        activityDelta: activityDelta,
+      ),
     );
 
     double rateLow = rateRange[0];
     double rateHigh = rateRange[1];
 
-    double clampedDays = reentryStartToCurrentDays.toDouble().clamp(1, double.infinity);
+    double clampedDays = reentryStartToCurrentDays.toDouble().clamp(
+      1,
+      double.infinity,
+    );
     double rawFatLow = rateLow * clampedDays;
     double rawFatHigh = rateHigh * clampedDays;
 
@@ -124,12 +130,21 @@ class FatEstimateCalculator {
     // Anti-punish guardrail: prevent sharp upward jumps
     if (lastRefineWeightDate != null) {
       DateTime now = DateTime.now();
-      int daysSinceLastRefine = now.difference(lastRefineWeightDate).inDays.clamp(1, double.infinity as int);
+      int daysSinceLastRefine = now
+          .difference(lastRefineWeightDate)
+          .inDays
+          .clamp(1, double.infinity as int);
       double maxIncreaseLow = 0.3 * daysSinceLastRefine;
       double maxIncreaseHigh = 0.3 * daysSinceLastRefine;
 
-      newLow = newLow.clamp(previousEstimateLow - maxIncreaseLow, double.infinity);
-      newHigh = (newHigh).clamp(double.negativeInfinity, previousEstimateHigh + maxIncreaseHigh);
+      newLow = newLow.clamp(
+        previousEstimateLow - maxIncreaseLow,
+        double.infinity,
+      );
+      newHigh = (newHigh).clamp(
+        double.negativeInfinity,
+        previousEstimateHigh + maxIncreaseHigh,
+      );
     }
 
     // Ensure bounds are valid
@@ -172,6 +187,9 @@ class FatEstimateCalculator {
   /// Get days in reentry window
   static int getReentryDays(DateTime startDate, {DateTime? endDate}) {
     final actualEndDate = endDate ?? DateTime.now();
-    return actualEndDate.difference(startDate).inDays.clamp(1, double.infinity as int);
+    return actualEndDate
+        .difference(startDate)
+        .inDays
+        .clamp(1, double.infinity as int);
   }
 }

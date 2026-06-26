@@ -32,7 +32,8 @@ class _MacroCalcScreenState extends State<MacroCalcScreen> {
       return;
     }
 
-    final resolved = (await userState.db.getDataInputsSettings(user.id!)) ??
+    final resolved =
+        (await userState.db.getDataInputsSettings(user.id!)) ??
         DataInputsSettings.defaults(user.id!);
     await userState.db.createOrUpdateDataInputsSettings(resolved);
 
@@ -84,56 +85,56 @@ class _MacroCalcScreenState extends State<MacroCalcScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Macro Calculations'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Control how calories are calculated from macros.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black.withOpacity(0.5),
-              height: 1.4,
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  'Control how calories are calculated from macros.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: context.colors.textPrimary.withValues(alpha: 0.5),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _SectionCard(
+                  children: [
+                    _ValueRow(
+                      title: 'Calculation Mode',
+                      value: _macroCalcMode,
+                      onTap: _selectCalcMode,
+                    ),
+                    const _SectionDivider(),
+                    _ToggleRow(
+                      title: 'Show Fiber',
+                      value: _showFiber,
+                      onChanged: (value) async {
+                        setState(() => _showFiber = value);
+                        await _saveSettings();
+                      },
+                    ),
+                    const _SectionDivider(),
+                    _ToggleRow(
+                      title: 'Show Sugar',
+                      value: _showSugar,
+                      onChanged: (value) async {
+                        setState(() => _showSugar = value);
+                        await _saveSettings();
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-          _SectionCard(
-            children: [
-              _ValueRow(
-                title: 'Calculation Mode',
-                value: _macroCalcMode,
-                onTap: _selectCalcMode,
-              ),
-              const _SectionDivider(),
-              _ToggleRow(
-                title: 'Show Fiber',
-                value: _showFiber,
-                onChanged: (value) async {
-                  setState(() => _showFiber = value);
-                  await _saveSettings();
-                },
-              ),
-              const _SectionDivider(),
-              _ToggleRow(
-                title: 'Show Sugar',
-                value: _showSugar,
-                onChanged: (value) async {
-                  setState(() => _showSugar = value);
-                  await _saveSettings();
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
@@ -152,10 +153,10 @@ class _SingleSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: Text(title),
       ),
@@ -169,7 +170,10 @@ class _SingleSelectScreen extends StatelessWidget {
                   InkWell(
                     onTap: () => Navigator.pop(context, entry.key),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -179,10 +183,10 @@ class _SingleSelectScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   entry.key,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
+                                    color: context.colors.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -190,18 +194,26 @@ class _SingleSelectScreen extends StatelessWidget {
                                   entry.value,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.black.withOpacity(0.55),
+                                    color: context.colors.textPrimary
+                                        .withValues(alpha: 0.55),
                                     height: 1.35,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Radio<String>(
-                            value: entry.key,
-                            groupValue: selected,
-                            activeColor: Palette.forestGreen,
-                            onChanged: (_) => Navigator.pop(context, entry.key),
+                          InkWell(
+                            onTap: () => Navigator.pop(context, entry.key),
+                            child: Icon(
+                              selected == entry.key
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: selected == entry.key
+                                  ? context.colors.accent
+                                  : context.colors.textSecondary.withValues(
+                                      alpha: 0.38,
+                                    ),
+                            ),
                           ),
                         ],
                       ),
@@ -231,7 +243,7 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: context.colors.textMuted.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -250,7 +262,7 @@ class _SectionDivider extends StatelessWidget {
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      color: Colors.black.withOpacity(0.06),
+      color: context.colors.divider.withValues(alpha: 0.06),
     );
   }
 }
@@ -277,10 +289,10 @@ class _ValueRow extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: context.colors.textPrimary,
                 ),
               ),
             ),
@@ -288,14 +300,14 @@ class _ValueRow extends StatelessWidget {
               value,
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.black.withOpacity(0.55),
+                color: context.colors.textPrimary.withValues(alpha: 0.55),
               ),
             ),
             const SizedBox(width: 8),
             Icon(
               Icons.chevron_right,
               size: 20,
-              color: Colors.black.withOpacity(0.25),
+              color: context.colors.textMuted,
             ),
           ],
         ),
@@ -324,10 +336,10 @@ class _ToggleRow extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: context.colors.textPrimary,
               ),
             ),
           ),

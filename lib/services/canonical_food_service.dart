@@ -2,6 +2,9 @@ import '../data/models/food_model.dart';
 import '../data/models/food_search_result_raw.dart';
 import 'canonical_food_parser.dart';
 import 'canonical_food_ranker.dart';
+import 'package:logger/logger.dart' as logger;
+
+final log = logger.Logger();
 
 /// Service integrating canonical food parsing into search results
 ///
@@ -22,7 +25,9 @@ class CanonicalFoodService {
   }) {
     if (results.isEmpty) return results;
 
-    print('🔍 [Canonical] Processing ${results.length} results for query: $query');
+    log.i(
+      '🔍 [Canonical] Processing ${results.length} results for query: $query',
+    );
 
     // Extract raw results from FoodModel
     final rawResults = <FoodSearchResultRaw>[];
@@ -34,11 +39,11 @@ class CanonicalFoodService {
     }
 
     if (rawResults.isEmpty) {
-      print('⚠️ [Canonical] No raw results extracted');
+      log.i('⚠️ [Canonical] No raw results extracted');
       return results;
     }
 
-    print('🔍 [Canonical] Extracted ${rawResults.length} raw results');
+    log.i('🔍 [Canonical] Extracted ${rawResults.length} raw results');
 
     // Group and select representatives
     final groups = CanonicalFoodParser.groupAndSelectRepresentatives(
@@ -46,11 +51,11 @@ class CanonicalFoodService {
     );
 
     if (groups.isEmpty) {
-      print('⚠️ [Canonical] No groups formed');
+      log.i('⚠️ [Canonical] No groups formed');
       return results;
     }
 
-    print('🔍 [Canonical] Formed ${groups.length} groups');
+    log.i('🔍 [Canonical] Formed ${groups.length} groups');
 
     // Rank groups by query relevance
     final rankedGroups = CanonicalFoodRanker.rankGroups(
@@ -58,7 +63,7 @@ class CanonicalFoodService {
       query,
     );
 
-    print('🔍 [Canonical] Ranked ${rankedGroups.length} groups');
+    log.i('🔍 [Canonical] Ranked ${rankedGroups.length} groups');
 
     // Convert back to FoodModel (representatives only)
     final canonicalResults = <FoodModel>[];
@@ -71,23 +76,36 @@ class CanonicalFoodService {
           orElse: () => results.first,
         );
 
-        // Create display version with canonical name
+        // Preserve the original food name whenever it's a real food descriptor.
+        // The canonical displayName is brand-centric — designed for USDA-style
+        // opaque strings — and would replace a clean name like "Chicken Breast"
+        // with the brand "Tony Downs Foods Co".
+        //
+        // Only use canonical.displayName when the name is empty, unknown, or
+        // clearly a corporate record (contains Inc / LLC / Corp / Ltd).
+        final nameLower = originalFood.name.trim().toLowerCase();
+        final isCorporateName = nameLower.isEmpty ||
+            nameLower == 'unknown' ||
+            RegExp(r'\b(inc|llc|corp|ltd)\b').hasMatch(nameLower) ||
+            nameLower.endsWith(' co') ||
+            nameLower.endsWith(' co.');
         final canonical = group.representativeCanonical!;
         final displayFood = originalFood.copyWith(
-          // Use canonical display name instead of raw DB string
-          name: canonical.displayName,
+          name: isCorporateName ? canonical.displayName : originalFood.name,
         );
 
         canonicalResults.add(displayFood);
       }
     }
 
-    print('🔍 [Canonical] Created ${canonicalResults.length} canonical results');
+    log.i(
+      '🔍 [Canonical] Created ${canonicalResults.length} canonical results',
+    );
 
     // Limit results if requested
     if (maxResults != null && canonicalResults.length > maxResults) {
       final limited = canonicalResults.take(maxResults).toList();
-      print('🔍 [Canonical] Limited to $maxResults results');
+      log.i('🔍 [Canonical] Limited to $maxResults results');
       return limited;
     }
 

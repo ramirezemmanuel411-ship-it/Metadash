@@ -5,10 +5,12 @@ class AiSuggestionRepository {
   final FatSecretRemoteDatasource _fatSecret;
 
   AiSuggestionRepository({FatSecretRemoteDatasource? fatSecret})
-      : _fatSecret = fatSecret ??
-            FatSecretRemoteDatasource(
-              backendUrl: 'https://fatsecret-proxy-production-d58c.up.railway.app',
-            );
+    : _fatSecret =
+          fatSecret ??
+          FatSecretRemoteDatasource(
+            backendUrl:
+                'https://fatsecret-proxy-production-d58c.up.railway.app',
+          );
 
   Future<List<FoodModel>> searchRestaurantItems(String query) async {
     final data = await _fatSecret.searchFoods(query);

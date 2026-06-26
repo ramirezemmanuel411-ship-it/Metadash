@@ -9,7 +9,7 @@ import '../../shared/date_utils.dart';
 import 'dashboard_state.dart';
 import 'horizontal_date_wheel_picker.dart';
 import 'calorie_progress_ring.dart';
-import 'macro_progress_bars.dart';
+import '../../providers/dashboard_layout_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   final DateTime selectedDay;
@@ -80,14 +80,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   void _handleSelectedDateChanged() {
     final selectedDate = _dashboardState.selectedDate;
-    if (_lastNotifiedDate != null && AppDateUtils.isSameDay(_lastNotifiedDate!, selectedDate)) {
+    if (_lastNotifiedDate != null &&
+        AppDateUtils.isSameDay(_lastNotifiedDate!, selectedDate)) {
       return;
     }
-    final daysDiff = DateUtils.dateOnly(selectedDate)
-        .difference(DateUtils.dateOnly(widget.selectedDay))
-        .inDays;
+    final daysDiff = DateUtils.dateOnly(
+      selectedDate,
+    ).difference(DateUtils.dateOnly(widget.selectedDay)).inDays;
     if (daysDiff != 0) {
       widget.onDayChanged(daysDiff);
     }
@@ -112,7 +120,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final settings = userState.metabolicSettings;
     final endDate = DateUtils.dateOnly(_dashboardState.selectedDate);
     final startDate = endDate.subtract(const Duration(days: 6));
-    final logs = await userState.db.getDailyLogsByUserAndDateRange(user.id!, startDate, endDate);
+    final logs = await userState.db.getDailyLogsByUserAndDateRange(
+      user.id!,
+      startDate,
+      endDate,
+    );
 
     final logByDate = <DateTime, dynamic>{
       for (final log in logs) DateUtils.dateOnly(log.date): log,
@@ -151,71 +163,836 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ChangeNotifierProvider.value(
       value: _dashboardState,
       child: Scaffold(
+        backgroundColor: context.colors.background,
         appBar: AppBar(
-          title: const Text('Dashboard'),
+          backgroundColor: context.colors.background,
+          elevation: 0,
+          title: const Text(
+            'Dashboard',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
         ),
-        body: Stack(
+        body: _DashboardBody(
+          weeklyDeficit: _weeklyDeficit,
+          weeklyTDEE: _weeklyTDEE,
+          loadingWeekly: _loadingWeekly,
+          onOpenDiary: widget.onOpenDiary,
+          greeting: _greeting(),
+          userName: widget.userState?.currentUser?.name.split(' ').first,
+        ),
+      ),
+    );
+  }
+}
+
+// ── _DashboardBody ────────────────────────────────────────────────────────────
+
+class _DashboardBody extends StatelessWidget {
+  final List<double> weeklyDeficit;
+  final List<double> weeklyTDEE;
+  final bool loadingWeekly;
+  final VoidCallback? onOpenDiary;
+  final String greeting;
+  final String? userName;
+
+  const _DashboardBody({
+    required this.weeklyDeficit,
+    required this.weeklyTDEE,
+    required this.loadingWeekly,
+    this.onOpenDiary,
+    required this.greeting,
+    this.userName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final layout = context.watch<DashboardLayoutProvider>();
+    final state = context.watch<DashboardState>();
+    final data = state.selectedData;
+    final userWeight = context.read<UserState>().currentUser?.weight ?? 0.0;
+
+    // ── Pre-computed derived values ─────────────────────────────────────────────────
+    final profileUser = context.read<UserState>().currentUser;
+    double? profileBMI;
+    if (profileUser != null &&
+        profileUser.weight > 0 &&
+        profileUser.height > 0) {
+      profileBMI =
+          (profileUser.weight / (profileUser.height * profileUser.height)) *
+          703;
+    }
+    int movementStreakDays = 0;
+    for (int i = weeklyDeficit.length - 1; i >= 0; i--) {
+      if (weeklyDeficit[i] != 0) {
+        movementStreakDays++;
+      } else {
+        break;
+      }
+    }
+    final weekTotalDeficit = weeklyDeficit.fold(0.0, (a, b) => a + b);
+    final nonZeroTDEE = weeklyTDEE.where((v) => v > 0).toList();
+    final avgWeeklyTDEE = nonZeroTDEE.isNotEmpty
+        ? nonZeroTDEE.fold(0.0, (a, b) => a + b) / nonZeroTDEE.length
+        : 0.0;
+
+    // Build ordered rows, pairing compact widgets side-by-side
+    final rows = <Widget>[];
+    final buf = <String>[];
+    final seenWidgetIds = <String>{};
+
+    String normalizeWidgetId(String id) {
+      if (id == 'calories') return 'calorie_balance';
+      if (id == 'weight_trend') return 'weight';
+      return id;
+    }
+
+    Widget fullCard(String id) {
+      switch (id) {
+        case 'calorie_balance':
+        case 'calories':
+          {
+            final remaining = data.caloriesGoal - data.caloriesConsumed;
+            final isOverGoal = remaining < 0;
+            final onPaceThreshold = math.max(75, data.caloriesGoal * 0.05);
+            final isOnPace = !isOverGoal && remaining <= onPaceThreshold;
+            final statusBadge = isOverGoal
+                ? 'Over Goal'
+                : isOnPace
+                ? 'On Pace'
+                : 'In Deficit';
+            final statusColor = isOverGoal
+                ? const Color(0xFFB03030)
+                : Palette.forestGreen;
+            return _CalorieBalanceCard(
+              onTap: onOpenDiary,
+              consumed: data.caloriesConsumed,
+              target: data.caloriesGoal,
+              statusBadge: statusBadge,
+              statusColor: statusColor,
+              accentColor: context.colors.accent,
+            );
+          }
+        case 'macros':
+          {
+            final pPct = data.proteinGoal > 0
+                ? (data.proteinConsumed / data.proteinGoal * 100).round()
+                : 0;
+            final statusText = pPct >= 90
+                ? 'Protein on track'
+                : pPct >= 60
+                ? 'Needs more protein'
+                : 'Protein gap';
+            return GestureDetector(
+              onTap: onOpenDiary,
+              child: _CardSection(
+                title: 'Macros',
+                tintColor: Palette.widgetProteinDay,
+                statusBadge: statusText,
+                statusColor: pPct >= 90
+                    ? Palette.widgetActivityDay
+                    : Palette.widgetProteinDay,
+                child: _MacrosCard(
+                  proteinConsumed: data.proteinConsumed,
+                  proteinGoal: data.proteinGoal,
+                  carbsConsumed: data.carbsConsumed,
+                  carbsGoal: data.carbsGoal,
+                  fatConsumed: data.fatConsumed,
+                  fatGoal: data.fatGoal,
+                ),
+              ),
+            );
+          }
+        case 'steps':
+          {
+            final stepPct = data.stepsGoal > 0
+                ? data.stepsTaken / data.stepsGoal
+                : 0.0;
+            final stepStatus = stepPct >= 1.0
+                ? 'Goal reached!'
+                : stepPct >= 0.75
+                ? 'Almost there'
+                : stepPct >= 0.5
+                ? 'Halfway'
+                : 'Keep moving';
+            return _CardSection(
+              title: 'Activity',
+              tintColor: Palette.widgetStepsDay,
+              statusBadge: stepStatus,
+              statusColor: stepPct >= 1.0
+                  ? Palette.widgetActivityDay
+                  : Palette.widgetStepsDay,
+              child: _StepsCard(
+                stepsTaken: data.stepsTaken,
+                stepsGoal: data.stepsGoal,
+              ),
+            );
+          }
+        case 'weekly_deficit':
+          {
+            final weekLbs = weekTotalDeficit / 3500;
+            final energyTint =
+                Theme.of(context).brightness == Brightness.dark
+                ? Palette.widgetEnergyDay
+                : Palette.forestGreen;
+            final weekStatus = weekLbs < -0.05
+                ? '${weekLbs.abs().toStringAsFixed(2)} lb deficit pace'
+                : weekLbs > 0.05
+                ? '+${weekLbs.abs().toStringAsFixed(2)} lb surplus pace'
+                : 'Maintenance pace';
+            return _CardSection(
+              title: 'Energy Balance',
+              tintColor: energyTint,
+              statusBadge: weekLbs < -0.02
+                  ? 'In Deficit'
+                  : weekLbs > 0.02
+                  ? 'In Surplus'
+                  : 'Maintenance',
+              statusColor: weekLbs < -0.02
+                  ? Palette.widgetActivityDay
+                  : weekLbs > 0.02
+                  ? const Color(0xFFB03030)
+                  : energyTint,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    weekStatus,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: context.colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _WeeklyDeficitChart(
+                    dailyDeficit: weeklyDeficit,
+                    dailyTDEE: weeklyTDEE,
+                    endDate: state.selectedDate,
+                    isLoading: loadingWeekly,
+                  ),
+                ],
+              ),
+            );
+          }
+        case 'goal_projection':
+          {
+            final goalWeight = profileUser?.goalWeight ?? 0;
+            final weeklyRateLbs = weekTotalDeficit / 3500;
+            final hasGoal = userWeight > 0 && goalWeight > 0;
+            final needToLose = userWeight > goalWeight;
+            final towardRate = needToLose ? -weeklyRateLbs : weeklyRateLbs;
+            final reached = hasGoal && (userWeight - goalWeight).abs() < 0.5;
+            final onPace = towardRate > 0.05;
+            return _CardSection(
+              title: 'Goal Projection',
+              tintColor: Palette.widgetTDEEDay,
+              statusBadge: !hasGoal
+                  ? null
+                  : reached
+                  ? 'Reached'
+                  : onPace
+                  ? 'On pace'
+                  : 'Off pace',
+              statusColor: (reached || onPace)
+                  ? Palette.widgetActivityDay
+                  : const Color(0xFFB03030),
+              child: !hasGoal
+                  ? const _EmptyMetricCard(
+                      hint: 'Set a goal weight',
+                      icon: Icons.flag_outlined,
+                      color: Palette.widgetTDEEDay,
+                    )
+                  : _GoalProjectionCard(
+                      currentWeight: userWeight,
+                      goalWeight: goalWeight,
+                      weeklyChangeLbs: weeklyRateLbs,
+                    ),
+            );
+          }
+        case 'water_intake':
+          return _CardSection(
+            title: 'Water Intake',
+            child: _WaterIntakeCard(waterOz: data.waterOz),
+          );
+        case 'sleep_score':
+          return _CardSection(
+            title: 'Sleep',
+            child: _SleepCard(sleepMinutes: data.sleepMinutes),
+          );
+        case 'workout_performance':
+          return _CardSection(
+            title: 'Workout Performance',
+            tintColor: const Color(0xFFAA5A10),
+            child: _WorkoutPerformanceCard(
+              calories: data.workoutCalories,
+              durationMinutes: data.workoutDurationMinutes,
+              workoutType: data.workoutType,
+            ),
+          );
+        case 'weight':
+        case 'weight_trend':
+          return _CardSection(
+            title: 'Weight',
+            tintColor: Palette.widgetWeightDay,
+            statusBadge: userWeight > 0 ? 'Logged' : 'Not logged',
+            statusColor: userWeight > 0
+                ? Palette.widgetWeightDay
+                : context.colors.textMuted,
+            child: _WeightCard(currentWeight: userWeight),
+          );
+        case 'tdee':
+          {
+            final lastTDEE = weeklyTDEE.lastWhere(
+              (v) => v > 0,
+              orElse: () => 0,
+            );
+            final delta = avgWeeklyTDEE > 0 ? lastTDEE - avgWeeklyTDEE : 0;
+            final hasTrend = avgWeeklyTDEE > 0 && lastTDEE > 0;
+            final trendBadge = !hasTrend
+                ? (data.tdee != null && data.tdee! > 0 ? 'Active' : 'No data')
+                : delta > 50
+                ? 'Rising'
+                : delta < -50
+                ? 'Trending down'
+                : 'Stable';
+            return _CardSection(
+              title: 'Metabolism',
+              tintColor: Palette.widgetTDEEDay,
+              statusBadge: trendBadge,
+              statusColor: Palette.widgetTDEEDay,
+              child: _TDEECard(
+                tdee: data.tdee,
+                avgTDEE: avgWeeklyTDEE,
+                weeklyTDEE: weeklyTDEE,
+              ),
+            );
+          }
+        case 'resting_hr':
+          return _CardSection(
+            title: 'Resting Heart Rate',
+            child: _RestingHRCard(bpm: data.restingHR),
+          );
+        case 'body_composition':
+          return _CardSection(
+            title: 'Body Composition',
+            tintColor: const Color(0xFF6B42A0),
+            child: _BodyCompositionCard(bmi: profileBMI),
+          );
+        case 'workout_consistency':
+          {
+            final activeDaysCount = weeklyTDEE.where((v) => v > 0).length;
+            final consistStatus = activeDaysCount >= 6
+                ? 'Outstanding'
+                : activeDaysCount >= 4
+                ? 'Strong week'
+                : activeDaysCount >= 2
+                ? 'Keep pushing'
+                : 'Just getting started';
+            return _CardSection(
+              title: 'Consistency',
+              tintColor: Palette.widgetConsistDay,
+              statusBadge: consistStatus,
+              statusColor: activeDaysCount >= 4
+                  ? Palette.widgetActivityDay
+                  : Palette.widgetConsistDay,
+              child: _WorkoutConsistencyCard(
+                weeklyTDEE: weeklyTDEE,
+                streakDays: movementStreakDays,
+              ),
+            );
+          }
+        case 'meal_timing':
+          {
+            final firstMeal = data.firstMealTime;
+            final lastMeal = data.lastMealTime;
+            return _CardSection(
+              title: 'Meal Timing',
+              tintColor: const Color(0xFF2E8B57),
+              statusBadge: firstMeal != null ? 'Tracking' : null,
+              statusColor: const Color(0xFF2E8B57),
+              child: (firstMeal == null || lastMeal == null)
+                  ? const _EmptyMetricCard(
+                      hint: 'No meals logged yet',
+                      icon: Icons.schedule_outlined,
+                      color: Color(0xFF2E8B57),
+                    )
+                  : _MealTimingCard(first: firstMeal, last: lastMeal),
+            );
+          }
+        case 'fiber':
+          return _CardSection(
+            title: 'Fiber & Micronutrients',
+            child: const _EmptyMetricCard(
+              hint: 'No data yet',
+              icon: Icons.grass_outlined,
+              color: Color(0xFF2E8B57),
+            ),
+          );
+        case 'measurements':
+          return _CardSection(
+            title: 'Body Measurements',
+            child: const _EmptyMetricCard(
+              hint: 'No measurements yet',
+              icon: Icons.straighten_outlined,
+              color: Color(0xFF8B5CF6),
+            ),
+          );
+        case 'recovery_index':
+          {
+            final hrv = data.hrv ?? 0;
+            if (hrv <= 0) {
+              return _CardSection(
+                title: 'Recovery Index',
+                tintColor: const Color(0xFF0EA5E9),
+                child: const _EmptyMetricCard(
+                  hint: 'Connect Apple Health (HRV)',
+                  icon: Icons.battery_charging_full_outlined,
+                  color: Color(0xFF0EA5E9),
+                ),
+              );
+            }
+            final r = _recoveryScore(hrv, data.sleepMinutes, data.restingHR);
+            final sleepH = (data.sleepMinutes ?? 0) / 60;
+            return _CardSection(
+              title: 'Recovery Index',
+              tintColor: const Color(0xFF0EA5E9),
+              statusBadge: r.label,
+              statusColor: r.color,
+              child: _ScoreMetricCard(
+                icon: Icons.battery_charging_full_rounded,
+                color: r.color,
+                score: r.score,
+                caption:
+                    'HRV ${hrv.round()}ms · ${sleepH.toStringAsFixed(1)}h sleep',
+              ),
+            );
+          }
+        case 'stress_level':
+          {
+            final hrv = data.hrv ?? 0;
+            if (hrv <= 0) {
+              return _CardSection(
+                title: 'Stress',
+                tintColor: const Color(0xFF8B5CF6),
+                child: const _EmptyMetricCard(
+                  hint: 'Connect Apple Health (HRV)',
+                  icon: Icons.self_improvement_outlined,
+                  color: Color(0xFF8B5CF6),
+                ),
+              );
+            }
+            final st = _stressScore(hrv, data.restingHR, data.workoutCalories);
+            return _CardSection(
+              title: 'Stress',
+              tintColor: const Color(0xFF8B5CF6),
+              statusBadge: st.label,
+              statusColor: st.color,
+              child: _ScoreMetricCard(
+                icon: Icons.self_improvement_rounded,
+                color: st.color,
+                score: st.score,
+                caption:
+                    'HRV ${hrv.round()}ms · RHR ${data.restingHR ?? '—'} bpm',
+              ),
+            );
+          }
+        case 'mindfulness':
+          return _CardSection(
+            title: 'Mindfulness',
+            child: const _EmptyMetricCard(
+              hint: 'No sessions logged',
+              icon: Icons.spa_outlined,
+              color: Color(0xFF0EA5E9),
+            ),
+          );
+        default:
+          return const SizedBox.shrink();
+      }
+    }
+
+    Widget compactCard(String id) {
+      switch (id) {
+        case 'calorie_balance':
+        case 'calories':
+          return _CompactCalorieBalanceCard(
+            consumed: data.caloriesConsumed,
+            target: data.caloriesGoal,
+            accentColor: context.colors.accent,
+          );
+        case 'macros':
+          return _CompactCard(
+            title: 'Protein',
+            icon: Icons.pie_chart_outline,
+            color: Palette.macroProtein,
+            value: '${data.proteinConsumed}g',
+            subtitle: 'of ${data.proteinGoal}g',
+            progress: data.proteinGoal > 0
+                ? (data.proteinConsumed / data.proteinGoal).clamp(0, 1)
+                : 0,
+          );
+        case 'steps':
+          return _CompactCard(
+            title: 'Steps',
+            icon: Icons.directions_walk,
+            color: const Color(0xFFEF8C2E),
+            value: data.stepsTaken >= 1000
+                ? '${(data.stepsTaken / 1000).toStringAsFixed(1)}k'
+                : '${data.stepsTaken}',
+            subtitle: 'of ${data.stepsGoal}',
+            progress: data.stepsGoal > 0
+                ? (data.stepsTaken / data.stepsGoal).clamp(0, 1)
+                : 0,
+          );
+        case 'water_intake':
+          return _CompactCard(
+            title: 'Water',
+            icon: Icons.water_drop,
+            color: const Color(0xFF0EA5E9),
+            value: '${data.waterOz.round()}',
+            subtitle: 'of 64 oz',
+            progress: (data.waterOz / 64).clamp(0.0, 1.0),
+          );
+        case 'sleep_score':
+          {
+            final sm = data.sleepMinutes ?? 0;
+            return _CompactCard(
+              title: 'Sleep',
+              icon: Icons.bedtime,
+              color: const Color(0xFF0EA5E9),
+              value: sm > 0 ? '${sm ~/ 60}h ${sm % 60}m' : '—',
+              subtitle: sm > 0 ? 'last night' : 'No data yet',
+            );
+          }
+        case 'workout_performance':
+          {
+            final wc = data.workoutCalories ?? 0;
+            return _CompactCard(
+              title: 'Workout',
+              icon: Icons.fitness_center,
+              color: const Color(0xFFEF8C2E),
+              value: wc > 0 ? '$wc' : '—',
+              subtitle: wc > 0 ? 'kcal burned' : 'No data yet',
+            );
+          }
+        case 'weight':
+        case 'weight_trend':
+          return _CompactCard(
+            title: 'Weight',
+            icon: Icons.monitor_weight_outlined,
+            color: const Color(0xFF8B5CF6),
+            value: userWeight > 0 ? userWeight.toStringAsFixed(1) : '—',
+            subtitle: 'lbs',
+          );
+        case 'tdee':
+          return _CompactCard(
+            title: 'TDEE',
+            icon: Icons.local_fire_department_outlined,
+            color: const Color(0xFF4C7FA8),
+            value: data.tdee != null ? '${data.tdee!.round()}' : '—',
+            subtitle: 'kcal/day',
+          );
+        case 'resting_hr':
+          return _CompactCard(
+            title: 'Resting HR',
+            icon: Icons.favorite_outline,
+            color: const Color(0xFFD0021B),
+            value: data.restingHR != null ? '${data.restingHR}' : '—',
+            subtitle: 'bpm',
+          );
+        case 'body_composition':
+          return _CompactCard(
+            title: 'BMI',
+            icon: Icons.accessibility_new_outlined,
+            color: const Color(0xFF8B5CF6),
+            value: profileBMI != null ? profileBMI.toStringAsFixed(1) : '—',
+            subtitle: 'Body Mass Index',
+          );
+        case 'workout_consistency':
+          return _CompactCard(
+            title: 'Consistency',
+            icon: Icons.event_available_outlined,
+            color: const Color(0xFFEF8C2E),
+            value: '${weeklyTDEE.where((v) => v > 0).length}/7',
+            subtitle: 'active days',
+            progress: weeklyTDEE.where((v) => v > 0).length / 7,
+          );
+        case 'recovery_index':
+          {
+            final hrv = data.hrv ?? 0;
+            final r = hrv > 0
+                ? _recoveryScore(hrv, data.sleepMinutes, data.restingHR)
+                : null;
+            return _CompactCard(
+              title: 'Recovery',
+              icon: Icons.battery_charging_full_outlined,
+              color: const Color(0xFF0EA5E9),
+              value: r != null ? '${r.score}' : '—',
+              subtitle: r != null ? r.label : 'No HRV data',
+              progress: r != null ? r.score / 100 : null,
+            );
+          }
+        case 'stress_level':
+          {
+            final hrv = data.hrv ?? 0;
+            final st = hrv > 0
+                ? _stressScore(hrv, data.restingHR, data.workoutCalories)
+                : null;
+            return _CompactCard(
+              title: 'Stress',
+              icon: Icons.self_improvement_outlined,
+              color: const Color(0xFF8B5CF6),
+              value: st != null ? '${st.score}' : '—',
+              subtitle: st != null ? st.label : 'No HRV data',
+              progress: st != null ? st.score / 100 : null,
+            );
+          }
+        case 'goal_projection':
+          {
+            final goalWeight = profileUser?.goalWeight ?? 0;
+            final has = userWeight > 0 && goalWeight > 0;
+            final remaining = (userWeight - goalWeight).abs();
+            return _CompactCard(
+              title: 'Goal',
+              icon: Icons.flag_outlined,
+              color: Palette.widgetTDEEDay,
+              value: has ? remaining.toStringAsFixed(1) : '—',
+              subtitle: has ? 'lb to goal' : 'Set a goal',
+            );
+          }
+        case 'meal_timing':
+          {
+            final firstMeal = data.firstMealTime;
+            return _CompactCard(
+              title: 'Meal Timing',
+              icon: Icons.schedule_outlined,
+              color: const Color(0xFF2E8B57),
+              value: firstMeal != null ? _formatTimeOfDay(firstMeal) : '—',
+              subtitle: firstMeal != null ? 'first meal' : 'No data yet',
+            );
+          }
+        default:
+          final info = DashboardLayoutProvider.catalog.firstWhere(
+            (w) => w.id == id,
+            orElse: () => DashWidgetInfo(
+              id: id,
+              name: id,
+              icon: Icons.widgets_outlined,
+              description: '',
+              category: DashWidgetCategory.performance,
+            ),
+          );
+          return _CompactCard(
+            title: info.name,
+            icon: info.icon,
+            color: info.category.color,
+            value: '—',
+            subtitle: '',
+          );
+      }
+    }
+
+    void flushBuf() {
+      if (buf.isEmpty) return;
+      if (buf.length == 1) {
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: compactCard(buf[0])),
+              const SizedBox(width: 12),
+              const Expanded(child: SizedBox.shrink()),
+            ],
+          ),
+        );
+      } else {
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: compactCard(buf[0])),
+              const SizedBox(width: 12),
+              Expanded(child: compactCard(buf[1])),
+            ],
+          ),
+        );
+      }
+      rows.add(const SizedBox(height: 12));
+      buf.clear();
+    }
+
+    for (final rawId in layout.activeIds) {
+      final id = normalizeWidgetId(rawId);
+      if (!seenWidgetIds.add(id)) continue;
+
+      final sz = layout.sizeOf(id);
+      if (sz == DashWidgetSize.compact) {
+        buf.add(id);
+        if (buf.length == 2) flushBuf();
+      } else {
+        flushBuf();
+        final w = fullCard(id);
+        if (w is! SizedBox) {
+          rows.add(w);
+          rows.add(const SizedBox(height: 12));
+        }
+      }
+    }
+    flushBuf();
+    rows.add(
+      _CardSection(
+        title: 'Quick Actions',
+        tintColor: context.colors.accent,
+        child: _QuickActionsRow(),
+      ),
+    );
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      children: [
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: greeting,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: colors.textMuted,
+                ),
+              ),
+              if (userName != null)
+                TextSpan(
+                  text: ', $userName',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textSecondary,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        HorizontalDateWheelPicker(
+          selectedDate: state.selectedDate,
+          onSelectedDateChanged: state.setSelectedDate,
+        ),
+        const SizedBox(height: 16),
+        ...rows,
+      ],
+    );
+  }
+}
+
+// ── Premium compact square card ───────────────────────────────────────────────
+// Each compact card gets a subtle tinted background derived from its accent
+// color, a bold value, a status subtitle, and an optional progress bar.
+
+class _CompactCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String subtitle;
+  final double? progress;
+
+  const _CompactCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.subtitle,
+    this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AspectRatio(
+      aspectRatio: 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: isDark ? 0.16 : 0.11),
+              colors.surface,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: color.withValues(alpha: isDark ? 0.22 : 0.15),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: color.withValues(alpha: isDark ? 0.12 : 0.07),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Consumer<DashboardState>(
-                  builder: (context, state, _) {
-                    return HorizontalDateWheelPicker(
-                      selectedDate: state.selectedDate,
-                      onSelectedDateChanged: state.setSelectedDate,
-                    );
-                  },
+            _ConceptIconTile(
+              color: color,
+              icon: icon,
+              size: 30,
+              iconSize: 16,
+            ),
+            const Spacer(),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: colors.textPrimary,
+                height: 1.0,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (progress != null) ...[
+              const SizedBox(height: 7),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: (progress!).clamp(0.0, 1.0),
+                  minHeight: 4,
+                  backgroundColor: color.withValues(alpha: 0.14),
+                  valueColor: AlwaysStoppedAnimation(color),
                 ),
-                const SizedBox(height: 16),
-                Consumer<DashboardState>(
-                  builder: (context, state, _) {
-                    final data = state.selectedData;
-                    return GestureDetector(
-                      onTap: widget.onOpenDiary,
-                      child: _CardRowSummary(
-                        calories: data.caloriesConsumed,
-                        goal: data.caloriesGoal,
-                        protein: data.proteinConsumed,
-                        carbs: data.carbsConsumed,
-                        fat: data.fatConsumed,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                Consumer<DashboardState>(
-                  builder: (context, state, _) {
-                    final data = state.selectedData;
-                    return _CardSection(
-                      title: 'Steps',
-                      child: _StepsCard(
-                        stepsTaken: data.stepsTaken,
-                        stepsGoal: data.stepsGoal,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                Consumer<DashboardState>(
-                  builder: (context, state, _) {
-                    return _CardSection(
-                      title: 'Weekly Deficit',
-                      child: _WeeklyDeficitChart(
-                        dailyDeficit: _weeklyDeficit,
-                        dailyTDEE: _weeklyTDEE,
-                        endDate: state.selectedDate,
-                        isLoading: _loadingWeekly,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                const _CardSection(
-                  title: 'Quick Actions',
-                  child: _QuickActionsRow(),
-                ),
-              ],
+              ),
+            ],
+            const SizedBox(height: 4),
+            Text(
+              title.toUpperCase(),
+              style: TextStyle(
+                fontSize: 8.5,
+                color: color.withValues(alpha: 0.85),
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
@@ -224,37 +1001,346 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _CardRowSummary extends StatelessWidget {
-  final int calories;
-  final int goal;
-  final int protein;
-  final int carbs;
-  final int fat;
+// ── Concept A baseline card ──────────────────────────────────────────────────
+// This is the first concrete Meta Dash widget language: calm biometric surface,
+// centered data instrument, status pill, and a lower inset metrics panel.
 
-  const _CardRowSummary({
-    required this.calories,
-    required this.goal,
-    required this.protein,
-    required this.carbs,
-    required this.fat,
+class _CalorieBalanceCard extends StatelessWidget {
+  final int consumed;
+  final int target;
+  final String statusBadge;
+  final Color statusColor;
+  final Color accentColor;
+  final VoidCallback? onTap;
+
+  const _CalorieBalanceCard({
+    required this.consumed,
+    required this.target,
+    required this.statusBadge,
+    required this.statusColor,
+    required this.accentColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = math.max(target - consumed, 0);
+    final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final conceptText = colors.textPrimary;
+    final conceptSecondary = colors.textSecondary;
+    final rimColor = isDark
+        ? accentColor.withValues(alpha: 0.22)
+        : colors.textMuted.withValues(alpha: 0.16);
+    final insetSurface = isDark ? colors.surfaceVariant : colors.surface;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.12),
+            blurRadius: 32,
+            offset: const Offset(0, 18),
+          ),
+          BoxShadow(
+            color: accentColor.withValues(alpha: isDark ? 0.18 : 0.10),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [colors.background, colors.surface],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: rimColor, width: 1.2),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(28),
+            splashColor: accentColor.withValues(alpha: 0.08),
+            highlightColor: accentColor.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _ConceptIconTile(color: accentColor),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Calorie Balance',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            height: 1.0,
+                            color: conceptText,
+                          ),
+                        ),
+                      ),
+                      _ConceptStatusPill(
+                        label: statusBadge,
+                        color: statusColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  CalorieProgressRing(
+                    consumed: consumed,
+                    target: target,
+                    accentColor: accentColor,
+                    statusColor: statusColor,
+                    textColor: conceptText,
+                    secondaryTextColor: conceptSecondary,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                    decoration: BoxDecoration(
+                      color: insetSurface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: rimColor,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ConceptMetric(
+                            label: 'Remaining',
+                            value: _formatCompactInt(remaining),
+                            unit: 'kcal',
+                            color: statusColor,
+                            textColor: conceptText,
+                            secondaryTextColor: conceptSecondary,
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 38,
+                          color: rimColor,
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 18),
+                            child: _ConceptMetric(
+                              label: 'Goal',
+                              value: _formatCompactInt(target),
+                              unit: 'kcal',
+                              color: conceptText,
+                              textColor: conceptText,
+                              secondaryTextColor: conceptSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactCalorieBalanceCard extends StatelessWidget {
+  final int consumed;
+  final int target;
+  final Color accentColor;
+
+  const _CompactCalorieBalanceCard({
+    required this.consumed,
+    required this.target,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+    final colors = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final conceptText = colors.textPrimary;
+    final conceptSecondary = colors.textSecondary;
+    final rim = isDark
+        ? accentColor.withValues(alpha: 0.20)
+        : colors.textMuted.withValues(alpha: 0.15);
+
+    return AspectRatio(
+      aspectRatio: 1.0,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [colors.background, colors.surface],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: rim),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.10),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _ConceptIconTile(color: accentColor, size: 32, iconSize: 17),
+                const Spacer(),
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: accentColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              _formatCompactInt(consumed),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                height: 0.92,
+                color: conceptText,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'of ${_formatCompactInt(target)} kcal goal',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: conceptSecondary,
+              ),
+            ),
+            const SizedBox(height: 11),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: colors.textMuted.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation(accentColor),
+              ),
+            ),
+            const SizedBox(height: 9),
+            Text(
+              'CALORIE BALANCE',
+              style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                color: accentColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConceptIconTile extends StatelessWidget {
+  final Color color;
+  final double size;
+  final double iconSize;
+  final IconData icon;
+
+  const _ConceptIconTile({
+    required this.color,
+    this.size = 50,
+    this.iconSize = 25,
+    this.icon = Icons.local_fire_department_rounded,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(
+              Colors.white.withValues(alpha: 0.44),
+              color.withValues(alpha: 0.10),
+            ),
+            color.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(size * 0.28),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      child: Column(
+      child: Icon(
+        icon,
+        color: color,
+        size: iconSize,
+      ),
+    );
+  }
+}
+
+class _ConceptStatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _ConceptStatusPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _SummaryRow(
-            calories: calories,
-            goal: goal,
-            protein: protein,
-            carbs: carbs,
-            fat: fat,
+          Icon(Icons.circle, size: 7, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: 0.2,
+            ),
           ),
         ],
       ),
@@ -262,72 +1348,472 @@ class _CardRowSummary extends StatelessWidget {
   }
 }
 
-class _CardSection extends StatelessWidget {
-  final String title;
-  final Widget child;
-  const _CardSection({required this.title, required this.child});
+class _ConceptMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final String unit;
+  final Color color;
+  final Color textColor;
+  final Color secondaryTextColor;
+
+  const _ConceptMetric({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+    required this.textColor,
+    required this.secondaryTextColor,
+  });
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: secondaryTextColor,
+          ),
+        ),
+        const SizedBox(height: 3),
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: value,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              TextSpan(
+                text: ' $unit',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _formatCompactInt(int value) {
+  final raw = value.toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < raw.length; i++) {
+    if (i > 0 && (raw.length - i) % 3 == 0) buffer.write(',');
+    buffer.write(raw[i]);
+  }
+  return buffer.toString();
+}
+
+String _formatTimeOfDay(DateTime t) {
+  final ampm = t.hour < 12 ? 'AM' : 'PM';
+  final h12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  return '$h12:${t.minute.toString().padLeft(2, '0')} $ampm';
+}
+
+const List<String> _kMonthAbbr = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+String _formatShortDate(DateTime d) {
+  final base = '${_kMonthAbbr[d.month - 1]} ${d.day}';
+  return d.year == DateTime.now().year ? base : '$base, ${d.year}';
+}
+
+// ── Recovery & stress scoring (from Apple Health HRV + sleep + resting HR) ────
+
+double _hrvScore(double hrv) {
+  if (hrv >= 70) return 1.0;
+  if (hrv >= 50) return 0.8;
+  if (hrv >= 35) return 0.6;
+  if (hrv >= 20) return 0.4;
+  return 0.25;
+}
+
+double _rhrScore(int? rhr) {
+  if (rhr == null || rhr == 0) return 0.6; // neutral when unknown
+  if (rhr < 55) return 1.0;
+  if (rhr <= 65) return 0.85;
+  if (rhr <= 75) return 0.65;
+  if (rhr <= 85) return 0.45;
+  return 0.3;
+}
+
+/// Readiness: weighted blend of HRV, sleep and resting HR.
+({int score, String label, Color color}) _recoveryScore(
+  double hrv,
+  int? sleepMinutes,
+  int? restingHR,
+) {
+  final sleepScore = ((sleepMinutes ?? 0) / 480).clamp(0.0, 1.0);
+  final s =
+      0.4 * _hrvScore(hrv) + 0.4 * sleepScore + 0.2 * _rhrScore(restingHR);
+  final score = (s * 100).round();
+  final label = score >= 80
+      ? 'Primed'
+      : score >= 60
+      ? 'Ready'
+      : score >= 40
+      ? 'Moderate'
+      : 'Strained';
+  final color = score >= 60
+      ? Palette.widgetActivityDay
+      : score >= 40
+      ? Palette.widgetWeightDay
+      : const Color(0xFFB03030);
+  return (score: score, label: label, color: color);
+}
+
+/// Physiological strain: low HRV + elevated resting HR + training load.
+({int score, String label, Color color}) _stressScore(
+  double hrv,
+  int? restingHR,
+  int? workoutCalories,
+) {
+  final load = ((workoutCalories ?? 0) / 700).clamp(0.0, 1.0);
+  final s =
+      0.5 * (1 - _hrvScore(hrv)) +
+      0.3 * (1 - _rhrScore(restingHR)) +
+      0.2 * load;
+  final score = (s * 100).round();
+  final label = score >= 70
+      ? 'High'
+      : score >= 45
+      ? 'Elevated'
+      : score >= 25
+      ? 'Moderate'
+      : 'Low';
+  final color = score >= 70
+      ? const Color(0xFFB03030)
+      : score >= 45
+      ? Palette.widgetWeightDay
+      : Palette.widgetActivityDay;
+  return (score: score, label: label, color: color);
+}
+
+/// A 0–100 score widget with an icon tile, value, progress bar and caption.
+class _ScoreMetricCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final int score;
+  final String caption;
+  const _ScoreMetricCard({
+    required this.icon,
+    required this.color,
+    required this.score,
+    required this.caption,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      children: [
+        _ConceptIconTile(color: color, icon: icon, size: 46, iconSize: 24),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$score',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                      color: colors.textPrimary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  Text(
+                    ' /100',
+                    style: TextStyle(fontSize: 12, color: colors.textMuted),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: (score / 100).clamp(0.0, 1.0),
+                  minHeight: 6,
+                  backgroundColor: color.withValues(alpha: 0.14),
+                  valueColor: AlwaysStoppedAnimation(color),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                caption,
+                style: TextStyle(fontSize: 11, color: colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Projects the date the user reaches their goal weight at the current weekly
+/// pace (derived from the rolling 7-day calorie deficit/surplus).
+class _GoalProjectionCard extends StatelessWidget {
+  final double currentWeight;
+  final double goalWeight;
+  final double weeklyChangeLbs; // signed; negative = losing weight
+  const _GoalProjectionCard({
+    required this.currentWeight,
+    required this.goalWeight,
+    required this.weeklyChangeLbs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    const tint = Palette.widgetTDEEDay;
+    final needToLose = currentWeight > goalWeight;
+    final remaining = (currentWeight - goalWeight).abs();
+    final towardRate = needToLose ? -weeklyChangeLbs : weeklyChangeLbs;
+    final reached = remaining < 0.5;
+    final onPace = towardRate > 0.05;
+
+    String headline;
+    String sub;
+    if (reached) {
+      headline = 'Reached';
+      sub = "You're at your goal weight";
+    } else if (!onPace) {
+      headline = '${remaining.toStringAsFixed(1)} lb to go';
+      sub = needToLose ? 'Not in a deficit this week' : 'Not in a surplus this week';
+    } else {
+      final weeks = remaining / towardRate;
+      if (weeks > 104) {
+        headline = '2+ yrs';
+        sub =
+            '${remaining.toStringAsFixed(1)} lb · ${towardRate.toStringAsFixed(1)} lb/wk';
+      } else {
+        final date = DateTime.now().add(Duration(days: (weeks * 7).round()));
+        headline = _formatShortDate(date);
+        sub =
+            '${remaining.toStringAsFixed(1)} lb to go · ${towardRate.toStringAsFixed(1)} lb/wk';
+      }
+    }
+
+    return Row(
+      children: [
+        const _ConceptIconTile(
+          color: tint,
+          icon: Icons.flag_rounded,
+          size: 46,
+          iconSize: 24,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                headline,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                sub,
+                style: TextStyle(fontSize: 12, color: colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          '${goalWeight.toStringAsFixed(0)} lb',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: tint,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Meal timing widget — eating window between the first and last logged meal,
+/// derived from the day's food entries.
+class _MealTimingCard extends StatelessWidget {
+  final DateTime first;
+  final DateTime last;
+  const _MealTimingCard({required this.first, required this.last});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final single = !last.isAfter(first);
+    final window = last.difference(first);
+    final wH = window.inHours;
+    final wM = window.inMinutes % 60;
+    return Row(
+      children: [
+        const _ConceptIconTile(
+          color: Color(0xFF2E8B57),
+          icon: Icons.schedule_rounded,
+          size: 46,
+          iconSize: 24,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                single ? _formatTimeOfDay(first) : '${wH}h ${wM}m',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                single
+                    ? 'First meal logged'
+                    : '${_formatTimeOfDay(first)} – ${_formatTimeOfDay(last)}',
+                style: TextStyle(fontSize: 12, color: colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        if (!single)
+          Text(
+            'window',
+            style: TextStyle(fontSize: 11, color: colors.textMuted),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Tinted full-width card section ───────────────────────────────────────────
+// Used for all named full-width dashboard widgets.
+// When [tintColor] is provided, the card uses a subtle tinted background
+// instead of the plain surface color.
+
+class _CardSection extends StatelessWidget {
+  final String title;
+  final Widget child;
+  final Color? tintColor;
+  final String? statusBadge;
+  final Color? statusColor;
+
+  const _CardSection({
+    required this.title,
+    required this.child,
+    this.tintColor,
+    this.statusBadge,
+    this.statusColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tc = tintColor;
+    final surface = context.colors.surface;
+    final borderColor = tc != null
+        ? tc.withValues(alpha: isDark ? 0.20 : 0.14)
+        : context.colors.divider;
+
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: tc != null
+              ? [tc.withValues(alpha: isDark ? 0.16 : 0.11), surface]
+              : [surface, surface],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+          if (tc != null)
+            BoxShadow(
+              color: tc.withValues(alpha: isDark ? 0.10 : 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
+          Row(
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: tc ?? context.colors.textMuted,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.7,
+                ),
+              ),
+              if (statusBadge != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: (statusColor ?? context.colors.accent).withValues(
+                      alpha: 0.12,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    statusBadge!,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor ?? context.colors.accent,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           child,
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryRow extends StatelessWidget {
-  final int calories;
-  final int goal;
-  final int protein;
-  final int carbs;
-  final int fat;
-
-  const _SummaryRow({
-    required this.calories,
-    required this.goal,
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          CalorieProgressRing(
-            consumed: calories,
-            target: goal,
-          ),
-          const SizedBox(height: 24),
-          MacroProgressBars(
-            proteinConsumed: protein,
-            proteinTarget: goal ~/ 8,
-            carbsConsumed: carbs,
-            carbsTarget: goal ~/ 2,
-            fatConsumed: fat,
-            fatTarget: goal ~/ 4,
-          ),
         ],
       ),
     );
@@ -342,27 +1828,88 @@ class _StepsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = stepsGoal > 0 ? (stepsTaken / stepsGoal).clamp(0.0, 1.0) : 0.0;
-    return Row(
+    const tint = Palette.widgetStepsDay;
+    final progress = stepsGoal > 0
+        ? (stepsTaken / stepsGoal).clamp(0.0, 1.0)
+        : 0.0;
+    final isGoalMet = stepsTaken >= stepsGoal && stepsGoal > 0;
+    final stepsStr = stepsTaken >= 1000
+        ? '${(stepsTaken / 1000).toStringAsFixed(1)}k'
+        : '$stepsTaken';
+    final statusStr = isGoalMet
+        ? 'Goal reached!'
+        : stepsGoal > 0
+        ? '${((1 - progress) * stepsGoal).round().toString()} steps to go'
+        : 'No goal set';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.directions_walk, color: Palette.forestGreen, size: 24),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('$stepsTaken / $stepsGoal steps', style: const TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.shade300,
-                  color: Palette.forestGreen,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const _ConceptIconTile(
+              color: tint,
+              icon: Icons.directions_walk_rounded,
+              size: 46,
+              iconSize: 24,
+            ),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: stepsStr,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: context.colors.textPrimary,
+                          height: 1.0,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      TextSpan(
+                        text: '  steps',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: context.colors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                Text(
+                  statusStr,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isGoalMet ? tint : context.colors.textMuted,
+                    fontWeight: isGoalMet ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            if (stepsGoal > 0)
+              Text(
+                'Goal: ${stepsGoal >= 1000 ? '${(stepsGoal / 1000).toStringAsFixed(0)}k' : '$stepsGoal'}',
+                style: TextStyle(fontSize: 11, color: context.colors.textMuted),
               ),
-            ],
+          ],
+        ),
+        const SizedBox(height: 14),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 7,
+            backgroundColor: tint.withValues(alpha: 0.12),
+            valueColor: AlwaysStoppedAnimation(
+              isGoalMet ? tint : tint.withValues(alpha: 0.75),
+            ),
           ),
         ),
       ],
@@ -392,13 +1939,21 @@ class _WeeklyDeficitChart extends StatelessWidget {
       );
     }
 
-    final values = dailyDeficit.length == 7 ? dailyDeficit : List<double>.filled(7, 0);
-    final tdeeValues = dailyTDEE.length == 7 ? dailyTDEE : List<double>.filled(7, 0);
-    final maxAbs = values.map((v) => v.abs()).fold(0.0, (a, b) => math.max(a, b));
+    final values = dailyDeficit.length == 7
+        ? dailyDeficit
+        : List<double>.filled(7, 0);
+    final tdeeValues = dailyTDEE.length == 7
+        ? dailyTDEE
+        : List<double>.filled(7, 0);
+    final maxAbs = values
+        .map((v) => v.abs())
+        .fold(0.0, (a, b) => math.max(a, b));
     final maxTDEE = tdeeValues.fold(0.0, (a, b) => math.max(a, b));
     final safeMax = math.max(maxAbs, maxTDEE);
     final safeMaxVal = safeMax == 0 ? 1.0 : safeMax;
-    final startDate = DateUtils.dateOnly(endDate).subtract(const Duration(days: 6));
+    final startDate = DateUtils.dateOnly(
+      endDate,
+    ).subtract(const Duration(days: 6));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,13 +1962,25 @@ class _WeeklyDeficitChart extends StatelessWidget {
         SizedBox(
           height: 140,
           child: Padding(
-            padding: const EdgeInsets.only(left: 32, right: 8, top: 8, bottom: 24),
+            padding: const EdgeInsets.only(
+              left: 32,
+              right: 8,
+              top: 8,
+              bottom: 24,
+            ),
             child: CustomPaint(
               painter: _ComboChartPainter(
                 deficitValues: values,
                 tdeeValues: tdeeValues,
                 maxValue: safeMaxVal,
                 startDate: startDate,
+                labelColor: context.colors.textSecondary,
+                gridLineColor: context.colors.divider,
+                axisColor: context.colors.textSecondary,
+                centerLineColor: context.colors.divider,
+                deficitColor: context.colors.accent,
+                surplusColor: Theme.of(context).colorScheme.error,
+                avgLineColor: context.colors.accent,
               ),
               child: Container(),
             ),
@@ -422,20 +1989,25 @@ class _WeeklyDeficitChart extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            _LegendDot(color: Palette.forestGreen, label: 'Deficit'),
+            _LegendDot(color: context.colors.accent, label: 'Deficit'),
             const SizedBox(width: 12),
-            _LegendDot(color: Colors.redAccent, label: 'Surplus'),
+            _LegendDot(
+              color: Theme.of(context).colorScheme.error,
+              label: 'Surplus',
+            ),
             const SizedBox(width: 12),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 12,
-                  height: 2,
-                  color: Colors.orange,
-                ),
+                Container(width: 12, height: 2, color: context.colors.accent),
                 const SizedBox(width: 6),
-                const Text('Avg TDEE', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                Text(
+                  'Avg TDEE',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ],
@@ -450,12 +2022,26 @@ class _ComboChartPainter extends CustomPainter {
   final List<double> tdeeValues;
   final double maxValue;
   final DateTime startDate;
+  final Color labelColor;
+  final Color gridLineColor;
+  final Color axisColor;
+  final Color centerLineColor;
+  final Color deficitColor;
+  final Color surplusColor;
+  final Color avgLineColor;
 
   _ComboChartPainter({
     required this.deficitValues,
     required this.tdeeValues,
     required this.maxValue,
     required this.startDate,
+    required this.labelColor,
+    required this.gridLineColor,
+    required this.axisColor,
+    required this.centerLineColor,
+    required this.deficitColor,
+    required this.surplusColor,
+    required this.avgLineColor,
   });
 
   @override
@@ -479,7 +2065,7 @@ class _ComboChartPainter extends CustomPainter {
 
       labelPaint.text = TextSpan(
         text: value.toStringAsFixed(0),
-        style: const TextStyle(fontSize: 8, color: Colors.black54),
+        style: TextStyle(fontSize: 8, color: labelColor),
       );
       labelPaint.layout();
       labelPaint.paint(
@@ -492,7 +2078,7 @@ class _ComboChartPainter extends CustomPainter {
         Offset(0, y),
         Offset(chartRight, y),
         Paint()
-          ..color = Colors.black12
+          ..color = gridLineColor
           ..strokeWidth = 0.5,
       );
     }
@@ -502,7 +2088,7 @@ class _ComboChartPainter extends CustomPainter {
       Offset(0, chartTop),
       Offset(0, chartBottom),
       Paint()
-        ..color = Colors.black26
+        ..color = axisColor
         ..strokeWidth = 1,
     );
 
@@ -511,7 +2097,7 @@ class _ComboChartPainter extends CustomPainter {
       Offset(0, chartHeight / 2),
       Offset(chartRight, chartHeight / 2),
       Paint()
-        ..color = Colors.black12
+        ..color = centerLineColor
         ..strokeWidth = 1,
     );
 
@@ -532,7 +2118,7 @@ class _ComboChartPainter extends CustomPainter {
         );
         canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(3)),
-          Paint()..color = Colors.redAccent,
+          Paint()..color = surplusColor,
         );
       } else if (value < 0) {
         // Deficit (green, bottom)
@@ -546,7 +2132,7 @@ class _ComboChartPainter extends CustomPainter {
         );
         canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(3)),
-          Paint()..color = Palette.forestGreen,
+          Paint()..color = deficitColor,
         );
       }
     }
@@ -554,7 +2140,8 @@ class _ComboChartPainter extends CustomPainter {
     // Draw dashed line for average TDEE
     final avgTDEE = tdeeValues.fold(0.0, (a, b) => a + b) / 7;
     final avgFactor = (avgTDEE / maxValue).clamp(0.0, 1.0);
-    final lineY = chartTop + (chartHeight * 0.5) - (chartHeight * avgFactor * 0.5);
+    final lineY =
+        chartTop + (chartHeight * 0.5) - (chartHeight * avgFactor * 0.5);
 
     _drawDashedLine(
       canvas,
@@ -562,7 +2149,7 @@ class _ComboChartPainter extends CustomPainter {
       Offset(chartRight, lineY),
       dashWidth: 4,
       dashSpace: 2,
-      color: Colors.orange,
+      color: avgLineColor,
       strokeWidth: 2,
     );
 
@@ -574,7 +2161,11 @@ class _ComboChartPainter extends CustomPainter {
 
       labelPaint.text = TextSpan(
         text: label,
-        style: const TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontSize: 10,
+          color: labelColor,
+          fontWeight: FontWeight.w500,
+        ),
       );
       labelPaint.layout();
       labelPaint.paint(
@@ -607,10 +2198,7 @@ class _ComboChartPainter extends CustomPainter {
       final t1 = (i * (dashWidth + dashSpace)) / distance;
       final t2 = ((i * (dashWidth + dashSpace)) + dashWidth) / distance;
 
-      final p1 = Offset(
-        start.dx + dx * t1,
-        start.dy + dy * t1,
-      );
+      final p1 = Offset(start.dx + dx * t1, start.dy + dy * t1);
       final p2 = Offset(
         start.dx + dx * t2.clamp(0, 1),
         start.dy + dy * t2.clamp(0, 1),
@@ -642,7 +2230,53 @@ class _ComboChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ComboChartPainter oldDelegate) =>
-      oldDelegate.deficitValues != deficitValues || oldDelegate.tdeeValues != tdeeValues;
+      oldDelegate.deficitValues != deficitValues ||
+      oldDelegate.tdeeValues != tdeeValues;
+}
+
+/// Polished empty state for a widget that has no data yet — shows the widget's
+/// gradient icon tile, a dash placeholder, and a short helper hint. Looks like
+/// a finished, ready-to-use widget that will populate once data exists.
+class _EmptyMetricCard extends StatelessWidget {
+  final String hint;
+  final IconData icon;
+  final Color color;
+  const _EmptyMetricCard({
+    required this.hint,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _ConceptIconTile(color: color, icon: icon, size: 46, iconSize: 24),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '—',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                  color: context.colors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                hint,
+                style: TextStyle(fontSize: 12, color: context.colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _LegendDot extends StatelessWidget {
@@ -662,7 +2296,10 @@ class _LegendDot extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: context.colors.textSecondary),
+        ),
       ],
     );
   }
@@ -673,39 +2310,961 @@ class _QuickActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: const [
-        _ActionChip(icon: Icons.add, label: 'Add Food'),
-        _ActionChip(icon: Icons.fitness_center, label: 'Add Workout'),
-        _ActionChip(icon: Icons.local_drink, label: 'Log Water'),
+    final accent = context.colors.accent;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final actions = [
+      (Icons.add_circle_outline, 'Add Food', Palette.widgetNutritionDay),
+      (Icons.fitness_center_outlined, 'Add Workout', Palette.widgetStepsDay),
+      (Icons.monitor_weight_outlined, 'Log Weight', Palette.widgetWeightDay),
+      (Icons.auto_awesome_outlined, 'AI Assist', accent),
+    ];
+
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 3.0,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: actions.map((a) {
+        final (icon, label, color) = a;
+        return GestureDetector(
+          onTap: () {},
+          child: Container(
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: isDark ? 0.14 : 0.09),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: color.withValues(alpha: isDark ? 0.25 : 0.18),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 9),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── New widget cards ─────────────────────────────────────────────────────────
+
+class _MacrosCard extends StatelessWidget {
+  final int proteinConsumed;
+  final int proteinGoal;
+  final int carbsConsumed;
+  final int carbsGoal;
+  final int fatConsumed;
+  final int fatGoal;
+
+  const _MacrosCard({
+    required this.proteinConsumed,
+    required this.proteinGoal,
+    required this.carbsConsumed,
+    required this.carbsGoal,
+    required this.fatConsumed,
+    required this.fatGoal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _MacroRow(
+          label: 'Protein',
+          consumed: proteinConsumed,
+          goal: proteinGoal,
+          color: Palette.macroProtein,
+        ),
+        const SizedBox(height: 12),
+        _MacroRow(
+          label: 'Carbs',
+          consumed: carbsConsumed,
+          goal: carbsGoal,
+          color: Palette.macroCarbs,
+        ),
+        const SizedBox(height: 12),
+        _MacroRow(
+          label: 'Fat',
+          consumed: fatConsumed,
+          goal: fatGoal,
+          color: Palette.macroFat,
+        ),
       ],
     );
   }
 }
 
-class _ActionChip extends StatelessWidget {
-  final IconData icon;
+class _MacroRow extends StatelessWidget {
   final String label;
-  const _ActionChip({required this.icon, required this.label});
+  final int consumed;
+  final int goal;
+  final Color color;
+
+  const _MacroRow({
+    required this.label,
+    required this.consumed,
+    required this.goal,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
-      selected: false,
-      onSelected: (_) {},
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 6),
-          Text(label),
+    final progress = goal > 0 ? (consumed / goal).clamp(0.0, 1.0) : 0.0;
+    final pct = goal > 0 ? (progress * 100).round() : 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const Spacer(),
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$consumed',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' / ${goal}g',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '  $pct%',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 8,
+            backgroundColor: color.withValues(alpha: 0.12),
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WaterIntakeCard extends StatelessWidget {
+  final double waterOz;
+  const _WaterIntakeCard({this.waterOz = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    const goalOz = 64.0;
+    final progress = (waterOz / goalOz).clamp(0.0, 1.0);
+    final cups = (waterOz / 8).round();
+    return Row(
+      children: [
+        const _ConceptIconTile(
+          color: Color(0xFF0EA5E9),
+          icon: Icons.water_drop_rounded,
+          size: 46,
+          iconSize: 24,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$cups cups · ${waterOz.toStringAsFixed(0)} oz',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 7,
+                  backgroundColor: const Color(
+                    0xFF0EA5E9,
+                  ).withValues(alpha: 0.12),
+                  valueColor: const AlwaysStoppedAnimation(Color(0xFF0EA5E9)),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${goalOz.round()} oz goal',
+                style: TextStyle(fontSize: 11, color: context.colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SleepCard extends StatelessWidget {
+  final int? sleepMinutes;
+  const _SleepCard({this.sleepMinutes});
+
+  @override
+  Widget build(BuildContext context) {
+    if (sleepMinutes == null || sleepMinutes == 0) {
+      return const _EmptyMetricCard(
+        hint: 'Connect Apple Health',
+        icon: Icons.bedtime_outlined,
+        color: Color(0xFF0EA5E9),
+      );
+    }
+    final hours = sleepMinutes! ~/ 60;
+    final mins = sleepMinutes! % 60;
+    final quality = sleepMinutes! >= 480
+        ? 'Excellent'
+        : sleepMinutes! >= 420
+        ? 'Good'
+        : sleepMinutes! >= 360
+        ? 'Fair'
+        : 'Poor';
+    final qualityColor = sleepMinutes! >= 480
+        ? const Color(0xFF2E8B57)
+        : sleepMinutes! >= 420
+        ? const Color(0xFF4C7FA8)
+        : sleepMinutes! >= 360
+        ? const Color(0xFFEF8C2E)
+        : const Color(0xFFD0021B);
+    final progress = (sleepMinutes! / 480).clamp(0.0, 1.0);
+    return Row(
+      children: [
+        SizedBox(
+          width: 52,
+          height: 52,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: progress,
+                strokeWidth: 5,
+                backgroundColor: const Color(
+                  0xFF0EA5E9,
+                ).withValues(alpha: 0.12),
+                valueColor: const AlwaysStoppedAnimation(Color(0xFF0EA5E9)),
+              ),
+              const Icon(
+                Icons.bedtime_rounded,
+                size: 18,
+                color: Color(0xFF0EA5E9),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${hours}h ${mins}m',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: context.colors.textPrimary,
+                height: 1.1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            Text(
+              quality,
+              style: TextStyle(
+                fontSize: 12,
+                color: qualityColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _WorkoutPerformanceCard extends StatelessWidget {
+  final int? calories;
+  final int? durationMinutes;
+  final String? workoutType;
+  const _WorkoutPerformanceCard({
+    this.calories,
+    this.durationMinutes,
+    this.workoutType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if ((calories ?? 0) == 0) {
+      return const _EmptyMetricCard(
+        hint: 'No workout logged',
+        icon: Icons.fitness_center_rounded,
+        color: Color(0xFFEF8C2E),
+      );
+    }
+    return Row(
+      children: [
+        const _ConceptIconTile(
+          color: Color(0xFFEF8C2E),
+          icon: Icons.fitness_center_rounded,
+          size: 52,
+          iconSize: 26,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                workoutType ?? 'Workout',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  if (durationMinutes != null) ...[
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 12,
+                      color: context.colors.textMuted,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${durationMinutes}min',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  const Icon(
+                    Icons.local_fire_department_outlined,
+                    size: 12,
+                    color: Color(0xFFEF8C2E),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$calories kcal',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFEF8C2E),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WeightCard extends StatelessWidget {
+  final double currentWeight;
+  const _WeightCard({required this.currentWeight});
+
+  @override
+  Widget build(BuildContext context) {
+    const tint = Palette.widgetWeightDay;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _ConceptIconTile(
+          color: tint,
+          icon: Icons.monitor_weight_outlined,
+          size: 48,
+          iconSize: 24,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              currentWeight > 0
+                  ? RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: currentWeight.toStringAsFixed(1),
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              color: context.colors.textPrimary,
+                              height: 1.0,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' lb',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: context.colors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Text(
+                      '— lb',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.textMuted,
+                      ),
+                    ),
+              const SizedBox(height: 3),
+              Text(
+                currentWeight > 0 ? 'Tap to update' : 'Not yet logged',
+                style: TextStyle(fontSize: 12, color: context.colors.textMuted),
+              ),
+            ],
+          ),
+        ),
+        // Tap hint
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: tint.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.edit_outlined, size: 14, color: tint),
+        ),
+      ],
+    );
+  }
+}
+
+// ── New health widget cards ───────────────────────────────────────────────────
+
+class _TDEECard extends StatelessWidget {
+  final double? tdee;
+  final double avgTDEE;
+  final List<double> weeklyTDEE;
+  const _TDEECard({this.tdee, this.avgTDEE = 0, this.weeklyTDEE = const []});
+
+  @override
+  Widget build(BuildContext context) {
+    const tint = Palette.widgetTDEEDay;
+    if (tdee == null || tdee == 0) {
+      return const _EmptyMetricCard(
+        hint: 'Log food & activity',
+        icon: Icons.local_fire_department_outlined,
+        color: tint,
+      );
+    }
+    final tdeeVal = tdee!.round();
+    final category = tdeeVal >= 2800
+        ? 'High output'
+        : tdeeVal >= 2200
+        ? 'Active'
+        : tdeeVal >= 1800
+        ? 'Moderate'
+        : 'Low output';
+    final hasTrend = avgTDEE > 0 && weeklyTDEE.any((v) => v > 0);
+    final delta = avgTDEE > 0 ? tdeeVal - avgTDEE : 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _ConceptIconTile(
+              color: tint,
+              icon: Icons.local_fire_department_rounded,
+              size: 48,
+              iconSize: 24,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '$tdeeVal',
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            color: context.colors.textPrimary,
+                            height: 1.0,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' kcal/day',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: context.colors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: tint.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          category,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: tint,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Current TDEE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.colors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (hasTrend) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text(
+                '${avgTDEE.round()} kcal/day',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '7-day avg',
+                style: TextStyle(fontSize: 11, color: context.colors.textMuted),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: tint.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${delta >= 0 ? '+' : '−'}${delta.abs().round()} vs avg',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: tint,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(weeklyTDEE.length, (i) {
+                final v = weeklyTDEE[i];
+                final maxVal = weeklyTDEE.fold(0.0, (a, b) => math.max(a, b));
+                final h = maxVal > 0 ? (v / maxVal).clamp(0.0, 1.0) : 0.0;
+                final isLatest = i == weeklyTDEE.length - 1;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Container(
+                      height: 40 * h,
+                      decoration: BoxDecoration(
+                        color: isLatest ? tint : tint.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
         ],
-      ),
-      selectedColor: Palette.forestGreen,
-      backgroundColor: Theme.of(context).cardColor,
-      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+      ],
+    );
+  }
+}
+
+class _RestingHRCard extends StatelessWidget {
+  final int? bpm;
+  const _RestingHRCard({this.bpm});
+
+  @override
+  Widget build(BuildContext context) {
+    if (bpm == null || bpm == 0) {
+      return const _EmptyMetricCard(
+        hint: 'Connect Apple Health',
+        icon: Icons.favorite_outline,
+        color: Color(0xFFD0021B),
+      );
+    }
+    final hrColor = bpm! < 60
+        ? const Color(0xFF2E8B57)
+        : bpm! <= 80
+        ? const Color(0xFF4C7FA8)
+        : bpm! <= 100
+        ? const Color(0xFFEF8C2E)
+        : const Color(0xFFD0021B);
+    final hrLabel = bpm! < 60
+        ? 'Athletic'
+        : bpm! <= 80
+        ? 'Normal'
+        : bpm! <= 100
+        ? 'Elevated'
+        : 'High';
+    return Row(
+      children: [
+        _ConceptIconTile(
+          color: hrColor,
+          icon: Icons.favorite_rounded,
+          size: 52,
+          iconSize: 26,
+        ),
+        const SizedBox(width: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$bpm',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: context.colors.textPrimary,
+                      height: 1.0,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' bpm',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              hrLabel,
+              style: TextStyle(
+                fontSize: 12,
+                color: hrColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _BodyCompositionCard extends StatelessWidget {
+  final double? bmi;
+  const _BodyCompositionCard({this.bmi});
+
+  @override
+  Widget build(BuildContext context) {
+    if (bmi == null) {
+      return const _EmptyMetricCard(
+        hint: 'Add height & weight',
+        icon: Icons.accessibility_new_outlined,
+        color: Color(0xFF8B5CF6),
+      );
+    }
+    final bmiLabel = bmi! < 18.5
+        ? 'Underweight'
+        : bmi! < 25.0
+        ? 'Normal'
+        : bmi! < 30.0
+        ? 'Overweight'
+        : 'Obese';
+    final bmiColor = bmi! >= 18.5 && bmi! < 25.0
+        ? const Color(0xFF2E8B57)
+        : bmi! < 18.5
+        ? const Color(0xFF0EA5E9)
+        : const Color(0xFFEF8C2E);
+    return Row(
+      children: [
+        const _ConceptIconTile(
+          color: Color(0xFF8B5CF6),
+          icon: Icons.accessibility_new_outlined,
+          size: 52,
+          iconSize: 26,
+        ),
+        const SizedBox(width: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: bmi!.toStringAsFixed(1),
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: context.colors.textPrimary,
+                      height: 1.0,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' BMI',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              bmiLabel,
+              style: TextStyle(
+                fontSize: 12,
+                color: bmiColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _WorkoutConsistencyCard extends StatelessWidget {
+  final List<double> weeklyTDEE;
+  final int streakDays;
+  const _WorkoutConsistencyCard({
+    required this.weeklyTDEE,
+    this.streakDays = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const tint = Palette.widgetConsistDay;
+    final activeDays = weeklyTDEE.where((v) => v > 0).length;
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final streakPhrase = activeDays >= 6
+        ? 'Incredible week'
+        : activeDays >= 5
+        ? 'Strong performance'
+        : activeDays >= 3
+        ? 'Keep the momentum'
+        : activeDays >= 1
+        ? 'Building consistency'
+        : 'Start logging today';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$activeDays',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      color: context.colors.textPrimary,
+                      height: 1.0,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' / 7',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: context.colors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'days logged',
+                style: TextStyle(fontSize: 12, color: context.colors.textMuted),
+              ),
+            ),
+            const Spacer(),
+            if (streakDays > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tint.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 13,
+                        color: tint,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$streakDays day${streakDays == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: tint,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          streakPhrase,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: tint,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(7, (i) {
+            final active = i < weeklyTDEE.length && weeklyTDEE[i] > 0;
+            return Column(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: active
+                        ? tint.withValues(alpha: 0.20)
+                        : context.colors.surfaceVariant,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: active
+                          ? tint.withValues(alpha: 0.55)
+                          : context.colors.divider,
+                      width: active ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Icon(
+                    active ? Icons.check_rounded : Icons.remove,
+                    size: 15,
+                    color: active ? tint : context.colors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  dayLabels[i].substring(0, 1),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                    color: active ? tint : context.colors.textMuted,
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+      ],
     );
   }
 }

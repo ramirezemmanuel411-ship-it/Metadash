@@ -18,10 +18,7 @@ class MetabolicSettings {
   }
 
   /// Copy with modifications
-  MetabolicSettings copyWith({
-    String? energyModel,
-    String? workoutAccuracy,
-  }) {
+  MetabolicSettings copyWith({String? energyModel, String? workoutAccuracy}) {
     return MetabolicSettings(
       energyModel: energyModel ?? this.energyModel,
       workoutAccuracy: workoutAccuracy ?? this.workoutAccuracy,
@@ -30,10 +27,7 @@ class MetabolicSettings {
 
   /// Convert to JSON for storage
   Map<String, dynamic> toJson() {
-    return {
-      'energyModel': energyModel,
-      'workoutAccuracy': workoutAccuracy,
-    };
+    return {'energyModel': energyModel, 'workoutAccuracy': workoutAccuracy};
   }
 
   /// Create from JSON

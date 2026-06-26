@@ -82,21 +82,23 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
   Widget build(BuildContext context) {
     if (_reentryState == null) {
       return Scaffold(
-        backgroundColor: Palette.warmNeutral,
+        backgroundColor: context.colors.background,
         appBar: AppBar(
-          backgroundColor: Palette.warmNeutral,
-          foregroundColor: Colors.black87,
+          backgroundColor: context.colors.background,
+          foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
           elevation: 0,
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(color: context.colors.accent),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: _currentStep == 2
             ? const Text('All Set')
@@ -122,10 +124,10 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
       children: [
         Text(
           'What\'s your current weight?',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: context.colors.textPrimary,
           ),
         ),
         const SizedBox(height: 12),
@@ -133,7 +135,7 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
           'We\'ll use this to estimate your fat change during your break.',
           style: TextStyle(
             fontSize: 14,
-            color: Colors.black.withValues(alpha: 0.6),
+            color: context.colors.textPrimary.withValues(alpha: 0.6),
             height: 1.4,
           ),
         ),
@@ -142,11 +144,11 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
           borderRadius: BorderRadius.circular(14),
           child: Container(
             decoration: BoxDecoration(
-              color: Palette.lightStone,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: context.colors.textMuted.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -159,10 +161,10 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
                 children: [
                   Text(
                     'Scale Weight (lb)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -178,28 +180,37 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
                     controller: TextEditingController(
                       text: _currentWeight?.toString() ?? '',
                     ),
-                    style: const TextStyle(fontSize: 16, color: Colors.black87),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: context.colors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Enter weight',
                       hintStyle: TextStyle(
-                        color: Colors.black.withValues(alpha: 0.4),
+                        color: context.colors.textPrimary.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: context.colors.textMuted.withValues(
+                            alpha: 0.1,
+                          ),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: context.colors.textMuted.withValues(
+                            alpha: 0.1,
+                          ),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(
-                          color: Palette.forestGreen,
+                        borderSide: BorderSide(
+                          color: context.colors.accent,
                           width: 2,
                         ),
                       ),
@@ -220,9 +231,9 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: _currentWeight != null
-                  ? Palette.forestGreen
-                  : Colors.grey,
-              foregroundColor: Colors.white,
+                  ? context.colors.accent
+                  : context.colors.surfaceVariant,
+              foregroundColor: context.colors.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -249,10 +260,10 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
       children: [
         Text(
           'A few quick questions',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: context.colors.textPrimary,
           ),
         ),
         const SizedBox(height: 12),
@@ -260,7 +271,7 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
           'Help us refine the fat change estimate.',
           style: TextStyle(
             fontSize: 14,
-            color: Colors.black.withValues(alpha: 0.6),
+            color: context.colors.textPrimary.withValues(alpha: 0.6),
             height: 1.4,
           ),
         ),
@@ -299,9 +310,9 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor:
                   _selectedIntakeDelta != null && _selectedActivityDelta != null
-                  ? Palette.forestGreen
-                  : Colors.grey,
-              foregroundColor: Colors.white,
+                  ? context.colors.accent
+                  : context.colors.surfaceVariant,
+              foregroundColor: context.colors.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -312,12 +323,14 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
                 ? () => _endReentryAndShowResults()
                 : null,
             child: _isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        context.colors.onPrimary,
+                      ),
                     ),
                   )
                 : const Text(
@@ -340,11 +353,11 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
       borderRadius: BorderRadius.circular(14),
       child: Container(
         decoration: BoxDecoration(
-          color: Palette.lightStone,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: context.colors.textMuted.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -357,10 +370,10 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Text(
                 question,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: context.colors.textPrimary,
                 ),
               ),
             ),
@@ -379,13 +392,13 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
                       child: Divider(
                         height: 1,
                         thickness: 0.5,
-                        color: Colors.black.withValues(alpha: 0.08),
+                        color: context.colors.divider.withValues(alpha: 0.08),
                       ),
                     ),
                   GestureDetector(
                     onTap: () => onChanged(value),
                     child: Container(
-                      color: Colors.transparent,
+                      color: context.colors.background.withValues(alpha: 0),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
@@ -400,15 +413,18 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
                               fontWeight: isSelected
                                   ? FontWeight.w600
                                   : FontWeight.w500,
-                              color: Colors.black87,
+                              color: context.colors.textPrimary,
                             ),
                           ),
-                          Radio(
-                            value: value,
-                            groupValue: selectedValue,
-                            onChanged: onChanged,
-                            fillColor: WidgetStateProperty.all(
-                              isSelected ? Palette.forestGreen : Colors.grey,
+                          InkWell(
+                            onTap: () => onChanged(value),
+                            child: Icon(
+                              isSelected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: isSelected
+                                  ? context.colors.accent
+                                  : context.colors.textMuted,
                             ),
                           ),
                         ],
@@ -430,10 +446,10 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
       children: [
         Text(
           'Your Fat Change Estimate',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: context.colors.textPrimary,
           ),
         ),
         const SizedBox(height: 24),
@@ -445,7 +461,7 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: context.colors.textMuted.withValues(alpha: 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -461,10 +477,10 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
                       _reentryState?.fatEstimateLowLb,
                       _reentryState?.fatEstimateHighLb,
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: context.colors.textPrimary,
                       height: 1.4,
                     ),
                   ),
@@ -473,7 +489,7 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
                     'We\'ll refine this estimate over the next week as you return to routine.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.black.withValues(alpha: 0.6),
+                      color: context.colors.textPrimary.withValues(alpha: 0.6),
                       height: 1.4,
                       fontStyle: FontStyle.italic,
                     ),
@@ -488,8 +504,8 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Palette.forestGreen,
-              foregroundColor: Colors.white,
+              backgroundColor: context.colors.accent,
+              foregroundColor: context.colors.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

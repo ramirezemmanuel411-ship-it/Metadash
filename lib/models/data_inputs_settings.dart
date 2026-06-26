@@ -17,6 +17,7 @@ class DataInputsSettings {
   final bool garminConnected;
   final bool fitbitConnected;
   final bool stravaConnected;
+  final String wearableFamily; // WearableFamily.name — stored as string
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -39,6 +40,7 @@ class DataInputsSettings {
     required this.garminConnected,
     required this.fitbitConnected,
     required this.stravaConnected,
+    this.wearableFamily = 'unknown',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -87,18 +89,23 @@ class DataInputsSettings {
     bool? garminConnected,
     bool? fitbitConnected,
     bool? stravaConnected,
+    String? wearableFamily,
     DateTime? updatedAt,
   }) {
     return DataInputsSettings(
       userId: userId,
       stepCalorieMethod: stepCalorieMethod ?? this.stepCalorieMethod,
       stepGoal: stepGoal ?? this.stepGoal,
-      includeStepsInExpenditure: includeStepsInExpenditure ?? this.includeStepsInExpenditure,
-      useTrackedWorkoutCalories: useTrackedWorkoutCalories ?? this.useTrackedWorkoutCalories,
+      includeStepsInExpenditure:
+          includeStepsInExpenditure ?? this.includeStepsInExpenditure,
+      useTrackedWorkoutCalories:
+          useTrackedWorkoutCalories ?? this.useTrackedWorkoutCalories,
       workoutAccuracy: workoutAccuracy ?? this.workoutAccuracy,
-      includeStrengthInExpenditure: includeStrengthInExpenditure ?? this.includeStrengthInExpenditure,
+      includeStrengthInExpenditure:
+          includeStrengthInExpenditure ?? this.includeStrengthInExpenditure,
       foodPrimarySource: foodPrimarySource ?? this.foodPrimarySource,
-      showVerifiedItemsFirst: showVerifiedItemsFirst ?? this.showVerifiedItemsFirst,
+      showVerifiedItemsFirst:
+          showVerifiedItemsFirst ?? this.showVerifiedItemsFirst,
       preferBarcodeMatches: preferBarcodeMatches ?? this.preferBarcodeMatches,
       macroCalcMode: macroCalcMode ?? this.macroCalcMode,
       showFiber: showFiber ?? this.showFiber,
@@ -108,6 +115,7 @@ class DataInputsSettings {
       garminConnected: garminConnected ?? this.garminConnected,
       fitbitConnected: fitbitConnected ?? this.fitbitConnected,
       stravaConnected: stravaConnected ?? this.stravaConnected,
+      wearableFamily: wearableFamily ?? this.wearableFamily,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     );
@@ -133,6 +141,7 @@ class DataInputsSettings {
       'garminConnected': garminConnected ? 1 : 0,
       'fitbitConnected': fitbitConnected ? 1 : 0,
       'stravaConnected': stravaConnected ? 1 : 0,
+      'wearableFamily': wearableFamily,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -146,7 +155,8 @@ class DataInputsSettings {
       includeStepsInExpenditure: (map['includeStepsInExpenditure'] as int) == 1,
       useTrackedWorkoutCalories: (map['useTrackedWorkoutCalories'] as int) == 1,
       workoutAccuracy: map['workoutAccuracy'] as String,
-      includeStrengthInExpenditure: (map['includeStrengthInExpenditure'] as int) == 1,
+      includeStrengthInExpenditure:
+          (map['includeStrengthInExpenditure'] as int) == 1,
       foodPrimarySource: map['foodPrimarySource'] as String,
       showVerifiedItemsFirst: (map['showVerifiedItemsFirst'] as int) == 1,
       preferBarcodeMatches: (map['preferBarcodeMatches'] as int) == 1,
@@ -158,6 +168,7 @@ class DataInputsSettings {
       garminConnected: (map['garminConnected'] as int) == 1,
       fitbitConnected: (map['fitbitConnected'] as int) == 1,
       stravaConnected: (map['stravaConnected'] as int) == 1,
+      wearableFamily: (map['wearableFamily'] as String?) ?? 'unknown',
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );

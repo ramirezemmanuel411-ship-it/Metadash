@@ -12,7 +12,7 @@ class AdaptiveTDEEService {
   }) {
     const caloriesPerPoundFat = 3500.0;
     const waterWeightMultiplier = 0.75; // 75% fat, 25% water
-    
+
     final dailyDeficit = caloriesConsumed - tdee;
     return (dailyDeficit / caloriesPerPoundFat) * waterWeightMultiplier;
   }
@@ -21,12 +21,12 @@ class AdaptiveTDEEService {
   /// Uses 3-day window to reduce water weight noise
   static double calculateSmoothedWeight(List<double> recentWeights) {
     if (recentWeights.isEmpty) return 0.0;
-    
+
     // Use up to last 3 days
-    final window = recentWeights.length >= 3 
+    final window = recentWeights.length >= 3
         ? recentWeights.sublist(recentWeights.length - 3)
         : recentWeights;
-    
+
     return window.reduce((a, b) => a + b) / window.length;
   }
 
@@ -42,17 +42,20 @@ class AdaptiveTDEEService {
 
     // Calculate discrepancy in pounds
     final discrepancyLbs = actualWeightChange - expectedFatDelta;
-    
+
     // Convert to calories
     const caloriesPerPoundFat = 3500.0;
     const waterWeightMultiplier = 0.75;
-    final discrepancyCal = (discrepancyLbs * caloriesPerPoundFat) / waterWeightMultiplier;
-    
+    final discrepancyCal =
+        (discrepancyLbs * caloriesPerPoundFat) / waterWeightMultiplier;
+
     // Apply dampening based on energy model
     // Hybrid: 30% dampened (conservative)
     // Adaptive: 100% full adjustment (aggressive)
-    final dampening = settings.energyModel == 'Hybrid (Recommended)' ? 0.3 : 1.0;
-    
+    final dampening = settings.energyModel == 'Hybrid (Recommended)'
+        ? 0.3
+        : 1.0;
+
     // Negative because inverse relationship:
     // If lost MORE than expected → TDEE is HIGHER than calculated → increase it
     // If lost LESS than expected → TDEE is LOWER than calculated → decrease it
@@ -73,10 +76,10 @@ class AdaptiveTDEEService {
 
     // Cumulative adjustment: yesterday's + today's micro-adjustment
     final totalAdjustment = previousAdjustment + todayAdjustment;
-    
+
     // Cap adjustments at ±500 calories to prevent extreme swings
     final cappedAdjustment = totalAdjustment.clamp(-500.0, 500.0);
-    
+
     return formulaTDEE + cappedAdjustment;
   }
 
@@ -120,7 +123,8 @@ class AdaptiveTDEEResult {
   });
 
   @override
-  String toString() => '''
+  String toString() =>
+      '''
 AdaptiveTDEEResult(
   Formula TDEE: ${formulaTDEE.toStringAsFixed(0)} cal
   Expected fat delta: ${expectedFatDelta.toStringAsFixed(3)} lbs

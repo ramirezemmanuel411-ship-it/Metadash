@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 
+import 'dart:io';
 import 'package:health/health.dart';
 
 /// Service for syncing health data from HealthKit (iOS) and Google Fit / Health Connect (Android)
@@ -21,49 +22,90 @@ class HealthService {
     _configured = true;
   }
 
-  /// List of data types we want to track
-  static const List<HealthDataType> _dataTypes = [
+  /// Core types available on both iOS and Android
+  static const List<HealthDataType> _coreTypes = [
     HealthDataType.STEPS,
     HealthDataType.ACTIVE_ENERGY_BURNED,
+    HealthDataType.BASAL_ENERGY_BURNED,
     HealthDataType.WORKOUT,
-    HealthDataType.SLEEP_ASLEEP,
-    HealthDataType.SLEEP_IN_BED,
     HealthDataType.HEART_RATE,
     HealthDataType.RESTING_HEART_RATE,
+    HealthDataType.WEIGHT,
+    HealthDataType.HEIGHT,
+    HealthDataType.BODY_FAT_PERCENTAGE,
+    HealthDataType.BODY_MASS_INDEX,
+    HealthDataType.LEAN_BODY_MASS,
+    HealthDataType.BLOOD_GLUCOSE,
+    HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
+    HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
+    HealthDataType.SLEEP_ASLEEP,
+    HealthDataType.SLEEP_IN_BED,
+    HealthDataType.SLEEP_DEEP,
+    HealthDataType.SLEEP_REM,
+    HealthDataType.SLEEP_AWAKE,
+    HealthDataType.DISTANCE_WALKING_RUNNING,
+    HealthDataType.FLIGHTS_CLIMBED,
+    HealthDataType.EXERCISE_TIME,
+    HealthDataType.WATER,
+    HealthDataType.RESPIRATORY_RATE,
+    HealthDataType.HEART_RATE_VARIABILITY_SDNN,
+  ];
+
+  /// iOS-only types (HealthKit specific)
+  static const List<HealthDataType> _iosExtraTypes = [
+    HealthDataType.MINDFULNESS,
+    HealthDataType.WAIST_CIRCUMFERENCE,
+    HealthDataType.BLOOD_OXYGEN,
+    HealthDataType.WALKING_SPEED,
+    HealthDataType.WALKING_HEART_RATE,
+    HealthDataType.APPLE_STAND_TIME,
+    HealthDataType.APPLE_MOVE_TIME,
     HealthDataType.DISTANCE_DELTA,
   ];
 
-  /// Request permissions from the user
-  /// Returns true if user granted permissions, false otherwise
+  /// Full list used for reads — always access via this getter
+  List<HealthDataType> get _dataTypes => [
+    ..._coreTypes,
+    if (Platform.isIOS) ..._iosExtraTypes,
+  ];
+
+  /// Request permissions from the user.
+  /// Shows the native Health Access dialog populated with all our data types.
+  /// Returns true if at least the core activity types were granted.
   Future<bool> requestPermissions() async {
     try {
       await _ensureConfigured();
-      final accessTypes = _dataTypes
-          .map((_) => HealthDataAccess.READ)
-          .toList(growable: false);
-      final authorized = await _health.requestAuthorization(
-        _dataTypes,
-        permissions: accessTypes,
-      );
-      if (authorized) return true;
 
-      // Fallback: request without explicit permissions (some iOS builds require this)
-      final fallbackAuthorized = await _health.requestAuthorization(_dataTypes);
-      if (fallbackAuthorized) return true;
+      final types = _dataTypes;
+      final access = types.map((_) => HealthDataAccess.READ).toList();
 
-      // Fallback: request minimal scopes
-      final minimalTypes = <HealthDataType>[
+      // Request all types at once — iOS will show the full native dialog
+      try {
+        final granted = await _health.requestAuthorization(
+          types,
+          permissions: access,
+        );
+        if (granted) return true;
+      } catch (_) {}
+
+      // Fallback without explicit permissions list (required on some iOS builds)
+      try {
+        final granted = await _health.requestAuthorization(types);
+        if (granted) return true;
+      } catch (_) {}
+
+      // Last resort: request only the essential activity types
+      final essential = [
         HealthDataType.STEPS,
         HealthDataType.ACTIVE_ENERGY_BURNED,
+        HealthDataType.WORKOUT,
+        HealthDataType.HEART_RATE,
+        HealthDataType.WEIGHT,
       ];
-      final minimalAccess = minimalTypes
-          .map((_) => HealthDataAccess.READ)
-          .toList(growable: false);
-      final minimalAuthorized = await _health.requestAuthorization(
-        minimalTypes,
-        permissions: minimalAccess,
+      return await _health.requestAuthorization(
+        essential,
+        permissions: essential.map((_) => HealthDataAccess.READ).toList(),
       );
-      return minimalAuthorized;
     } catch (e) {
       print('Error requesting health permissions: $e');
       return false;
@@ -74,9 +116,7 @@ class HealthService {
   Future<bool> hasPermissions() async {
     try {
       await _ensureConfigured();
-      final results = await Future.wait(
-        _dataTypes.map(_hasPermissionFor),
-      );
+      final results = await Future.wait(_dataTypes.map(_hasPermissionFor));
       return results.any((value) => value);
     } catch (e) {
       print('Error checking health permissions: $e');
@@ -113,20 +153,20 @@ class HealthService {
   Future<Map<String, bool>> readPermissionStatus() async {
     await _ensureConfigured();
     final steps = await _hasPermissionFor(HealthDataType.STEPS);
-    final calories = await _hasPermissionFor(HealthDataType.ACTIVE_ENERGY_BURNED);
+    final calories = await _hasPermissionFor(
+      HealthDataType.ACTIVE_ENERGY_BURNED,
+    );
     final workouts = await _hasPermissionFor(HealthDataType.WORKOUT);
-    return {
-      'Steps': steps,
-      'Active Energy': calories,
-      'Workouts': workouts,
-    };
+    return {'Steps': steps, 'Active Energy': calories, 'Workouts': workouts};
   }
 
   Future<Map<String, dynamic>> fetchHealthDiagnostics(DateTime date) async {
     await _ensureConfigured();
     final diagnostics = <String, dynamic>{};
     final hasSteps = await _hasPermissionFor(HealthDataType.STEPS);
-    final hasCalories = await _hasPermissionFor(HealthDataType.ACTIVE_ENERGY_BURNED);
+    final hasCalories = await _hasPermissionFor(
+      HealthDataType.ACTIVE_ENERGY_BURNED,
+    );
     final hasWorkouts = await _hasPermissionFor(HealthDataType.WORKOUT);
     diagnostics['permissions'] = {
       'steps': hasSteps,
@@ -168,7 +208,9 @@ class HealthService {
     await _ensureConfigured();
     final diagnostics = <String, dynamic>{};
     final hasSteps = await _hasPermissionFor(HealthDataType.STEPS);
-    final hasCalories = await _hasPermissionFor(HealthDataType.ACTIVE_ENERGY_BURNED);
+    final hasCalories = await _hasPermissionFor(
+      HealthDataType.ACTIVE_ENERGY_BURNED,
+    );
     final hasWorkouts = await _hasPermissionFor(HealthDataType.WORKOUT);
     diagnostics['permissions'] = {
       'steps': hasSteps,
@@ -206,8 +248,11 @@ class HealthService {
   ) async {
     await _ensureConfigured();
     final start = DateTime(startDate.year, startDate.month, startDate.day);
-    final endExclusive = DateTime(endDate.year, endDate.month, endDate.day)
-        .add(const Duration(days: 1));
+    final endExclusive = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+    ).add(const Duration(days: 1));
 
     final stepsByDay = <DateTime, int>{};
     final caloriesByDay = <DateTime, int>{};
@@ -222,6 +267,9 @@ class HealthService {
     final avgHrSumByDay = <DateTime, int>{};
     final avgHrCountByDay = <DateTime, int>{};
     final distanceByDay = <DateTime, double>{};
+    final hrvSumByDay = <DateTime, double>{};
+    final hrvCountByDay = <DateTime, int>{};
+    final mindfulnessByDay = <DateTime, int>{};
 
     var usedTotals = false;
     try {
@@ -247,7 +295,11 @@ class HealthService {
 
         // Fallback: sum all values from samples
         for (final point in stepData) {
-          final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+          final day = DateTime(
+            point.dateFrom.year,
+            point.dateFrom.month,
+            point.dateFrom.day,
+          );
           final pointValue = _extractNumericValue(point);
           stepsByDay[day] = (stepsByDay[day] ?? 0) + pointValue;
         }
@@ -261,7 +313,11 @@ class HealthService {
         endTime: endExclusive,
       );
       for (final point in calorieData) {
-        final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
         final pointValue = _extractNumericValue(point);
         caloriesByDay[day] = (caloriesByDay[day] ?? 0) + pointValue;
       }
@@ -275,7 +331,11 @@ class HealthService {
       );
       final runningIntervalsByDay = <DateTime, List<_WorkoutInterval>>{};
       for (final point in workoutData) {
-        final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
         int calories = 0;
         String type = '';
         final workoutValue = point.value;
@@ -311,7 +371,11 @@ class HealthService {
             endTime: endExclusive,
           );
           for (final point in stepData) {
-            final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+            final day = DateTime(
+              point.dateFrom.year,
+              point.dateFrom.month,
+              point.dateFrom.day,
+            );
             final intervals = runningIntervalsByDay[day];
             if (intervals == null || intervals.isEmpty) continue;
             if (_overlapsAnyInterval(point.dateFrom, point.dateTo, intervals)) {
@@ -330,7 +394,11 @@ class HealthService {
         endTime: endExclusive,
       );
       for (final point in sleepData) {
-        final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
         final minutes = point.dateTo.difference(point.dateFrom).inMinutes;
         sleepMinutesByDay[day] = (sleepMinutesByDay[day] ?? 0) + minutes;
         sleepAsleepDays[day] = true;
@@ -344,7 +412,11 @@ class HealthService {
         endTime: endExclusive,
       );
       for (final point in sleepInBedData) {
-        final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
         if (sleepAsleepDays[day] == true) continue;
         final minutes = point.dateTo.difference(point.dateFrom).inMinutes;
         sleepMinutesByDay[day] = (sleepMinutesByDay[day] ?? 0) + minutes;
@@ -358,7 +430,11 @@ class HealthService {
         endTime: endExclusive,
       );
       for (final point in hrData) {
-        final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
         final value = _extractNumericValue(point);
         avgHrSumByDay[day] = (avgHrSumByDay[day] ?? 0) + value;
         avgHrCountByDay[day] = (avgHrCountByDay[day] ?? 0) + 1;
@@ -372,7 +448,11 @@ class HealthService {
         endTime: endExclusive,
       );
       for (final point in restingData) {
-        final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
         final value = _extractNumericValue(point);
         restingHrSumByDay[day] = (restingHrSumByDay[day] ?? 0) + value;
         restingHrCountByDay[day] = (restingHrCountByDay[day] ?? 0) + 1;
@@ -381,17 +461,73 @@ class HealthService {
 
     try {
       final distanceData = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.DISTANCE_DELTA],
+        types: [HealthDataType.DISTANCE_WALKING_RUNNING],
         startTime: start,
         endTime: endExclusive,
       );
       for (final point in distanceData) {
-        final day = DateTime(point.dateFrom.year, point.dateFrom.month, point.dateFrom.day);
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
         final value = _extractNumericValue(point).toDouble();
         distanceByDay[day] = (distanceByDay[day] ?? 0) + value;
       }
+    } catch (_) {
+      try {
+        final distanceData = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.DISTANCE_DELTA],
+          startTime: start,
+          endTime: endExclusive,
+        );
+        for (final point in distanceData) {
+          final day = DateTime(
+            point.dateFrom.year,
+            point.dateFrom.month,
+            point.dateFrom.day,
+          );
+          final value = _extractNumericValue(point).toDouble();
+          distanceByDay[day] = (distanceByDay[day] ?? 0) + value;
+        }
+      } catch (_) {}
+    }
+
+    try {
+      final hrvData = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN],
+        startTime: start,
+        endTime: endExclusive,
+      );
+      for (final point in hrvData) {
+        final day = DateTime(
+          point.dateFrom.year,
+          point.dateFrom.month,
+          point.dateFrom.day,
+        );
+        hrvSumByDay[day] = (hrvSumByDay[day] ?? 0) + _extractDoubleValue(point);
+        hrvCountByDay[day] = (hrvCountByDay[day] ?? 0) + 1;
+      }
     } catch (_) {}
 
+    if (Platform.isIOS) {
+      try {
+        final mindData = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.MINDFULNESS],
+          startTime: start,
+          endTime: endExclusive,
+        );
+        for (final point in mindData) {
+          final day = DateTime(
+            point.dateFrom.year,
+            point.dateFrom.month,
+            point.dateFrom.day,
+          );
+          mindfulnessByDay[day] = (mindfulnessByDay[day] ?? 0) +
+              point.dateTo.difference(point.dateFrom).inMinutes;
+        }
+      } catch (_) {}
+    }
 
     final results = <DateTime, HealthMetrics>{};
     DateTime current = start;
@@ -402,16 +538,31 @@ class HealthService {
       final workoutType = workoutTypeByDay[current] ?? '';
       final workoutMinutes = workoutMinutesByDay[current] ?? 0;
       final sleepMinutes = sleepMinutesByDay[current] ?? 0;
-      final restingHr = restingHrCountByDay[current] != null && restingHrCountByDay[current]! > 0
-          ? (restingHrSumByDay[current]! / restingHrCountByDay[current]!).round()
+      final restingHr =
+          restingHrCountByDay[current] != null &&
+              restingHrCountByDay[current]! > 0
+          ? (restingHrSumByDay[current]! / restingHrCountByDay[current]!)
+                .round()
           : 0;
-      final avgHr = avgHrCountByDay[current] != null && avgHrCountByDay[current]! > 0
+      final avgHr =
+          avgHrCountByDay[current] != null && avgHrCountByDay[current]! > 0
           ? (avgHrSumByDay[current]! / avgHrCountByDay[current]!).round()
           : 0;
       final distanceMeters = distanceByDay[current] ?? 0;
       const vo2Max = 0.0;
-      if (steps > 0 || calories > 0 || workoutCalories > 0 || workoutType.isNotEmpty) {
-        final runningSteps = runningStepsByDay[current] ?? _inferRunningSteps(steps, workoutType);
+      final hrv = (hrvCountByDay[current] ?? 0) > 0
+          ? hrvSumByDay[current]! / hrvCountByDay[current]!
+          : 0.0;
+      final mindfulness = mindfulnessByDay[current] ?? 0;
+      if (steps > 0 ||
+          calories > 0 ||
+          workoutCalories > 0 ||
+          workoutType.isNotEmpty ||
+          hrv > 0 ||
+          mindfulness > 0) {
+        final runningSteps =
+            runningStepsByDay[current] ??
+            _inferRunningSteps(steps, workoutType);
         results[current] = HealthMetrics(
           totalSteps: steps,
           runningSteps: runningSteps,
@@ -425,6 +576,8 @@ class HealthService {
           averageHeartRate: avgHr,
           distanceMeters: distanceMeters,
           vo2Max: vo2Max,
+          hrv: hrv,
+          mindfulnessMinutes: mindfulness,
         );
       }
       current = current.add(const Duration(days: 1));
@@ -479,7 +632,9 @@ class HealthService {
   Future<HealthMetrics?> fetchHealthDataForDate(DateTime date) async {
     await _ensureConfigured();
     final hasSteps = await _hasPermissionFor(HealthDataType.STEPS);
-    final hasCalories = await _hasPermissionFor(HealthDataType.ACTIVE_ENERGY_BURNED);
+    final hasCalories = await _hasPermissionFor(
+      HealthDataType.ACTIVE_ENERGY_BURNED,
+    );
     final hasWorkouts = await _hasPermissionFor(HealthDataType.WORKOUT);
 
     // Fetch data for this day
@@ -604,7 +759,11 @@ class HealthService {
           endTime: endOfDay,
         );
         for (final point in stepData) {
-          if (_overlapsAnyInterval(point.dateFrom, point.dateTo, runningIntervals)) {
+          if (_overlapsAnyInterval(
+            point.dateFrom,
+            point.dateTo,
+            runningIntervals,
+          )) {
             runningSteps += _extractNumericValue(point);
           }
         }
@@ -647,7 +806,10 @@ class HealthService {
         endTime: endOfDay,
       );
       if (restingData.isNotEmpty) {
-        final sum = restingData.fold<int>(0, (s, p) => s + _extractNumericValue(p));
+        final sum = restingData.fold<int>(
+          0,
+          (s, p) => s + _extractNumericValue(p),
+        );
         restingHeartRate = (sum / restingData.length).round();
       }
     } catch (_) {}
@@ -666,7 +828,7 @@ class HealthService {
 
     try {
       final distanceData = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.DISTANCE_DELTA],
+        types: [HealthDataType.DISTANCE_WALKING_RUNNING],
         startTime: startOfDay,
         endTime: endOfDay,
       );
@@ -676,8 +838,50 @@ class HealthService {
           (s, p) => s + _extractNumericValue(p).toDouble(),
         );
       }
+    } catch (_) {
+      try {
+        final distanceData = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.DISTANCE_DELTA],
+          startTime: startOfDay,
+          endTime: endOfDay,
+        );
+        if (distanceData.isNotEmpty) {
+          distanceMeters = distanceData.fold<double>(
+            0,
+            (s, p) => s + _extractNumericValue(p).toDouble(),
+          );
+        }
+      } catch (_) {}
+    }
+
+    double hrv = 0;
+    try {
+      final hrvData = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN],
+        startTime: startOfDay,
+        endTime: endOfDay,
+      );
+      if (hrvData.isNotEmpty) {
+        final sum =
+            hrvData.fold<double>(0, (s, p) => s + _extractDoubleValue(p));
+        hrv = sum / hrvData.length;
+      }
     } catch (_) {}
 
+    int mindfulnessMinutes = 0;
+    if (Platform.isIOS) {
+      try {
+        final mindData = await _health.getHealthDataFromTypes(
+          types: [HealthDataType.MINDFULNESS],
+          startTime: startOfDay,
+          endTime: endOfDay,
+        );
+        for (final point in mindData) {
+          mindfulnessMinutes +=
+              point.dateTo.difference(point.dateFrom).inMinutes;
+        }
+      } catch (_) {}
+    }
 
     return HealthMetrics(
       totalSteps: totalSteps,
@@ -692,6 +896,8 @@ class HealthService {
       averageHeartRate: averageHeartRate,
       distanceMeters: distanceMeters,
       vo2Max: vo2Max,
+      hrv: hrv,
+      mindfulnessMinutes: mindfulnessMinutes,
     );
   }
 
@@ -736,6 +942,14 @@ class HealthService {
     return false;
   }
 
+  double _extractDoubleValue(HealthDataPoint data) {
+    final value = data.value;
+    if (value is NumericHealthValue) {
+      return value.numericValue.toDouble();
+    }
+    return 0;
+  }
+
   int _extractNumericValue(HealthDataPoint data) {
     final value = data.value;
     if (value is NumericHealthValue) {
@@ -747,14 +961,12 @@ class HealthService {
     return 0;
   }
 
-
-
   /// Debug: Get all raw step data points for a specific date
   /// Prints to console so you can see what Apple Health is returning
   Future<Map<String, dynamic>> debugStepDataForDate(DateTime date) async {
     await _ensureConfigured();
     final result = <String, dynamic>{};
-    
+
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
@@ -767,14 +979,15 @@ class HealthService {
 
       result['count'] = stepData.length;
       result['dataPoints'] = [];
-      
+
       print('\n=== DEBUG STEP DATA FOR ${date.toString().split(' ')[0]} ===');
       print('Total data points: ${stepData.length}');
-      
+
       for (int i = 0; i < stepData.length; i++) {
         final point = stepData[i];
         final value = _extractNumericValue(point);
-        final timeStr = '${point.dateFrom.hour}:${point.dateFrom.minute.toString().padLeft(2, '0')}';
+        final timeStr =
+            '${point.dateFrom.hour}:${point.dateFrom.minute.toString().padLeft(2, '0')}';
         print('[$i] $timeStr: $value steps');
         (result['dataPoints'] as List).add({
           'time': timeStr,
@@ -783,7 +996,7 @@ class HealthService {
           'dateTo': point.dateTo.toString(),
         });
       }
-      
+
       // Show what max value we'd get from samples
       if (stepData.isNotEmpty) {
         final max = stepData.fold<int>(0, (maxVal, point) {
@@ -804,12 +1017,11 @@ class HealthService {
           result['totalStepsInterval'] = total;
         }
       } catch (_) {}
-      
     } catch (e) {
       print('Error fetching step data: $e');
       result['error'] = e.toString();
     }
-    
+
     return result;
   }
 
@@ -821,7 +1033,8 @@ class HealthService {
     final metrics = <HealthMetrics>[];
     var currentDate = startDate;
 
-    while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
+    while (currentDate.isBefore(endDate) ||
+        currentDate.isAtSameMomentAs(endDate)) {
       final dayMetrics = await fetchHealthDataForDate(currentDate);
       if (dayMetrics != null) {
         metrics.add(dayMetrics);
@@ -847,6 +1060,8 @@ class HealthMetrics {
   final int averageHeartRate;
   final double distanceMeters;
   final double vo2Max;
+  final double hrv;
+  final int mindfulnessMinutes;
 
   HealthMetrics({
     required this.totalSteps,
@@ -861,6 +1076,8 @@ class HealthMetrics {
     required this.averageHeartRate,
     required this.distanceMeters,
     required this.vo2Max,
+    this.hrv = 0,
+    this.mindfulnessMinutes = 0,
   });
 
   @override
@@ -874,4 +1091,3 @@ class _WorkoutInterval {
 
   const _WorkoutInterval(this.start, this.end);
 }
-

@@ -1,8 +1,4 @@
-enum AiSuggestionMode {
-  none,
-  meal,
-  singleItem,
-}
+enum AiSuggestionMode { none, meal, singleItem }
 
 class AiSuggestionTotals {
   final int calories;
@@ -60,10 +56,7 @@ class AiSuggestionGroup {
   final String title;
   final List<AiSingleItemSuggestion> items;
 
-  const AiSuggestionGroup({
-    required this.title,
-    required this.items,
-  });
+  const AiSuggestionGroup({required this.title, required this.items});
 }
 
 class AiSuggestionResponse {

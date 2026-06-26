@@ -118,7 +118,7 @@ class _FoodSearchResultsState extends State<FoodSearchResults> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Palette.warmNeutral,
+      color: context.colors.background,
       child: Column(
         children: [
           Padding(
@@ -133,13 +133,13 @@ class _FoodSearchResultsState extends State<FoodSearchResults> {
                     children: [
                       if (widget.searchText.trim().isEmpty &&
                           widget.recent.isNotEmpty) ...[
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(top: 4, bottom: 6),
                           child: Text(
                             'Recent',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: context.colors.textSecondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -156,13 +156,13 @@ class _FoodSearchResultsState extends State<FoodSearchResults> {
                         ),
                       ],
                       if (widget.searchText.trim().isNotEmpty) ...[
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(top: 8, bottom: 6),
                           child: Text(
                             'Results',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: context.colors.textSecondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -173,8 +173,8 @@ class _FoodSearchResultsState extends State<FoodSearchResults> {
                             child: Center(
                               child: Text(
                                 'No foods found for "${widget.searchText}"',
-                                style: const TextStyle(
-                                  color: Colors.grey,
+                                style: TextStyle(
+                                  color: context.colors.textSecondary,
                                   fontSize: 14,
                                 ),
                               ),
@@ -216,13 +216,15 @@ class _FoodSearchResultsState extends State<FoodSearchResults> {
       decoration: BoxDecoration(
         color: const Color.fromRGBO(255, 255, 255, 0.4),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black12),
+        border: Border.all(
+          color: context.colors.divider.withValues(alpha: 0.12),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         child: Row(
           children: [
-            const Icon(Icons.search, color: Colors.grey),
+            Icon(Icons.search, color: context.colors.textSecondary),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(
@@ -285,16 +287,19 @@ class _FoodRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   item.macroLine,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
           Text(
             '${item.calories} kcal',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Colors.grey,
+              color: context.colors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -334,16 +339,19 @@ class _DatabaseFoodRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   macroLine,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.colors.textSecondary,
+                  ),
                 ),
               ],
             ),
           ),
           Text(
-            '${food.calories.toInt()} kcal',
-            style: const TextStyle(
+            '${food.calories} kcal',
+            style: TextStyle(
               fontSize: 12,
-              color: Colors.grey,
+              color: context.colors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),

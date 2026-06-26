@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../models/exercise_model.dart';
 import '../../../data/repositories/exercise_repository.dart';
 import '../../../providers/user_state.dart';
+import '../../../shared/palette.dart';
 
 /// Screen for manually entering calories burned
 class ExerciseManualScreen extends StatefulWidget {
@@ -21,12 +22,7 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
   bool get _isValid => _calories > 0;
 
   void _onAdd() async {
-    if (!_isValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter calories burned')),
-      );
-      return;
-    }
+    if (!_isValid) return;
 
     try {
       final exercise = Exercise.manual(caloriesBurned: _calories);
@@ -37,21 +33,7 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
 
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$_calories calories logged'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    } catch (_) {}
   }
 
   void _addDigit(String digit) {
@@ -64,7 +46,10 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
   void _backspace() {
     setState(() {
       if (_controller.text.isNotEmpty) {
-        _controller.text = _controller.text.substring(0, _controller.text.length - 1);
+        _controller.text = _controller.text.substring(
+          0,
+          _controller.text.length - 1,
+        );
         _calories = int.tryParse(_controller.text) ?? 0;
       }
     });
@@ -89,8 +74,8 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
       appBar: AppBar(
         title: const Text('Manual'),
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
+        backgroundColor: context.colors.surface.withValues(alpha: 0),
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
       ),
       body: Column(
         children: [
@@ -115,12 +100,14 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Colors.orange.withOpacity(0.1),
-                                Colors.red.withOpacity(0.1),
+                                context.colors.cta.withValues(alpha: 0.12),
+                                Theme.of(
+                                  context,
+                                ).colorScheme.error.withValues(alpha: 0.12),
                               ],
                             ),
                             border: Border.all(
-                              color: Colors.orange,
+                              color: context.colors.cta,
                               width: 3,
                             ),
                           ),
@@ -128,25 +115,25 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.local_fire_department,
                               size: 64,
-                              color: Colors.orange,
+                              color: context.colors.cta,
                             ),
                             const SizedBox(height: 8),
                             Text(
                               _calories.toString(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 40,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: context.colors.textPrimary,
                               ),
                             ),
-                            const Text(
+                            Text(
                               'calories',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey,
+                                color: context.colors.textSecondary,
                               ),
                             ),
                           ],
@@ -160,7 +147,7 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: context.colors.surfaceVariant,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -191,17 +178,16 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
                       ),
                       _buildKeypadButton(
                         'DEL',
-                        color: Colors.red[100],
-                        textColor: Colors.red,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.error.withValues(alpha: 0.12),
+                        textColor: Theme.of(context).colorScheme.error,
                         onTap: _backspace,
                       ),
-                      _buildKeypadButton(
-                        '0',
-                        onTap: () => _addDigit('0'),
-                      ),
+                      _buildKeypadButton('0', onTap: () => _addDigit('0')),
                       _buildKeypadButton(
                         'C',
-                        color: Colors.grey[300],
+                        color: context.colors.surfaceVariant,
                         onTap: _clear,
                       ),
                     ],
@@ -219,15 +205,13 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
                 onPressed: _isValid ? _onAdd : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
-                  disabledBackgroundColor: Colors.grey[300],
+                  backgroundColor: context.colors.cta,
+                  disabledBackgroundColor: context.colors.surfaceVariant
+                      .withValues(alpha: 0.5),
                 ),
                 child: const Text(
                   'Add',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -247,7 +231,7 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: color ?? Colors.grey[200],
+          color: color ?? context.colors.surfaceVariant,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
@@ -256,7 +240,7 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: textColor ?? Colors.black87,
+              color: textColor ?? context.colors.textPrimary,
             ),
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/palette.dart';
 
 /// Duration picker with quick-select pills and custom input
 class DurationSelector extends StatefulWidget {
@@ -46,7 +47,7 @@ class _DurationSelectorState extends State<DurationSelector> {
       widget.onChanged(0);
       return;
     }
-    
+
     final minutes = int.tryParse(value);
     if (minutes != null && minutes > 0) {
       widget.onChanged(minutes);
@@ -60,10 +61,7 @@ class _DurationSelectorState extends State<DurationSelector> {
       children: [
         const Text(
           'Duration',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         // Quick-select pills
@@ -83,9 +81,7 @@ class _DurationSelectorState extends State<DurationSelector> {
           decoration: InputDecoration(
             hintText: 'Custom minutes',
             suffixText: 'min',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 12,
@@ -98,16 +94,18 @@ class _DurationSelectorState extends State<DurationSelector> {
 
   Widget _buildQuickSelectPill(int minutes) {
     final isSelected = widget.selectedDuration == minutes;
-    
+
     return GestureDetector(
       onTap: () => _selectQuickOption(minutes),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.grey[100],
+          color: isSelected
+              ? context.colors.accent.withValues(alpha: 0.9)
+              : context.colors.surfaceVariant,
           borderRadius: BorderRadius.circular(20),
           border: isSelected
-              ? Border.all(color: Colors.blue, width: 2)
+              ? Border.all(color: context.colors.accent, width: 2)
               : null,
         ),
         child: Text(
@@ -115,7 +113,9 @@ class _DurationSelectorState extends State<DurationSelector> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : Colors.black87,
+            color: isSelected
+                ? context.colors.onPrimary
+                : context.colors.textPrimary,
           ),
         ),
       ),

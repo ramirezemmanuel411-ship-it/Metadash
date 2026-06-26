@@ -20,15 +20,17 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
   }) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: isStartDate ? (_startDate ?? DateTime.now()) : (_endDate ?? DateTime.now()),
+      initialDate: isStartDate
+          ? (_startDate ?? DateTime.now())
+          : (_endDate ?? DateTime.now()),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: Palette.forestGreen,
-              secondary: Palette.forestGreen,
+              primary: context.colors.accent,
+              secondary: context.colors.accent,
               surface: Palette.lightStone,
             ),
           ),
@@ -56,10 +58,10 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Vacation Mode'),
       ),
@@ -71,7 +73,7 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
             'Pause goal evaluations during breaks from structured tracking.',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withValues(alpha: 0.6),
+              color: context.colors.textPrimary.withValues(alpha: 0.6),
               height: 1.4,
             ),
           ),
@@ -81,10 +83,10 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Palette.lightStone,
+              color: context.colors.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: context.colors.divider.withValues(alpha: 0.05),
                 width: 1,
               ),
             ),
@@ -96,46 +98,53 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: context.colors.textPrimary,
                     height: 1.3,
                   ),
                 ),
                 const SizedBox(height: 10),
-                ...['Goal progress evaluations', 'Automatic calorie adjustments', 'Plateau detection', 'Weekly check-ins'].map(
-                  (item) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '• ',
+                ...[
+                  'Goal progress evaluations',
+                  'Automatic calorie adjustments',
+                  'Plateau detection',
+                  'Weekly check-ins',
+                ].map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '• ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.colors.textPrimary.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            item,
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.black.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              item,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.black.withValues(alpha: 0.6),
-                                height: 1.3,
+                              color: context.colors.textPrimary.withValues(
+                                alpha: 0.6,
                               ),
+                              height: 1.3,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
                 const SizedBox(height: 10),
                 Text(
                   'Your energy model continues running, but goal decisions are held until you return.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.black.withValues(alpha: 0.6),
+                    color: context.colors.textPrimary.withValues(alpha: 0.6),
                     height: 1.3,
                     fontStyle: FontStyle.italic,
                   ),
@@ -150,38 +159,45 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
             borderRadius: BorderRadius.circular(14),
             child: Container(
               decoration: BoxDecoration(
-                color: Palette.lightStone,
+                color: context.colors.surface,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: context.colors.textMuted.withValues(alpha: 0.03),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Vacation Mode',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                            color: context.colors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _vacationModeEnabled ? 'Currently paused' : 'Not active',
+                          _vacationModeEnabled
+                              ? 'Currently paused'
+                              : 'Not active',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: context.colors.textPrimary.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                         ),
                       ],
@@ -200,10 +216,16 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                             }
                           });
                         },
-                        activeThumbColor: Palette.forestGreen,
-                        activeTrackColor: Palette.forestGreen.withValues(alpha: 0.3),
-                        inactiveThumbColor: Colors.grey.shade400,
-                        inactiveTrackColor: Colors.grey.shade300,
+                        activeThumbColor: context.colors.accent,
+                        activeTrackColor: context.colors.accent.withValues(
+                          alpha: 0.3,
+                        ),
+                        inactiveThumbColor: context.colors.textMuted.withValues(
+                          alpha: 0.4,
+                        ),
+                        inactiveTrackColor: context.colors.textMuted.withValues(
+                          alpha: 0.3,
+                        ),
                       ),
                     ),
                   ],
@@ -219,11 +241,11 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Palette.lightStone,
+                  color: context.colors.surface,
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: context.colors.textMuted.withValues(alpha: 0.03),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -239,7 +261,7 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: context.colors.textPrimary,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -248,21 +270,23 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                     _buildDateRow(
                       label: 'Start Date',
                       date: _startDate,
-                      onTap: () => _selectDate(context: context, isStartDate: true),
+                      onTap: () =>
+                          _selectDate(context: context, isStartDate: true),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Divider(
                         height: 1,
                         thickness: 0.5,
-                        color: Colors.black.withValues(alpha: 0.08),
+                        color: context.colors.divider.withValues(alpha: 0.08),
                       ),
                     ),
                     // End Date
                     _buildDateRow(
                       label: 'End Date',
                       date: _endDate,
-                      onTap: () => _selectDate(context: context, isStartDate: false),
+                      onTap: () =>
+                          _selectDate(context: context, isStartDate: false),
                       isOptional: true,
                     ),
                   ],
@@ -282,13 +306,16 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Palette.lightStone,
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: context.colors.textMuted.withValues(alpha: 0.03),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -301,12 +328,12 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Resume Manually',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: context.colors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -314,7 +341,9 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                             'No end date — resume when ready',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.black.withValues(alpha: 0.5),
+                              color: context.colors.textPrimary.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                           ),
                         ],
@@ -331,12 +360,14 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                         });
                       },
                       fillColor: WidgetStateProperty.all(
-                        _resumeManually ? Palette.forestGreen : Colors.transparent,
+                        _resumeManually
+                            ? Palette.forestGreen
+                            : Colors.transparent,
                       ),
                       side: BorderSide(
                         color: _resumeManually
                             ? Palette.forestGreen
-                            : Colors.black.withValues(alpha: 0.3),
+                            : context.colors.textMuted,
                         width: 2,
                       ),
                       shape: RoundedRectangleBorder(
@@ -372,20 +403,19 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: context.colors.textPrimary,
                   ),
                 ),
-                if (isOptional)
-                  const SizedBox(height: 2),
+                if (isOptional) const SizedBox(height: 2),
                 if (isOptional)
                   Text(
                     'Optional',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black.withValues(alpha: 0.5),
+                      color: context.colors.textPrimary.withValues(alpha: 0.5),
                     ),
                   ),
               ],
@@ -399,13 +429,13 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
                     fontWeight: FontWeight.w600,
                     color: date != null
                         ? Palette.forestGreen
-                        : Colors.black.withValues(alpha: 0.4),
+                        : context.colors.textMuted,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
                   Icons.chevron_right,
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: context.colors.textMuted,
                   size: 20,
                 ),
               ],
@@ -416,4 +446,3 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
     );
   }
 }
-

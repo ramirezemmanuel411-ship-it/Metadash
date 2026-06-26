@@ -60,7 +60,7 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
   }) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -93,12 +93,12 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Palette.forestGreen.withValues(alpha: 0.1)
-                              : Palette.lightStone,
+                              ? context.colors.accent.withValues(alpha: 0.1)
+                              : context.colors.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: isSelected
                               ? Border.all(
-                                  color: Palette.forestGreen,
+                                  color: context.colors.accent,
                                   width: 2,
                                 )
                               : null,
@@ -114,14 +114,14 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
                                     ? FontWeight.w600
                                     : FontWeight.w500,
                                 color: isSelected
-                                    ? Palette.forestGreen
-                                    : Colors.black87,
+                                    ? context.colors.accent
+                                    : context.colors.textPrimary,
                               ),
                             ),
                             if (isSelected)
                               Icon(
                                 Icons.check_circle,
-                                color: Palette.forestGreen,
+                                color: context.colors.accent,
                                 size: 20,
                               ),
                           ],
@@ -141,10 +141,10 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Goal Strategy'),
       ),
@@ -155,7 +155,7 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
             'Define how MetaDash interprets progress and adjusts targets.',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withOpacity(0.5),
+              color: context.colors.textSecondary,
               height: 1.4,
             ),
           ),
@@ -167,14 +167,16 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
               _StrategyRow(
                 label: 'Check-In Frequency',
                 value: _checkInFrequency,
-                description: 'Determines how often MetaDash reviews your trends.',
+                description:
+                    'Determines how often MetaDash reviews your trends.',
                 onTap: _showFrequencyPicker,
               ),
-              _buildDivider(),
+              _buildDivider(context),
               _StrategyRow(
                 label: 'Progress Interpretation',
                 value: _progressInterpretation,
-                description: 'Controls how strictly MetaDash defines being "on track."',
+                description:
+                    'Controls how strictly MetaDash defines being "on track."',
                 onTap: _showProgressInterpretationPicker,
               ),
             ],
@@ -187,16 +189,18 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
               _StrategyToggleRow(
                 label: 'Auto-Adjust Targets',
                 value: _autoAdjustTargets,
-                description: 'Automatically updates calorie targets when trends shift.',
+                description:
+                    'Automatically updates calorie targets when trends shift.',
                 onChanged: (newValue) {
                   setState(() => _autoAdjustTargets = newValue);
                 },
               ),
-              _buildDivider(),
+              _buildDivider(context),
               _StrategyRow(
                 label: 'Plateau Response',
                 value: _plateauResponse,
-                description: 'Defines how MetaDash responds when progress slows.',
+                description:
+                    'Defines how MetaDash responds when progress slows.',
                 onTap: _showPlateauResponsePicker,
                 showRecommendedBadge: _plateauResponse == 'Adaptive',
               ),
@@ -228,7 +232,8 @@ class _GoalStrategyScreenState extends State<GoalStrategyScreen> {
             children: [
               _StrategyNavigationRow(
                 label: 'Reentry Mode',
-                description: 'Pause calorie tracking and resume smoothly after a break.',
+                description:
+                    'Pause calorie tracking and resume smoothly after a break.',
                 onTap: () {
                   Navigator.push(
                     context,
@@ -250,10 +255,7 @@ class _StrategySection extends StatelessWidget {
   final String title;
   final List<Widget> children;
 
-  const _StrategySection({
-    required this.title,
-    required this.children,
-  });
+  const _StrategySection({required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -261,11 +263,11 @@ class _StrategySection extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: Container(
         decoration: BoxDecoration(
-          color: Palette.lightStone,
+          color: context.colors.surfaceVariant,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: context.colors.textMuted.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -278,10 +280,10 @@ class _StrategySection extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: context.colors.textPrimary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -314,7 +316,7 @@ class _StrategyRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        color: Colors.transparent,
+        color: context.colors.surface.withValues(alpha: 0),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -328,10 +330,10 @@ class _StrategyRow extends StatelessWidget {
                       Flexible(
                         child: Text(
                           label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                            color: context.colors.textPrimary,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -344,15 +346,17 @@ class _StrategyRow extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Palette.forestGreen.withOpacity(0.15),
+                            color: context.colors.accent.withValues(
+                              alpha: 0.15,
+                            ),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Recommended',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Palette.forestGreen,
+                              color: context.colors.accent,
                             ),
                           ),
                         ),
@@ -364,7 +368,7 @@ class _StrategyRow extends StatelessWidget {
                     description,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.black.withOpacity(0.5),
+                      color: context.colors.textMuted,
                       height: 1.3,
                     ),
                     maxLines: 2,
@@ -378,16 +382,16 @@ class _StrategyRow extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Palette.forestGreen,
+                    color: context.colors.accent,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
                   Icons.chevron_right,
-                  color: Colors.black.withOpacity(0.3),
+                  color: context.colors.textMuted,
                   size: 20,
                 ),
               ],
@@ -415,7 +419,7 @@ class _StrategyToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.transparent,
+      color: context.colors.surface.withValues(alpha: 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -426,10 +430,10 @@ class _StrategyToggleRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: context.colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -437,7 +441,7 @@ class _StrategyToggleRow extends StatelessWidget {
                   description,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.black.withOpacity(0.5),
+                    color: context.colors.textMuted,
                     height: 1.3,
                   ),
                   maxLines: 2,
@@ -452,10 +456,12 @@ class _StrategyToggleRow extends StatelessWidget {
             child: Switch(
               value: value,
               onChanged: onChanged,
-              activeThumbColor: Palette.forestGreen,
-              activeTrackColor: Palette.forestGreen.withOpacity(0.3),
-              inactiveThumbColor: Colors.grey.shade400,
-              inactiveTrackColor: Colors.grey.shade300,
+              activeThumbColor: context.colors.accent,
+              activeTrackColor: context.colors.accent.withValues(alpha: 0.3),
+              inactiveThumbColor: context.colors.textMuted.withValues(
+                alpha: 0.6,
+              ),
+              inactiveTrackColor: context.colors.divider,
             ),
           ),
         ],
@@ -480,7 +486,7 @@ class _StrategyNavigationRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        color: Colors.transparent,
+        color: context.colors.surface.withValues(alpha: 0),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -491,10 +497,10 @@ class _StrategyNavigationRow extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -502,7 +508,7 @@ class _StrategyNavigationRow extends StatelessWidget {
                     description,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.black.withOpacity(0.5),
+                      color: context.colors.textMuted,
                       height: 1.3,
                     ),
                     maxLines: 2,
@@ -514,7 +520,7 @@ class _StrategyNavigationRow extends StatelessWidget {
             const SizedBox(width: 12),
             Icon(
               Icons.chevron_right,
-              color: Colors.black.withOpacity(0.3),
+              color: context.colors.textMuted,
               size: 20,
             ),
           ],
@@ -524,13 +530,9 @@ class _StrategyNavigationRow extends StatelessWidget {
   }
 }
 
-Widget _buildDivider() {
+Widget _buildDivider(BuildContext context) {
   return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Divider(
-      height: 1,
-      thickness: 0.5,
-      color: Colors.black.withOpacity(0.08),
-    ),
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Divider(height: 1, thickness: 1, color: context.colors.divider),
   );
 }

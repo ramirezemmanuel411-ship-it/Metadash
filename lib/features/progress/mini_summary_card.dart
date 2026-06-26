@@ -11,7 +11,7 @@ class MiniSummaryCard<T> extends StatelessWidget {
   final String filter;
   final DateSelector<T> dateSelector;
   final ValueSelector<T> valueSelector;
-  final Color color;
+  final Color? color;
 
   const MiniSummaryCard({
     super.key,
@@ -20,16 +20,24 @@ class MiniSummaryCard<T> extends StatelessWidget {
     required this.filter,
     required this.dateSelector,
     required this.valueSelector,
-    this.color = Colors.black,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final res = computeDeltaByRange<T>(items, filter, dateSelector, valueSelector);
+    final res = computeDeltaByRange<T>(
+      items,
+      filter,
+      dateSelector,
+      valueSelector,
+    );
 
     Widget right;
     if (!res.hasEnoughData) {
-      right = const Text('Not enough data', style: TextStyle(color: Colors.black54));
+      right = Text(
+        'Not enough data',
+        style: TextStyle(color: context.colors.textSecondary),
+      );
     } else {
       final d = res.delta ?? 0.0;
       final sign = d >= 0 ? '+' : '';
@@ -37,9 +45,23 @@ class MiniSummaryCard<T> extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // small sparkline
-          SizedBox(width: 56, height: 28, child: CustomPaint(painter: _SparklinePainter(items, dateSelector, valueSelector, color))),
+          SizedBox(
+            width: 56,
+            height: 28,
+            child: CustomPaint(
+              painter: _SparklinePainter(
+                items,
+                dateSelector,
+                valueSelector,
+                color ?? context.colors.textPrimary,
+              ),
+            ),
+          ),
           const SizedBox(width: 8),
-          Text('$sign${d.toStringAsFixed(1)} lb', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            '$sign${d.toStringAsFixed(1)} lb',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ],
       );
     }
@@ -47,13 +69,16 @@ class MiniSummaryCard<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Palette.warmNeutral,
+        color: context.colors.background,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+          Text(
+            title,
+            style: TextStyle(fontSize: 13, color: context.colors.textPrimary),
+          ),
           right,
         ],
       ),
@@ -67,15 +92,25 @@ class _SparklinePainter<T> extends CustomPainter {
   final ValueSelector<T> valueSelector;
   final Color color;
 
-  _SparklinePainter(this.items, this.dateSelector, this.valueSelector, this.color);
+  _SparklinePainter(
+    this.items,
+    this.dateSelector,
+    this.valueSelector,
+    this.color,
+  );
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (items.isEmpty) { return; }
-    final points = items.map((e) => MapEntry(dateSelector(e), valueSelector(e))).toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    if (items.isEmpty) {
+      return;
+    }
+    final points =
+        items.map((e) => MapEntry(dateSelector(e), valueSelector(e))).toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
     final values = points.map((e) => e.value).toList();
-    if (values.isEmpty) { return; }
+    if (values.isEmpty) {
+      return;
+    }
 
     final minV = values.reduce((a, b) => a < b ? a : b);
     final maxV = values.reduce((a, b) => a > b ? a : b);

@@ -34,10 +34,11 @@ class _DataInputsScreenState extends State<DataInputsScreen> {
       return;
     }
 
-    final defaults = DataInputsSettings.defaults(user.id!).copyWith(
-      stepGoal: user.dailyStepsGoal,
-    );
-    final resolved = (await userState.db.getDataInputsSettings(user.id!)) ?? defaults;
+    final defaults = DataInputsSettings.defaults(
+      user.id!,
+    ).copyWith(stepGoal: user.dailyStepsGoal);
+    final resolved =
+        (await userState.db.getDataInputsSettings(user.id!)) ?? defaults;
     await userState.db.createOrUpdateDataInputsSettings(resolved);
 
     setState(() {
@@ -93,10 +94,10 @@ class _DataInputsScreenState extends State<DataInputsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       appBar: AppBar(
-        backgroundColor: Palette.warmNeutral,
-        foregroundColor: Colors.black87,
+        backgroundColor: context.colors.background,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text('Data & Inputs'),
       ),
@@ -105,91 +106,97 @@ class _DataInputsScreenState extends State<DataInputsScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-          Text(
-            'Manage wearable data, step logic, and nutrition sources.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black.withOpacity(0.5),
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const _SectionLabel('CONNECTIONS'),
-          _SectionCard(
-            children: [
-              _DataInputRow(
-                icon: Icons.watch_outlined,
-                title: 'Wearables & Health Data',
-                subtitle: 'Connect Apple Health / Google Fit and choose what to import.',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const WearablesConnectionsScreen(),
+                Text(
+                  'Manage wearable data, step logic, and nutrition sources.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: context.colors.textSecondary,
+                    height: 1.4,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const _SectionLabel('ACTIVITY INPUTS'),
-          _SectionCard(
-            children: [
-              _DataInputRow(
-                icon: Icons.directions_walk_outlined,
-                title: 'Steps',
-                subtitle: null,
-                trailing: _stepGoal.toString(),
-                onTap: _editStepGoal,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const _SectionLabel('NUTRITION INPUTS'),
-          _SectionCard(
-            children: [
-              _DataInputRow(
-                icon: Icons.restaurant_outlined,
-                title: 'Food Database',
-                subtitle: 'Choose where food data comes from when you search.',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FoodSourcesScreen(),
+                const SizedBox(height: 20),
+                const _SectionLabel('CONNECTIONS'),
+                _SectionCard(
+                  children: [
+                    _DataInputRow(
+                      icon: Icons.watch_outlined,
+                      title: 'Wearables & Health Data',
+                      subtitle:
+                          'Connect Apple Health / Google Fit and choose what to import.',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WearablesConnectionsScreen(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('ACTIVITY INPUTS'),
+                _SectionCard(
+                  children: [
+                    _DataInputRow(
+                      icon: Icons.directions_walk_outlined,
+                      title: 'Steps',
+                      subtitle: null,
+                      trailing: _stepGoal.toString(),
+                      onTap: _editStepGoal,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('NUTRITION INPUTS'),
+                _SectionCard(
+                  children: [
+                    _DataInputRow(
+                      icon: Icons.restaurant_outlined,
+                      title: 'Food Database',
+                      subtitle:
+                          'Choose where food data comes from when you search.',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FoodSourcesScreen(),
+                        ),
+                      ),
+                    ),
+                    const _SectionDivider(),
+                    _DataInputRow(
+                      icon: Icons.calculate_outlined,
+                      title: 'Macro Calculations',
+                      subtitle:
+                          'Control how calories are calculated from macros.',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MacroCalcScreen(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.colors.accent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 8,
+                      ),
+                    ),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ResetDataInputsScreen(),
+                      ),
+                    ),
+                    child: const Text('Reset Data & Inputs'),
                   ),
                 ),
-              ),
-              const _SectionDivider(),
-              _DataInputRow(
-                icon: Icons.calculate_outlined,
-                title: 'Macro Calculations',
-                subtitle: 'Control how calories are calculated from macros.',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const MacroCalcScreen(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              ),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ResetDataInputsScreen(),
-                ),
-              ),
-              child: const Text('Reset Data & Inputs'),
-            ),
-          ),
-          const SizedBox(height: 12),
+                const SizedBox(height: 12),
               ],
             ),
     );
@@ -210,7 +217,7 @@ class _SectionLabel extends StatelessWidget {
         style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w600,
-          color: Colors.black.withOpacity(0.4),
+          color: context.colors.textMuted,
           letterSpacing: 0.8,
         ),
       ),
@@ -227,11 +234,11 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Palette.lightStone,
+        color: context.colors.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: context.colors.textMuted.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -250,7 +257,7 @@ class _SectionDivider extends StatelessWidget {
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      color: Colors.black.withOpacity(0.06),
+      color: context.colors.divider,
     );
   }
 }
@@ -283,7 +290,7 @@ class _DataInputRow extends StatelessWidget {
             Icon(
               icon,
               size: 22,
-              color: Colors.black.withOpacity(0.7),
+              color: context.colors.textSecondary,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -292,10 +299,10 @@ class _DataInputRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -304,7 +311,7 @@ class _DataInputRow extends StatelessWidget {
                       subtitle!,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.black.withOpacity(0.55),
+                        color: context.colors.textSecondary,
                         height: 1.35,
                       ),
                     ),
@@ -318,7 +325,7 @@ class _DataInputRow extends StatelessWidget {
                 trailing!,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.black.withOpacity(0.55),
+                  color: context.colors.textSecondary,
                 ),
               ),
             ],
@@ -326,7 +333,7 @@ class _DataInputRow extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               size: 20,
-              color: Colors.black.withOpacity(0.25),
+              color: context.colors.textMuted,
             ),
           ],
         ),

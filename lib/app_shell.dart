@@ -54,9 +54,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     }
     _loadDailyData();
     widget.userState.addListener(_handleUserStateChange);
-    
+
     // Start automatic sync on app open (async, non-blocking)
-    Future.delayed(const Duration(milliseconds: 500), _syncHealthDataInBackground);
+    Future.delayed(
+      const Duration(milliseconds: 500),
+      _syncHealthDataInBackground,
+    );
   }
 
   @override
@@ -94,7 +97,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         if (!hasPermissions) return;
       } catch (e) {
         // If health service fails to check permissions, skip sync
-        print('Could not check health permissions: $e');
+        debugPrint('Could not check health permissions: $e');
         return;
       }
 
@@ -104,7 +107,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         final start = now.subtract(const Duration(days: 6));
         final end = now; // Include today by using current time, not midnight
 
-        await widget.userState.db.syncHealthDataForDateRange(user.id!, start, end);
+        await widget.userState.db.syncHealthDataForDateRange(
+          user.id!,
+          start,
+          end,
+        );
 
         // Reload UI with new data
         if (mounted) {
@@ -112,11 +119,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         }
       } catch (e) {
         // If sync fails, still let app continue
-        print('Health data sync failed: $e');
+        debugPrint('Health data sync failed: $e');
       }
     } catch (e) {
       // Catch all - don't let anything crash the app
-      print('Background health sync error (non-blocking): $e');
+      debugPrint('Background health sync error (non-blocking): $e');
     }
   }
 
@@ -124,28 +131,37 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     final user = widget.userState.currentUser;
     if (user == null) return;
 
-    final settings = await widget.userState.db.getDataInputsSettings(user.id!) ??
-      DataInputsSettings.defaults(user.id!).copyWith(stepGoal: user.dailyStepsGoal);
+    final settings =
+        await widget.userState.db.getDataInputsSettings(user.id!) ??
+        DataInputsSettings.defaults(
+          user.id!,
+        ).copyWith(stepGoal: user.dailyStepsGoal);
     await widget.userState.db.createOrUpdateDataInputsSettings(settings);
 
-    final log = await widget.userState.db.getDailyLogByUserAndDate(user.id!, _selectedDay);
-    
+    final log = await widget.userState.db.getDailyLogByUserAndDate(
+      user.id!,
+      _selectedDay,
+    );
+
     // Also get food entries for the day
-    final foodEntryMaps = await widget.userState.db.getFoodEntriesForDay(user.id!, _selectedDay);
-    
+    final foodEntryMaps = await widget.userState.db.getFoodEntriesForDay(
+      user.id!,
+      _selectedDay,
+    );
+
     // Sum up calories and macros from food entries
     int foodCalories = 0;
     int foodProtein = 0;
     int foodCarbs = 0;
     int foodFat = 0;
-    
+
     for (final map in foodEntryMaps) {
       foodCalories += (map['calories'] as int?) ?? 0;
       foodProtein += (map['proteinG'] as int?) ?? 0;
       foodCarbs += (map['carbsG'] as int?) ?? 0;
       foodFat += (map['fatG'] as int?) ?? 0;
     }
-    
+
     setState(() {
       _stepsGoal = settings.stepGoal;
       _caloriesGoal = user.dailyCaloricGoal;
@@ -198,56 +214,59 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   void _openAiAssistant() {
-    Navigator.of(context).push(
+    Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (_) => AiChatScreen(
           userState: widget.userState,
           selectedDay: _selectedDay,
         ),
       ),
+      (route) => route.isFirst,
     );
   }
 
   void _openAddFood() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => FoodSearchScreen(
-          userState: widget.userState,
-          targetTimestamp: _selectedDay,
-          autofocusSearch: true,
-        ),
-      ),
-    ).then((_) => _loadDailyData());
+    Navigator.of(context)
+        .pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => FoodSearchScreen(
+              userState: widget.userState,
+              targetTimestamp: _selectedDay,
+              autofocusSearch: true,
+            ),
+          ),
+          (route) => route.isFirst,
+        )
+        .then((_) => _loadDailyData());
   }
 
   void _openAddWorkout() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ExerciseMainScreen(),
-      ),
-    ).then((_) => _loadDailyData());
+    Navigator.of(context)
+        .pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ExerciseMainScreen()),
+          (route) => route.isFirst,
+        )
+        .then((_) => _loadDailyData());
   }
 
   void _openAddWeight() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ProgressScreen(),
-      ),
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const ProgressScreen()),
+      (route) => route.isFirst,
     );
   }
 
   void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ControlCenterScreen(),
-      ),
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const ControlCenterScreen()),
+      (route) => route.isFirst,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.warmNeutral,
+      backgroundColor: context.colors.background,
       body: Stack(
         children: [
           SafeArea(
@@ -296,8 +315,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             onAddWorkout: _openAddWorkout,
             onAddWeight: _openAddWeight,
             onSettings: _openSettings,
-            fabColor: Palette.forestGreen,
-            backgroundColor: Palette.warmNeutral,
+            fabColor: context.colors.cta,
+            backgroundColor: context.colors.background,
           ),
           Positioned(
             bottom: 16,
@@ -331,21 +350,22 @@ class _DotIndicator extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
-  const _DotIndicator({
-    required this.isActive,
-    required this.onTap,
-  });
+  const _DotIndicator({required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: isActive ? 8 : 6,
-        height: isActive ? 8 : 6,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        width: isActive ? 20 : 6,
+        height: 6,
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isActive ? Palette.forestGreen : Colors.grey.shade400,
+          borderRadius: BorderRadius.circular(3),
+          color: isActive
+              ? context.colors.accent
+              : context.colors.textMuted.withValues(alpha: 0.3),
         ),
       ),
     );

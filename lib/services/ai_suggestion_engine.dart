@@ -61,8 +61,10 @@ class AiSuggestionEngine {
     addPartsFrom(rawName);
 
     if (parts.length < 2) {
-      final descMatch = RegExp(r'Per\s+(.+?)\s+-', caseSensitive: false)
-          .firstMatch(rawDesc);
+      final descMatch = RegExp(
+        r'Per\s+(.+?)\s+-',
+        caseSensitive: false,
+      ).firstMatch(rawDesc);
       if (descMatch != null) {
         addPartsFrom(descMatch.group(1) ?? '');
       }
@@ -73,7 +75,9 @@ class AiSuggestionEngine {
     final filtered = <String>[];
     for (final item in parts) {
       final normalized = item.toLowerCase();
-      if (normalized == 'serving' || normalized == 'bowl' || normalized == 'meal') {
+      if (normalized == 'serving' ||
+          normalized == 'bowl' ||
+          normalized == 'meal') {
         continue;
       }
       if (seen.add(normalized)) {
@@ -117,14 +121,16 @@ class AiSuggestionEngine {
       }
     }
 
-    final hasRestaurantPhrase = text.contains('what can i order') ||
+    final hasRestaurantPhrase =
+        text.contains('what can i order') ||
         text.contains('order at') ||
         text.contains('from ') ||
         text.contains('restaurant');
 
     final isRestaurantIntent = restaurantName != null || hasRestaurantPhrase;
 
-    final isSuggestionIntent = text.contains('calories left') ||
+    final isSuggestionIntent =
+        text.contains('calories left') ||
         text.contains('calories remaining') ||
         text.contains('what can i eat') ||
         text.contains('what should i eat') ||
@@ -205,11 +211,7 @@ class AiSuggestionEngine {
     }
 
     if (mode == AiSuggestionMode.meal) {
-      final meals = _buildMealSuggestions(
-        input,
-        candidates,
-        calLeft,
-      );
+      final meals = _buildMealSuggestions(input, candidates, calLeft);
       debugPrint('AI SUGGESTIONS: returned ${meals.length} meal options');
       return AiSuggestionResponse(
         mode: AiSuggestionMode.meal,
@@ -218,17 +220,14 @@ class AiSuggestionEngine {
       );
     }
 
-    final groups = _buildSingleItemGroups(
-      input,
-      candidates,
-      calLeft,
-    );
+    final groups = _buildSingleItemGroups(input, candidates, calLeft);
     debugPrint(
       'AI SUGGESTIONS: returned ${groups.fold<int>(0, (sum, g) => sum + g.items.length)} items',
     );
     return AiSuggestionResponse(
       mode: AiSuggestionMode.singleItem,
-      message: 'Here are single-item suggestions within your remaining calories.',
+      message:
+          'Here are single-item suggestions within your remaining calories.',
       groups: groups,
     );
   }
@@ -304,10 +303,7 @@ class AiSuggestionEngine {
 
     final used = <String>{};
 
-    List<AiSingleItemSuggestion> select(
-      Iterable<FoodModel> list,
-      int count,
-    ) {
+    List<AiSingleItemSuggestion> select(Iterable<FoodModel> list, int count) {
       final selected = <AiSingleItemSuggestion>[];
       for (final food in list) {
         if (selected.length >= count) break;
@@ -327,13 +323,19 @@ class AiSuggestionEngine {
     final byLowFat = foods.where((f) => f.fat <= 6).toList()
       ..sort((a, b) => a.calories.compareTo(b.calories));
 
-    final bySnack = [...foods]..sort((a, b) => a.calories.compareTo(b.calories));
+    final bySnack = [...foods]
+      ..sort((a, b) => a.calories.compareTo(b.calories));
 
     final groups = <AiSuggestionGroup>[];
 
     final proteinItems = select(byProtein, 3);
     if (proteinItems.isNotEmpty) {
-      groups.add(AiSuggestionGroup(title: 'Best Protein per Calorie', items: proteinItems));
+      groups.add(
+        AiSuggestionGroup(
+          title: 'Best Protein per Calorie',
+          items: proteinItems,
+        ),
+      );
     }
 
     final lowCarbItems = select(byLowCarb, 3);
@@ -358,7 +360,14 @@ class AiSuggestionEngine {
     final items = [
       _fallbackSingle('Greek yogurt', '1 cup', 140, 20, 9, 0),
       _fallbackSingle('Protein shake', '1 bottle', 160, 30, 6, 3),
-      _fallbackSingle('Apple + peanut butter', '1 apple + 1 tbsp', 180, 4, 24, 8),
+      _fallbackSingle(
+        'Apple + peanut butter',
+        '1 apple + 1 tbsp',
+        180,
+        4,
+        24,
+        8,
+      ),
       _fallbackSingle('Turkey jerky', '2 oz', 140, 20, 6, 2),
       _fallbackSingle('Cottage cheese', '1 cup', 180, 24, 8, 5),
       _fallbackSingle('Hard-boiled eggs', '2 eggs', 140, 12, 1, 10),
@@ -394,7 +403,10 @@ class AiSuggestionEngine {
     );
   }
 
-  AiMealSuggestion _mealFromFood(FoodModel food, String? requestRestaurantName) {
+  AiMealSuggestion _mealFromFood(
+    FoodModel food,
+    String? requestRestaurantName,
+  ) {
     final totals = AiSuggestionTotals(
       calories: food.calories.round(),
       proteinG: food.protein.round(),

@@ -15,7 +15,8 @@ class HorizontalDateWheelPicker extends StatefulWidget {
   });
 
   @override
-  State<HorizontalDateWheelPicker> createState() => _HorizontalDateWheelPickerState();
+  State<HorizontalDateWheelPicker> createState() =>
+      _HorizontalDateWheelPickerState();
 }
 
 class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
@@ -99,7 +100,10 @@ class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
 
   void _onScrollEnd() {
     if (!_controller.hasClients) return;
-    final targetIndex = (_controller.offset / _itemExtent).round().clamp(0, _dates.length - 1);
+    final targetIndex = (_controller.offset / _itemExtent).round().clamp(
+      0,
+      _dates.length - 1,
+    );
     _animateToIndex(targetIndex);
     _updateSelectedIndex(targetIndex, notify: true);
   }
@@ -152,8 +156,14 @@ class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
                   itemCount: _dates.length,
                   itemBuilder: (context, index) {
                     final date = _dates[index];
-                    final isToday = AppDateUtils.isSameDay(date, DateTime.now());
-                    final distance = _distanceFromCenter(index, constraints.maxWidth);
+                    final isToday = AppDateUtils.isSameDay(
+                      date,
+                      DateTime.now(),
+                    );
+                    final distance = _distanceFromCenter(
+                      index,
+                      constraints.maxWidth,
+                    );
                     final style = _styleForDistance(distance);
                     final isCentered = distance.abs() < 0.5;
 
@@ -177,13 +187,13 @@ class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
                               margin: const EdgeInsets.symmetric(horizontal: 2),
                               decoration: BoxDecoration(
                                 color: isCentered
-                                    ? Palette.lightStone.withOpacity(0.95)
-                                    : Palette.lightStone.withOpacity(0.75),
+                                    ? context.colors.surface
+                                    : context.colors.surfaceVariant,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isCentered
-                                      ? Palette.forestGreen
-                                      : Theme.of(context).colorScheme.outline.withOpacity(0.18),
+                                      ? context.colors.accent
+                                      : context.divider,
                                   width: isCentered ? 1.8 : 1.0,
                                 ),
                               ),
@@ -239,28 +249,34 @@ class _DateNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           weekday,
-          style: textTheme.labelSmall?.copyWith(
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
             fontSize: 9,
-            color: textTheme.bodySmall?.color?.withOpacity(0.75),
+            color: context.colors.textSecondary,
           ),
         ),
         const SizedBox(height: 0),
         Text(
           day,
-          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 15),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            color: context.colors.textPrimary,
+          ),
         ),
         const SizedBox(height: 0),
         Text(
           month,
-          style: textTheme.bodySmall?.copyWith(fontSize: 10, color: textTheme.bodySmall?.color?.withOpacity(0.8)),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontSize: 10,
+            color: context.colors.textSecondary,
+          ),
         ),
         if (isToday) ...[
           const SizedBox(height: 2),
@@ -268,7 +284,7 @@ class _DateNode extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
+              color: context.colors.accent,
               shape: BoxShape.circle,
             ),
           ),

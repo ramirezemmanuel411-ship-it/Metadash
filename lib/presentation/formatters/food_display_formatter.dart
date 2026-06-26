@@ -221,11 +221,11 @@ class FoodDisplayFormatter {
       return 'No nutrition info';
     }
 
-    // Always use rounded integer kcal
+    // Always use rounded integer calories
     final kcal = item.calories;
     final servingStr = _selectBestServing(item);
     final macros = _formatMacros(item);
-    final parts = <String>['$kcal kcal'];
+    final parts = <String>['$kcal cal'];
     if (macros.isNotEmpty) {
       parts.add(macros);
     }
@@ -245,9 +245,10 @@ class FoodDisplayFormatter {
   }
 
   static String _formatMacroValue(double value) {
-    if (value <= 0) return '0g';
-    final formatted = value >= 10 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
-    return '${formatted}g';
+    if (value <= 0) return '0';
+    return value >= 10
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(1);
   }
 
   /// Select best serving representation (ONE only)
@@ -352,7 +353,9 @@ double _scoreForDedup(FoodModel item) {
   if (item.isBranded == true) score += 50;
   if (item.barcode != null && item.barcode!.isNotEmpty) score += 25;
   if (item.servingVolumeMl != null && item.servingVolumeMl! > 0) score += 10;
-  if (item.servingWeightGrams != null && item.servingWeightGrams! > 0) score += 10;
+  if (item.servingWeightGrams != null && item.servingWeightGrams! > 0) {
+    score += 10;
+  }
 
   return score;
 }
@@ -365,15 +368,22 @@ void runFoodDisplayTests() {
   if (!kDebugMode) return;
 
   // Test 1: Title formatting
-  assert(FoodDisplayFormatter.stripNoiseTokens('The Coca-Cola Company') ==
-      'Coca Cola');
-  assert(FoodDisplayFormatter.stripNoiseTokens('COKE WITH LIME FLAVOR, LIME') ==
-      'Coke With Lime Flavor Lime');
+  assert(
+    FoodDisplayFormatter.stripNoiseTokens('The Coca-Cola Company') ==
+        'Coca Cola',
+  );
+  assert(
+    FoodDisplayFormatter.stripNoiseTokens('COKE WITH LIME FLAVOR, LIME') ==
+        'Coke With Lime Flavor Lime',
+  );
 
   // Test 2: Duplicate word removal
-  assert(FoodDisplayFormatter.removeDuplicateWords('Cherry cherry') == 'Cherry');
   assert(
-      FoodDisplayFormatter.removeDuplicateWords('Diet Diet Coke') == 'Diet Coke');
+    FoodDisplayFormatter.removeDuplicateWords('Cherry cherry') == 'Cherry',
+  );
+  assert(
+    FoodDisplayFormatter.removeDuplicateWords('Diet Diet Coke') == 'Diet Coke',
+  );
 
   // Test 3: Unit normalization
   assert(FoodDisplayFormatter.normalizeUnit('MLT') == 'ml');

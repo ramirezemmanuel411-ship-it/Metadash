@@ -27,7 +27,7 @@ class UserFoodItem {
     this.servingUnit,
     this.lastUsed,
     DateTime? createdAt,
-  }) : this.createdAt = createdAt ?? DateTime.now();
+  }) : createdAt = createdAt ?? DateTime.now();
 
   UserFoodItem copyWith({
     String? id,
@@ -111,9 +111,13 @@ class UserFoodItem {
       protein: (map['protein'] as num).toDouble(),
       carbs: (map['carbs'] as num).toDouble(),
       fat: (map['fat'] as num).toDouble(),
-      servingSize: map['servingSize'] != null ? (map['servingSize'] as num).toDouble() : null,
+      servingSize: map['servingSize'] != null
+          ? (map['servingSize'] as num).toDouble()
+          : null,
       servingUnit: map['servingUnit'],
-      lastUsed: map['lastUsed'] != null ? DateTime.parse(map['lastUsed']) : null,
+      lastUsed: map['lastUsed'] != null
+          ? DateTime.parse(map['lastUsed'])
+          : null,
       createdAt: DateTime.parse(map['createdAt']),
     );
   }

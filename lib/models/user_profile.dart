@@ -12,7 +12,8 @@ class UserProfile {
   final double bmr; // Basal Metabolic Rate
   final double goalWeight;
   final int dailyCaloricGoal;
-  final String activityLevel; // 'Sedentary', 'Lightly Active', 'Moderately Active', 'Very Active'
+  final String
+  activityLevel; // 'Sedentary', 'Lightly Active', 'Moderately Active', 'Very Active'
   final int dailyStepsGoal;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -80,7 +81,9 @@ class UserProfile {
       dailyStepsGoal: map['dailyStepsGoal'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
-      macroTargets: map['macroTargets'] != null ? Map<String, int>.from(jsonDecode(map['macroTargets'])) : null,
+      macroTargets: map['macroTargets'] != null
+          ? Map<String, int>.from(jsonDecode(map['macroTargets']))
+          : null,
       manualMacroEntry: map['manualMacroEntry'] == 1,
     );
   }

@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Food data model
 class Food {
@@ -49,7 +50,7 @@ class FoodService {
       'https://world.openfoodfacts.org/api/v0/product';
   static const String _usdaBaseUrl =
       'https://api.nal.usda.gov/fdc/v1/foods/search';
-  static const String _usdaApiKey = 'eLHyw1HDnNnuWOPVff5Oj99XcPcRWX06Bylqr2Mu';
+  static String get _usdaApiKey => dotenv.env['USDA_API_KEY'] ?? '';
 
   /// Search food by barcode (Open Food Facts is better for this)
   Future<Food?> searchByBarcode(String barcode) async {

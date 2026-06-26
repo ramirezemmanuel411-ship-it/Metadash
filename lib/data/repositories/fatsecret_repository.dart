@@ -3,6 +3,7 @@
 /// FatSecret Repository
 /// Provides high-level interface for food search and nutrition queries
 library;
+
 import '../../data/models/food_model.dart';
 import '../datasources/fatsecret_remote_datasource.dart';
 

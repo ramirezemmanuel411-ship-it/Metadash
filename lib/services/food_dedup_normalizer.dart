@@ -29,7 +29,17 @@ class FoodDedupNormalizer {
 
   /// Extended brand synonyms mapping (e.g., "coke" ↔ "coca-cola")
   static const Map<String, List<String>> _brandSynonyms = {
-    'coca-cola': ['coca cola', 'coke', 'coca', 'coca-cola brand', 'cocacola', 'coke zero', 'coke zero sugar', 'coca-cola zero', 'cola zero'],
+    'coca-cola': [
+      'coca cola',
+      'coke',
+      'coca',
+      'coca-cola brand',
+      'cocacola',
+      'coke zero',
+      'coke zero sugar',
+      'coca-cola zero',
+      'cola zero',
+    ],
     'pepsi': ['pepsi cola', 'pepsico', 'pepsi company'],
     'sprite': ['sprite lemon lime', 'sprite citrus'],
     'fanta': ['fanta orange', 'fanta strawberry', 'fanta grape'],
@@ -63,21 +73,59 @@ class FoodDedupNormalizer {
     if (text.isEmpty) return text;
 
     const accents = {
-      'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
-      'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e',
-      'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i',
-      'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o', 'õ': 'o',
-      'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u',
-      'ý': 'y', 'ỳ': 'y', 'ÿ': 'y',
+      'á': 'a',
+      'à': 'a',
+      'ä': 'a',
+      'â': 'a',
+      'ã': 'a',
+      'å': 'a',
+      'é': 'e',
+      'è': 'e',
+      'ë': 'e',
+      'ê': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'ï': 'i',
+      'î': 'i',
+      'ó': 'o',
+      'ò': 'o',
+      'ö': 'o',
+      'ô': 'o',
+      'õ': 'o',
+      'ú': 'u',
+      'ù': 'u',
+      'ü': 'u',
+      'û': 'u',
+      'ý': 'y',
+      'ỳ': 'y',
+      'ÿ': 'y',
       'ñ': 'n',
       'ç': 'c',
       'œ': 'oe',
       'æ': 'ae',
-      'Á': 'A', 'À': 'A', 'Ä': 'A', 'Â': 'A', 'Ã': 'A', 'Å': 'A',
-      'É': 'E', 'È': 'E', 'Ë': 'E', 'Ê': 'E',
-      'Í': 'I', 'Ì': 'I', 'Ï': 'I', 'Î': 'I',
-      'Ó': 'O', 'Ò': 'O', 'Ö': 'O', 'Ô': 'O', 'Õ': 'O',
-      'Ú': 'U', 'Ù': 'U', 'Ü': 'U', 'Û': 'U',
+      'Á': 'A',
+      'À': 'A',
+      'Ä': 'A',
+      'Â': 'A',
+      'Ã': 'A',
+      'Å': 'A',
+      'É': 'E',
+      'È': 'E',
+      'Ë': 'E',
+      'Ê': 'E',
+      'Í': 'I',
+      'Ì': 'I',
+      'Ï': 'I',
+      'Î': 'I',
+      'Ó': 'O',
+      'Ò': 'O',
+      'Ö': 'O',
+      'Ô': 'O',
+      'Õ': 'O',
+      'Ú': 'U',
+      'Ù': 'U',
+      'Ü': 'U',
+      'Û': 'U',
       'Ý': 'Y',
       'Ñ': 'N',
       'Ç': 'C',
@@ -126,7 +174,7 @@ class FoodDedupNormalizer {
       RegExp(r'\b[a-z]\s+(cola|coke|sprite|fanta|pepsi)\b'),
       (match) => match.group(1)!,
     );
-    
+
     // Step 7: Normalize "cola zero" to "coke zero" for consistency
     normalized = normalized.replaceAll('cola zero', 'coke zero');
 
@@ -195,7 +243,17 @@ class FoodDedupNormalizer {
     if (!brand.contains(',')) return brand;
 
     final parts = brand.split(',').map((s) => s.trim()).toList();
-    final noisePatterns = ['restaurant', 'supermarket', 'generic', 'store', 'brand', 'food service', 'company', 'inc', 'sandwiches'];
+    final noisePatterns = [
+      'restaurant',
+      'supermarket',
+      'generic',
+      'store',
+      'brand',
+      'food service',
+      'company',
+      'inc',
+      'sandwiches',
+    ];
 
     // Find first non-noise part
     for (final part in parts) {
@@ -231,7 +289,9 @@ class FoodDedupNormalizer {
 
     // Fix serving unit for beverages (g → ml)
     String displayUnit = servingUnit;
-    if (isBeverage && (servingUnit.toLowerCase() == 'g' || servingUnit.toLowerCase() == 'gram')) {
+    if (isBeverage &&
+        (servingUnit.toLowerCase() == 'g' ||
+            servingUnit.toLowerCase() == 'gram')) {
       displayUnit = 'ml';
     }
 
@@ -326,7 +386,7 @@ class FoodDedupNormalizer {
 
   /// Determine product family from name
   /// Priority order: DIET > ZERO > flavor variants > REGULAR
-  /// 
+  ///
   /// Examples:
   ///   "Diet Coke" → DIET
   ///   "Coke Zero" → ZERO
@@ -374,7 +434,7 @@ class FoodDedupNormalizer {
 
   /// Generate product family key for family-level deduplication
   /// Format: "normalizedBrand|productFamily"
-  /// 
+  ///
   /// Examples:
   ///   "Original Taste" + "Coca-Cola" → "coca-cola|REGULAR"
   ///   "Goût Original" + "coke" → "coca-cola|REGULAR" (same key!)
@@ -390,12 +450,12 @@ class FoodDedupNormalizer {
 
   /// Deduplicate at product family level
   /// Groups items by family key, selects best representative from each group
-  /// 
+  ///
   /// Selection criteria (priority order):
   /// 1. Branded items > generic items (has recognizable brand)
   /// 2. Longer, more descriptive titles
   /// 3. Calories closest to expected baseline (for REGULAR family)
-  /// 
+  ///
   /// Returns one item per family, preserving relative rank order
   static List<T> deduplicateByProductFamily<T>({
     required List<T> items,
@@ -408,7 +468,7 @@ class FoodDedupNormalizer {
 
     // Group items by family key
     final familyGroups = <String, List<T>>{};
-    
+
     for (final item in items) {
       final familyKey = generateProductFamilyKey(
         name: getName(item),
@@ -425,7 +485,7 @@ class FoodDedupNormalizer {
 
     // Select best representative from each family
     final representatives = <T>[];
-    
+
     for (final entry in familyGroups.entries) {
       final familyKey = entry.key;
       final candidates = entry.value;
@@ -451,7 +511,9 @@ class FoodDedupNormalizer {
         print('    Candidates: ${candidates.length}');
         print('    Selected: ${getName(best)}');
         if (candidates.length > 1) {
-          print('    Collapsed: ${candidates.where((c) => c != best).map((c) => getName(c)).join(", ")}');
+          print(
+            '    Collapsed: ${candidates.where((c) => c != best).map((c) => getName(c)).join(", ")}',
+          );
         }
       }
     }
@@ -489,9 +551,10 @@ class FoodDedupNormalizer {
 
       // 1. Branded items get +100 points
       final normalizedBrand = normalizeBrand(brand ?? '');
-      final hasBrand = normalizedBrand.isNotEmpty && 
-                      normalizedBrand != 'generic' && 
-                      normalizedBrand != 'unknown';
+      final hasBrand =
+          normalizedBrand.isNotEmpty &&
+          normalizedBrand != 'generic' &&
+          normalizedBrand != 'unknown';
       if (hasBrand) {
         score += 100;
       }
@@ -503,7 +566,8 @@ class FoodDedupNormalizer {
       // 3. For REGULAR family, prefer calories near 42 kcal/100ml (typical Coke)
       if (familyKey.contains('|REGULAR')) {
         final caloriesDiff = (calories - 42).abs();
-        final caloriesPenalty = caloriesDiff * 2; // -2 points per calorie difference
+        final caloriesPenalty =
+            caloriesDiff * 2; // -2 points per calorie difference
         score -= caloriesPenalty;
       }
 

@@ -5,7 +5,8 @@ class DailyLog {
   final int caloriesConsumed;
   final int stepsCount;
   final int? runningSteps; // Running steps (for TDEE calculation)
-  final int? workoutCalories; // Device-reported active calories (Apple Watch, etc.)
+  final int?
+  workoutCalories; // Device-reported active calories (Apple Watch, etc.)
   final String? workoutType; // 'Running', 'Strength', 'Cardio', etc.
   final int? workoutDurationMinutes;
   final double waterIntake; // in ounces
@@ -20,6 +21,14 @@ class DailyLog {
   final double? vo2Max;
   final double? weight; // Daily weight in lbs (for adaptive TDEE)
   final double? tdeeAdjustment; // Cumulative TDEE adjustment in calories
+  /// Source device/app name from HealthKit (e.g. 'Apple Watch', 'Garmin').
+  /// Used by the wearable calibration engine.
+  final String? wearableSource;
+  /// Average METs for the workout session (when exposed by Apple Health).
+  /// Used by the hybrid MET/wearable energy model.
+  final double? averageMets;
+  final double? hrv; // Heart-rate variability (SDNN, ms) from HealthKit
+  final int? mindfulnessMinutes; // Mindful minutes from Apple Health
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -45,6 +54,10 @@ class DailyLog {
     this.vo2Max,
     this.weight,
     this.tdeeAdjustment,
+    this.wearableSource,
+    this.averageMets,
+    this.hrv,
+    this.mindfulnessMinutes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -61,7 +74,9 @@ class DailyLog {
       'workoutType': workoutType,
       'workoutDurationMinutes': workoutDurationMinutes,
       'waterIntake': waterIntake,
-      'workoutActivities': workoutActivities.join(','), // Store as comma-separated
+      'workoutActivities': workoutActivities.join(
+        ',',
+      ), // Store as comma-separated
       'protein': protein,
       'carbs': carbs,
       'fat': fat,
@@ -72,6 +87,10 @@ class DailyLog {
       'vo2Max': vo2Max,
       'weight': weight,
       'tdeeAdjustment': tdeeAdjustment,
+      'wearableSource': wearableSource,
+      'averageMets': averageMets,
+      'hrv': hrv,
+      'mindfulnessMinutes': mindfulnessMinutes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -89,17 +108,29 @@ class DailyLog {
       workoutType: map['workoutType'],
       workoutDurationMinutes: map['workoutDurationMinutes'],
       waterIntake: (map['waterIntake'] as num).toDouble(),
-      workoutActivities: (map['workoutActivities'] as String).isEmpty ? [] : (map['workoutActivities'] as String).split(','),
+      workoutActivities: (map['workoutActivities'] as String).isEmpty
+          ? []
+          : (map['workoutActivities'] as String).split(','),
       protein: map['protein'],
       carbs: map['carbs'],
       fat: map['fat'],
       sleepMinutes: map['sleepMinutes'],
       restingHeartRate: map['restingHeartRate'],
       averageHeartRate: map['averageHeartRate'],
-      distanceMeters: map['distanceMeters'] != null ? (map['distanceMeters'] as num).toDouble() : null,
+      distanceMeters: map['distanceMeters'] != null
+          ? (map['distanceMeters'] as num).toDouble()
+          : null,
       vo2Max: map['vo2Max'] != null ? (map['vo2Max'] as num).toDouble() : null,
       weight: map['weight'] != null ? (map['weight'] as num).toDouble() : null,
-      tdeeAdjustment: map['tdeeAdjustment'] != null ? (map['tdeeAdjustment'] as num).toDouble() : null,
+      tdeeAdjustment: map['tdeeAdjustment'] != null
+          ? (map['tdeeAdjustment'] as num).toDouble()
+          : null,
+      wearableSource: map['wearableSource'] as String?,
+      averageMets: map['averageMets'] != null
+          ? (map['averageMets'] as num).toDouble()
+          : null,
+      hrv: map['hrv'] != null ? (map['hrv'] as num).toDouble() : null,
+      mindfulnessMinutes: map['mindfulnessMinutes'] as int?,
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );
@@ -127,6 +158,10 @@ class DailyLog {
     double? vo2Max,
     double? weight,
     double? tdeeAdjustment,
+    String? wearableSource,
+    double? averageMets,
+    double? hrv,
+    int? mindfulnessMinutes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -139,7 +174,8 @@ class DailyLog {
       runningSteps: runningSteps ?? this.runningSteps,
       workoutCalories: workoutCalories ?? this.workoutCalories,
       workoutType: workoutType ?? this.workoutType,
-      workoutDurationMinutes: workoutDurationMinutes ?? this.workoutDurationMinutes,
+      workoutDurationMinutes:
+          workoutDurationMinutes ?? this.workoutDurationMinutes,
       waterIntake: waterIntake ?? this.waterIntake,
       workoutActivities: workoutActivities ?? this.workoutActivities,
       protein: protein ?? this.protein,
@@ -152,6 +188,10 @@ class DailyLog {
       vo2Max: vo2Max ?? this.vo2Max,
       weight: weight ?? this.weight,
       tdeeAdjustment: tdeeAdjustment ?? this.tdeeAdjustment,
+      wearableSource: wearableSource ?? this.wearableSource,
+      averageMets: averageMets ?? this.averageMets,
+      hrv: hrv ?? this.hrv,
+      mindfulnessMinutes: mindfulnessMinutes ?? this.mindfulnessMinutes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

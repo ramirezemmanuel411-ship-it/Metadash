@@ -20,7 +20,9 @@ class FatSecretToken {
   });
 
   bool get isExpired {
-    final expirationTime = issuedAt.add(Duration(seconds: expiresIn - 60)); // 60s buffer
+    final expirationTime = issuedAt.add(
+      Duration(seconds: expiresIn - 60),
+    ); // 60s buffer
     return DateTime.now().isAfter(expirationTime);
   }
 
@@ -48,23 +50,27 @@ class FatSecretBackendClient {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('${FatSecretConfig.baseUrl}oauth/authorize'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {
-          'grant_type': 'client_credentials',
-          'client_id': FatSecretConfig.clientId,
-          'client_secret': FatSecretConfig.clientSecret,
-          'scope': 'basic',
-        },
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('${FatSecretConfig.baseUrl}oauth/authorize'),
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: {
+              'grant_type': 'client_credentials',
+              'client_id': FatSecretConfig.clientId,
+              'client_secret': FatSecretConfig.clientSecret,
+              'scope': 'basic',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         _cachedToken = FatSecretToken.fromJson(json);
         return _cachedToken!;
       } else {
-        throw Exception('Failed to get FatSecret token: ${response.statusCode}');
+        throw Exception(
+          'Failed to get FatSecret token: ${response.statusCode}',
+        );
       }
     } catch (e) {
       throw Exception('Error getting FatSecret token: $e');
@@ -76,13 +82,15 @@ class FatSecretBackendClient {
     try {
       final token = await _getAccessToken();
 
-      final response = await http.get(
-        Uri.parse(
-          '${FatSecretConfig.baseUrl}food.search.v3.1'
-          '?search_expression=$query'
-          '&access_token=${token.accessToken}',
-        ),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(
+            Uri.parse(
+              '${FatSecretConfig.baseUrl}food.search.v3.1'
+              '?search_expression=$query'
+              '&access_token=${token.accessToken}',
+            ),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -99,13 +107,15 @@ class FatSecretBackendClient {
     try {
       final token = await _getAccessToken();
 
-      final response = await http.get(
-        Uri.parse(
-          '${FatSecretConfig.baseUrl}food.get.v3.1'
-          '?food_id=$foodId'
-          '&access_token=${token.accessToken}',
-        ),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(
+            Uri.parse(
+              '${FatSecretConfig.baseUrl}food.get.v3.1'
+              '?food_id=$foodId'
+              '&access_token=${token.accessToken}',
+            ),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -122,13 +132,15 @@ class FatSecretBackendClient {
     try {
       final token = await _getAccessToken();
 
-      final response = await http.get(
-        Uri.parse(
-          '${FatSecretConfig.baseUrl}recipe.get.v3.1'
-          '?recipe_id=$recipeId'
-          '&access_token=${token.accessToken}',
-        ),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(
+            Uri.parse(
+              '${FatSecretConfig.baseUrl}recipe.get.v3.1'
+              '?recipe_id=$recipeId'
+              '&access_token=${token.accessToken}',
+            ),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;

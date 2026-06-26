@@ -1,16 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'providers/dashboard_layout_provider.dart';
+import 'providers/food_plate_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 import 'shared/palette.dart';
 import 'providers/user_state.dart';
-import 'features/user_selection/user_selection_screen.dart';
+import 'features/auth/auth_gate.dart';
 import 'shared/user_settings.dart';
-import 'app_shell.dart';
+import 'splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +42,7 @@ void main() async {
       isReportingPlatformError = false;
     }
   }
-  
+
   // Add global error handler for debugger disconnect crashes
   FlutterError.onError = (details) {
     if (details.exception.toString().contains('ServicesBinding') ||
@@ -48,7 +50,9 @@ void main() async {
         details.exception.toString().contains('PlatformException')) {
       // Silently handle platform-level errors (likely from debugger disconnect)
       // ignore: avoid_print
-      print('Platform error (likely debugger disconnect): ${details.exception}');
+      print(
+        'Platform error (likely debugger disconnect): ${details.exception}',
+      );
     } else {
       safeRecordFlutterError(details);
       FlutterError.dumpErrorToConsole(details);
@@ -59,30 +63,22 @@ void main() async {
     safeRecordPlatformError(error, stack);
     return true;
   };
-  
+
   // Load .env file for AI API keys
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     // ignore: avoid_print
-    print('Note: .env file not found. AI features will be disabled. Create a .env file with your API keys.');
+    print(
+      'Note: .env file not found. AI features will be disabled. Create a .env file with your API keys.',
+    );
   }
 
-  final firebaseApp = await Firebase.initializeApp();
+  final firebaseApp = await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   // ignore: avoid_print
   print('Firebase initialized: ${firebaseApp.name}');
-
-  final auth = FirebaseAuth.instance;
-  if (auth.currentUser == null) {
-    try {
-      final cred = await auth.signInAnonymously();
-      // ignore: avoid_print
-      print('Signed in anonymously: ${cred.user?.uid}');
-    } catch (e) {
-      // ignore: avoid_print
-      print('Anonymous auth failed: $e');
-    }
-  }
 
   final remoteConfig = FirebaseRemoteConfig.instance;
   await remoteConfig.setConfigSettings(
@@ -93,7 +89,7 @@ void main() async {
   );
   await remoteConfig.setDefaults(const {});
   await remoteConfig.fetchAndActivate();
-  
+
   runApp(const MyApp());
 }
 
@@ -107,29 +103,28 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late UserState _userState;
   bool _initialized = false;
+  bool _minTimeElapsed = false;
+
+  bool get _showApp => _initialized && _minTimeElapsed;
 
   @override
   void initState() {
     super.initState();
     _initializeApp();
+    // Keep splash visible for at least 2 seconds so tips are readable
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) setState(() => _minTimeElapsed = true);
+    });
   }
 
   Future<void> _initializeApp() async {
     _userState = UserState();
-
     _userState.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     });
-
-    // Give the database a moment to initialize
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (mounted) {
-      setState(() {
-        _initialized = true;
-      });
-    }
+    // Silently restore the last logged-in user — returning users skip onboarding
+    await _userState.autoLoginLastUser();
+    if (mounted) setState(() => _initialized = true);
   }
 
   @override
@@ -145,13 +140,19 @@ class _MyAppState extends State<MyApp> {
             primary: Palette.forestGreen,
             surface: Palette.dayBackground,
             onSurface: Palette.dayTextPrimary,
+            onSurfaceVariant: Palette.dayTextSecondary,
+            secondary: Palette.forestGreen,
+            onSecondary: Colors.white,
             surfaceContainer: Palette.dayCard,
             surfaceContainerHigh: Palette.daySecondary,
           ),
           scaffoldBackgroundColor: Palette.dayBackground,
           cardColor: Palette.dayCard,
           dividerColor: Palette.dayDivider,
-          dividerTheme: const DividerThemeData(color: Palette.dayDivider, thickness: 1),
+          dividerTheme: const DividerThemeData(
+            color: Palette.dayDivider,
+            thickness: 1,
+          ),
           textTheme: const TextTheme(
             displayLarge: TextStyle(color: Palette.dayTextPrimary),
             displayMedium: TextStyle(color: Palette.dayTextPrimary),
@@ -159,7 +160,10 @@ class _MyAppState extends State<MyApp> {
             headlineLarge: TextStyle(color: Palette.dayTextPrimary),
             headlineMedium: TextStyle(color: Palette.dayTextPrimary),
             headlineSmall: TextStyle(color: Palette.dayTextPrimary),
-            titleLarge: TextStyle(color: Palette.dayTextPrimary, fontWeight: FontWeight.bold),
+            titleLarge: TextStyle(
+              color: Palette.dayTextPrimary,
+              fontWeight: FontWeight.bold,
+            ),
             titleMedium: TextStyle(color: Palette.dayTextPrimary),
             titleSmall: TextStyle(color: Palette.dayTextPrimary),
             bodyLarge: TextStyle(color: Palette.dayTextPrimary),
@@ -170,10 +174,16 @@ class _MyAppState extends State<MyApp> {
           ),
           appBarTheme: const AppBarTheme(
             backgroundColor: Palette.dayBackground,
-            foregroundColor: Palette.dayTextPrimary,
+            foregroundColor: Palette.forestGreen,
             elevation: 0,
             centerTitle: true,
           ),
+          listTileTheme: const ListTileThemeData(
+            textColor: Palette.dayTextPrimary,
+            subtitleTextStyle: TextStyle(color: Palette.dayTextSecondary),
+            iconColor: Palette.dayTextSecondary,
+          ),
+          iconTheme: const IconThemeData(color: Palette.dayTextPrimary),
         );
 
         final darkTheme = ThemeData(
@@ -192,7 +202,10 @@ class _MyAppState extends State<MyApp> {
           scaffoldBackgroundColor: Palette.nightBackground,
           cardColor: Palette.nightCard,
           dividerColor: Palette.nightDivider,
-          dividerTheme: const DividerThemeData(color: Palette.nightDivider, thickness: 1),
+          dividerTheme: const DividerThemeData(
+            color: Palette.nightDivider,
+            thickness: 1,
+          ),
           textTheme: const TextTheme(
             displayLarge: TextStyle(color: Palette.nightTextPrimary),
             displayMedium: TextStyle(color: Palette.nightTextPrimary),
@@ -200,7 +213,10 @@ class _MyAppState extends State<MyApp> {
             headlineLarge: TextStyle(color: Palette.nightTextPrimary),
             headlineMedium: TextStyle(color: Palette.nightTextPrimary),
             headlineSmall: TextStyle(color: Palette.nightTextPrimary),
-            titleLarge: TextStyle(color: Palette.nightTextPrimary, fontWeight: FontWeight.bold),
+            titleLarge: TextStyle(
+              color: Palette.nightTextPrimary,
+              fontWeight: FontWeight.bold,
+            ),
             titleMedium: TextStyle(color: Palette.nightTextPrimary),
             titleSmall: TextStyle(color: Palette.nightTextPrimary),
             bodyLarge: TextStyle(color: Palette.nightTextPrimary),
@@ -211,50 +227,36 @@ class _MyAppState extends State<MyApp> {
           ),
           appBarTheme: const AppBarTheme(
             backgroundColor: Palette.nightBackground,
-            foregroundColor: Palette.nightTextPrimary,
+            foregroundColor: Palette.nightAccentBlue,
             elevation: 0,
             centerTitle: true,
           ),
         );
 
-        return ChangeNotifierProvider<UserState>.value(
-          value: _userState,
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider<UserState>.value(value: _userState),
+            ChangeNotifierProvider<DashboardLayoutProvider>(
+              create: (_) => DashboardLayoutProvider(),
+            ),
+            ChangeNotifierProvider<FoodPlateProvider>(
+              create: (_) => FoodPlateProvider(),
+            ),
+          ],
           child: MaterialApp(
             title: 'Nutrition',
             theme: theme,
             darkTheme: darkTheme,
             themeMode: mode,
-            home: _initialized
-                ? (_userState.isLoggedIn
-                    ? AppShell(userState: _userState)
-                    : UserSelectionScreen(userState: _userState))
-                : Scaffold(
-                    backgroundColor: mode == ThemeMode.dark ? Palette.nightBackground : Palette.dayBackground,
-                    body: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Palette.forestGreen,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Loading...',
-                            style: TextStyle(
-                              color: mode == ThemeMode.dark ? Palette.nightTextPrimary : Palette.dayTextPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+            home: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 500),
+              child: _showApp
+                  ? AuthGate(userState: _userState)
+                  : const SplashScreen(),
+            ),
           ),
         );
       },
     );
   }
 }
-
-

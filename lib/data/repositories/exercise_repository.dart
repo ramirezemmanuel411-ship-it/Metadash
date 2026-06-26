@@ -7,11 +7,9 @@ class ExerciseRepository {
   final DatabaseService _db;
   final UserState _userState;
 
-  ExerciseRepository({
-    DatabaseService? db,
-    required UserState userState,
-  })  : _db = db ?? DatabaseService(),
-        _userState = userState;
+  ExerciseRepository({DatabaseService? db, required UserState userState})
+    : _db = db ?? DatabaseService(),
+      _userState = userState;
 
   /// Save exercise to local database
   Future<void> saveExercise(Exercise exercise) async {
@@ -30,11 +28,14 @@ class ExerciseRepository {
       'id': exercise.id,
       'userId': userId,
       'date': date.toIso8601String(),
-      'type': exercise.type.toString().split('.').last, // Enum to string
-      'intensity': exercise.intensity?.toString().split('.').last,
+      'type': exercise.type.name,
+      'intensity': exercise.intensity?.name,
+      'liftingIntensity': exercise.workoutIntensity?.name,
+      'focusArea': exercise.workoutType,
       'durationMinutes': exercise.durationMinutes,
       'description': exercise.description,
       'caloriesBurned': exercise.caloriesBurned,
+      'avgHeartRate': exercise.avgHeartRate,
       'timestamp': exercise.timestamp.toIso8601String(),
       'createdAt': DateTime.now().toIso8601String(),
     });
@@ -86,7 +87,8 @@ class ExerciseRepository {
 
     for (final exercise in exercises) {
       // For manual exercises, use direct value
-      if (exercise.type == ExerciseType.manual && exercise.caloriesBurned != null) {
+      if (exercise.type == ExerciseType.manual &&
+          exercise.caloriesBurned != null) {
         total += exercise.caloriesBurned!;
       }
       // For run exercises, use estimated (requires user weight)
@@ -97,8 +99,12 @@ class ExerciseRepository {
           if (estimated != null) total += estimated;
         }
       }
-      // For described exercises, parse from AI extraction in future enhancement.
-      // For weight lifting, calculate from sets/reps in future enhancement.
+      // For weight lifting exercises, use MET-based estimation
+      else if (exercise.type == ExerciseType.weightLifting) {
+        final weight = _userState.currentUser?.weight;
+        final estimated = exercise.getEstimatedWorkoutCalories(weight);
+        if (estimated != null) total += estimated;
+      }
     }
 
     return total;
@@ -106,36 +112,65 @@ class ExerciseRepository {
 
   /// Convert database map to Exercise object
   Exercise _mapToExercise(Map<String, dynamic> map) {
+    final typeRaw = map['type']?.toString();
+    final intensityRaw = map['intensity']?.toString();
+    final liftingIntensityRaw = map['liftingIntensity']?.toString();
+    final workoutType = map['focusArea']?.toString();
+
     final type = ExerciseType.values.firstWhere(
-      (e) => e.toString().split('.').last == map['type'],
+      (e) => e.name == typeRaw,
       orElse: () => ExerciseType.manual,
     );
 
-    final intensity = map['intensity'] != null
+    final intensity = intensityRaw != null
         ? ExerciseIntensity.values.firstWhere(
-            (e) => e.toString().split('.').last == map['intensity'],
+            (e) => e.name == intensityRaw,
             orElse: () => ExerciseIntensity.medium,
           )
         : null;
+
+    final workoutIntensity = liftingIntensityRaw != null
+        ? WorkoutIntensity.values.firstWhere(
+            (e) => e.name == liftingIntensityRaw,
+            orElse: () => WorkoutIntensity.moderate,
+          )
+        : null;
+
+    final durationMinutes = map['durationMinutes'] is num
+        ? (map['durationMinutes'] as num).toInt()
+        : int.tryParse(map['durationMinutes']?.toString() ?? '');
+
+    final caloriesBurned = map['caloriesBurned'] is num
+        ? (map['caloriesBurned'] as num).toInt()
+        : int.tryParse(map['caloriesBurned']?.toString() ?? '');
 
     switch (type) {
       case ExerciseType.run:
         return Exercise.run(
           intensity: intensity ?? ExerciseIntensity.medium,
-          durationMinutes: map['durationMinutes'] ?? 30,
+          durationMinutes: durationMinutes ?? 30,
+          avgHeartRate: map['avgHeartRate'] is num
+              ? (map['avgHeartRate'] as num).toInt()
+              : int.tryParse(map['avgHeartRate']?.toString() ?? ''),
         );
 
       case ExerciseType.weightLifting:
-        return Exercise.run(
-          intensity: intensity ?? ExerciseIntensity.medium,
-          durationMinutes: map['durationMinutes'] ?? 30,
+        return Exercise.weightLifting(
+          workoutIntensity: workoutIntensity ?? WorkoutIntensity.moderate,
+          durationMinutes: durationMinutes ?? 45,
+          workoutType: workoutType,
+          avgHeartRate: map['avgHeartRate'] is num
+              ? (map['avgHeartRate'] as num).toInt()
+              : int.tryParse(map['avgHeartRate']?.toString() ?? ''),
         );
 
       case ExerciseType.described:
-        return Exercise.described(description: map['description'] ?? '');
+        return Exercise.described(
+          description: map['description']?.toString() ?? '',
+        );
 
       case ExerciseType.manual:
-        return Exercise.manual(caloriesBurned: map['caloriesBurned']);
+        return Exercise.manual(caloriesBurned: caloriesBurned ?? 0);
     }
   }
 }

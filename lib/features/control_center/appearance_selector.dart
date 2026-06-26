@@ -1,214 +1,199 @@
 import 'package:flutter/material.dart';
-import '../../shared/user_settings.dart';
 import '../../shared/palette.dart';
 
+export 'appearance_selector_clean.dart';
+
 class AppearanceSelector extends StatelessWidget {
-  const AppearanceSelector({super.key});
+  final bool selected;
+  final ThemeMode mode;
+
+  const AppearanceSelector({
+    super.key,
+    required this.selected,
+    required this.mode,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Appearance',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
+    return _buildIcon(context);
+  }
+
+  Widget _buildIcon(BuildContext context) {
+    final borderColor = selected
+        ? context.colors.accent
+        : context.colors.textMuted.withValues(alpha: 0.18);
+
+    if (mode == ThemeMode.system) {
+      // Auto: split thumbnail (left = day, right = night)
+      return Container(
+        width: 96.0,
+        height: 72.0,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor, width: selected ? 2 : 1),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: context.colors.accent.withValues(alpha: 0.14),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Row(
+            children: [
+              Expanded(child: _autoHalf(isLeft: true)),
+              Container(
+                width: 1,
+                color: context.colors.divider.withValues(alpha: 0.22),
+              ),
+              Expanded(child: _autoHalf(isLeft: false)),
+            ],
           ),
-          const SizedBox(height: 20),
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: UserSettings.themeMode,
-            builder: (context, currentMode, _) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+        ),
+      );
+    }
+
+    // Day/Night thumbnails (fixed artwork colors)
+    final isDark = mode == ThemeMode.dark;
+    final outerBg = isDark
+        ? context.colors.surfaceVariant
+        : context.colors.background;
+    final innerBg = isDark
+        ? context.colors.surface
+        : context.colors.surfaceVariant;
+    final accent = isDark
+        ? context.colors.accent
+        : context.colors.accent; // Corrected reference
+
+    return Container(
+      width: 96.0,
+      height: 72.0,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: outerBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: selected ? 2 : 1),
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.14),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          color: innerBg,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final w = c.maxWidth;
+              final h = c.maxHeight;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AppearanceOption(
-                    label: 'Auto',
-                    mode: ThemeMode.system,
-                    selected: currentMode == ThemeMode.system,
-                    onTap: () => UserSettings.themeMode.value = ThemeMode.system,
+                  Container(
+                    width: w * 0.36,
+                    height: h * 0.12,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: isDark ? 0.22 : 0.18),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  _AppearanceOption(
-                    label: 'Day',
-                    mode: ThemeMode.light,
-                    selected: currentMode == ThemeMode.light,
-                    onTap: () => UserSettings.themeMode.value = ThemeMode.light,
-                  ),
-                  _AppearanceOption(
-                    label: 'Night',
-                    mode: ThemeMode.dark,
-                    selected: currentMode == ThemeMode.dark,
-                    onTap: () => UserSettings.themeMode.value = ThemeMode.dark,
+                  const SizedBox(height: 6),
+                  Container(
+                    width: w * 0.72,
+                    height: h * 0.18,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: isDark ? 0.12 : 0.14),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
                 ],
               );
             },
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AppearanceOption extends StatelessWidget {
-  final String label;
-  final ThemeMode mode;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _AppearanceOption({
-    required this.label,
-    required this.mode,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 80,
-            height: 54,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected ? Palette.forestGreen : Colors.grey.withOpacity(0.3),
-                width: selected ? 2 : 1,
-              ),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: Palette.forestGreen.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      )
-                    ]
-                  : null,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: _buildPreview(context),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? Palette.forestGreen : Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildPreview(BuildContext context) {
-    if (mode == ThemeMode.system) {
-      return Row(
-        children: [
-          Expanded(child: _buildThemePreview(Brightness.light)),
-          Expanded(child: _buildThemePreview(Brightness.dark)),
-        ],
-      );
-    }
-    return _buildThemePreview(
-      mode == ThemeMode.light ? Brightness.light : Brightness.dark,
-    );
-  }
+  Widget _autoHalf({required bool isLeft}) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = c.maxWidth;
+        final h = c.maxHeight;
+        final bg = isLeft ? Palette.dayCard : Palette.nightCard;
+        final accent = isLeft ? Palette.forestGreen : Palette.nightAccentBlue;
 
-  Widget _buildThemePreview(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    final bgColor = isDark ? Palette.nightBackground : Palette.dayBackground;
-    final cardColor = isDark ? Palette.nightCard : Palette.dayCard;
-    final accentColor = Palette.forestGreen;
-
-    return Container(
-      color: bgColor,
-      child: Stack(
-        children: [
-          // Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 12,
-            child: Container(
-              color: isDark ? Palette.nightSecondary : Palette.daySecondary,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              alignment: Alignment.centerLeft,
-              child: Container(
-                width: 16,
-                height: 2,
+        return Container(
+          color: bg,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: w * 0.6,
+                height: h * 0.18,
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(1),
+                  color: accent,
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
-            ),
-          ),
-          // Main Card
-          Positioned(
-            top: 18,
-            left: 6,
-            right: 6,
-            bottom: 6,
-            child: Container(
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  )
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(1),
+              SizedBox(height: h * 0.12),
+              if (w >= 36)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.error.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      width: 15,
-                      height: 2,
-                      color: isDark ? Palette.nightTextMuted : Palette.dayTextSecondary.withOpacity(0.3),
-                    ),
-                    const SizedBox(height: 2),
-                    Container(
-                      width: 10,
-                      height: 2,
-                      color: isDark ? Palette.nightTextMuted : Palette.dayTextSecondary.withOpacity(0.3),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: context.colors.cta.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: accent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
