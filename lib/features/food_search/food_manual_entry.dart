@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:provider/provider.dart';
 import '../../shared/palette.dart';
 import '../../providers/user_state.dart';
@@ -94,7 +95,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
         try {
           await CloudFoodService().contributeToGlobalLibrary(foodItem);
         } catch (e) {
-          debugPrint('Failed to share food globally: $e');
+          AppLogger.d('Failed to share food globally: $e');
         }
       }
     }

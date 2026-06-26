@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:metadash/core/logging/app_logger.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -120,7 +121,7 @@ class _WearablesConnectionsScreenState
         }
       }
     } catch (e) {
-      debugPrint('Warning: Could not check health permissions: $e');
+      AppLogger.d('Warning: Could not check health permissions: $e');
     }
 
     await userState.db.createOrUpdateDataInputsSettings(next);

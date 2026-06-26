@@ -1,6 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'dart:convert';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -61,7 +60,7 @@ class FoodService {
       // If not found in OFF, could fall back to other sources here
       return null;
     } catch (e) {
-      print('Error searching by barcode: $e');
+      AppLogger.d('Error searching by barcode: $e');
       return null;
     }
   }
@@ -90,7 +89,7 @@ class FoodService {
       // Remove duplicates and return
       return _deduplicateFoods(results);
     } catch (e) {
-      print('Error searching foods: $e');
+      AppLogger.d('Error searching foods: $e');
       return [];
     }
   }
@@ -100,7 +99,7 @@ class FoodService {
     try {
       return await _searchOpenFoodFacts(query);
     } catch (e) {
-      print('Error searching Open Food Facts: $e');
+      AppLogger.d('Error searching Open Food Facts: $e');
       return [];
     }
   }
@@ -109,10 +108,10 @@ class FoodService {
   Future<List<Food>> searchUSDAOnly(String query) async {
     try {
       final results = await _searchUSDA(query);
-      print('USDA search completed with ${results.length} results');
+      AppLogger.d('USDA search completed with ${results.length} results');
       return results;
     } catch (e) {
-      print('Error searching USDA: $e');
+      AppLogger.d('Error searching USDA: $e');
       return [];
     }
   }
@@ -132,7 +131,7 @@ class FoodService {
       }
       return null;
     } catch (e) {
-      print('Error searching OFF by barcode: $e');
+      AppLogger.d('Error searching OFF by barcode: $e');
       return null;
     }
   }
@@ -185,7 +184,7 @@ class FoodService {
       }
       return [];
     } catch (e) {
-      print('OFF error: $e');
+      AppLogger.d('OFF error: $e');
       return [];
     }
   }
@@ -222,7 +221,7 @@ class FoodService {
       }
       return null;
     } catch (e) {
-      print('Error parsing OFF product: $e');
+      AppLogger.d('Error parsing OFF product: $e');
       return null;
     }
   }
@@ -270,7 +269,7 @@ class FoodService {
       }
       return [];
     } catch (e) {
-      print('USDA error: $e');
+      AppLogger.d('USDA error: $e');
       return [];
     }
   }
@@ -327,7 +326,7 @@ class FoodService {
         source: 'usda',
       );
     } catch (e) {
-      print('Error parsing USDA food: $e');
+      AppLogger.d('Error parsing USDA food: $e');
       return null;
     }
   }

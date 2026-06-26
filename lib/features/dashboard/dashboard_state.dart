@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import '../../shared/date_utils.dart';
 import '../../providers/user_state.dart';
 import '../../models/data_inputs_settings.dart';
@@ -138,14 +139,14 @@ class DashboardState extends ChangeNotifier {
       }
 
       // Debugging: Log values for calories calculation
-      debugPrint('Log caloriesConsumed: \\${log?.caloriesConsumed ?? 0}');
-      debugPrint('Food calories: \\$foodCalories');
-      debugPrint('Daily caloric goal: \\$user.dailyCaloricGoal');
+      AppLogger.d('Log caloriesConsumed: \\${log?.caloriesConsumed ?? 0}');
+      AppLogger.d('Food calories: \\$foodCalories');
+      AppLogger.d('Daily caloric goal: \\$user.dailyCaloricGoal');
 
       // Additional debugging to verify data fetching
-      debugPrint('Log: \\$log');
-      debugPrint('Food Entry Maps: \\$foodEntryMaps');
-      debugPrint('Settings: \\$settings');
+      AppLogger.d('Log: \\$log');
+      AppLogger.d('Food Entry Maps: \\$foodEntryMaps');
+      AppLogger.d('Settings: \\$settings');
 
       // Compute TDEE from today's log data
       double? todayTDEE;

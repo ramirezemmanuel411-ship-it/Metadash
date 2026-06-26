@@ -1,4 +1,6 @@
-// ignore_for_file: avoid_print, constant_identifier_names
+// ignore_for_file: constant_identifier_names
+
+import 'package:metadash/core/logging/app_logger.dart';
 
 /// Advanced deduplication and normalization for food search results
 /// Handles accents, diacritics, brand aliases, and smart title selection
@@ -377,7 +379,7 @@ class FoodDedupNormalizer {
         seen.add(key);
         deduplicated.add(item);
       } else if (debug) {
-        print('  ⚠️  Duplicate detected (skipped): $key');
+        AppLogger.d('  ⚠️  Duplicate detected (skipped): $key');
       }
     }
 
@@ -478,9 +480,9 @@ class FoodDedupNormalizer {
     }
 
     if (debug) {
-      print('\n🔍 Product Family Deduplication:');
-      print('  Total items: ${items.length}');
-      print('  Unique families: ${familyGroups.length}');
+      AppLogger.d('\n🔍 Product Family Deduplication:');
+      AppLogger.d('  Total items: ${items.length}');
+      AppLogger.d('  Unique families: ${familyGroups.length}');
     }
 
     // Select best representative from each family
@@ -507,11 +509,11 @@ class FoodDedupNormalizer {
       representatives.add(best);
 
       if (debug) {
-        print('  Family: $familyKey');
-        print('    Candidates: ${candidates.length}');
-        print('    Selected: ${getName(best)}');
+        AppLogger.d('  Family: $familyKey');
+        AppLogger.d('    Candidates: ${candidates.length}');
+        AppLogger.d('    Selected: ${getName(best)}');
         if (candidates.length > 1) {
-          print(
+          AppLogger.d(
             '    Collapsed: ${candidates.where((c) => c != best).map((c) => getName(c)).join(", ")}',
           );
         }

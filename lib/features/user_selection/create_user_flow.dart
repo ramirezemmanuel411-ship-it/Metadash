@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_state.dart';
@@ -2277,7 +2278,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
       }
     } catch (e) {
       // ignore: avoid_print
-      print('Error requesting health permissions: $e');
+      AppLogger.d('Error requesting health permissions: $e');
       if (mounted) {
         setState(() => _healthPermissionsGranted = false);
       }

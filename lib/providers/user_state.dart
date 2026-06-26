@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,7 +37,7 @@ class UserState extends ChangeNotifier {
         return await loginUser(userId);
       }
     } catch (e) {
-      debugPrint('Auto-login failed: $e');
+      AppLogger.d('Auto-login failed: $e');
     }
     return false;
   }
@@ -114,7 +115,7 @@ class UserState extends ChangeNotifier {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firebase create_user sync failed: $e');
+      AppLogger.d('Firebase create_user sync failed: $e');
     }
 
     return createdUser;
@@ -207,7 +208,7 @@ class UserState extends ChangeNotifier {
       final settingsJson = jsonEncode(_metabolicSettings.toJson());
       await prefs.setString('metabolic_settings', settingsJson);
     } catch (e) {
-      debugPrint('Failed to save metabolic settings: $e');
+      AppLogger.d('Failed to save metabolic settings: $e');
     }
   }
 
@@ -306,7 +307,7 @@ class UserState extends ChangeNotifier {
             .set(dailyLogData, SetOptions(merge: true));
       }
     } catch (e) {
-      debugPrint('Firebase save_daily_log sync failed: $e');
+      AppLogger.d('Firebase save_daily_log sync failed: $e');
     }
   }
 

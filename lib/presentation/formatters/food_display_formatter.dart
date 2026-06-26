@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import '../../data/models/food_model.dart';
 
 /// Presentation layer for food search results
@@ -392,5 +393,5 @@ void runFoodDisplayTests() {
   assert(FoodDisplayFormatter.titleCase('coca cola') == 'Coca Cola');
   assert(FoodDisplayFormatter.titleCase('DIET COKE') == 'Diet Coke');
 
-  debugPrint('✓ FoodDisplayFormatter: All tests passed');
+  AppLogger.d('✓ FoodDisplayFormatter: All tests passed');
 }

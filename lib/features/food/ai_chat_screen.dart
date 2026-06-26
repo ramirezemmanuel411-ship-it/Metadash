@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
@@ -110,7 +111,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       setState(() => _torchOn = !_torchOn);
     } catch (e) {
       // Silently fail - torch may not be available on all devices
-      debugPrint('Error toggling torch: $e');
+      AppLogger.d('Error toggling torch: $e');
     }
   }
 

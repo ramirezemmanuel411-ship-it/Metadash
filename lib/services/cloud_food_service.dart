@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import '../models/user_food_item.dart';
 
 class CloudFoodService {
@@ -32,7 +32,7 @@ class CloudFoodService {
         'searchName': food.name.toLowerCase(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error contributing to global library: $e');
+      AppLogger.d('Error contributing to global library: $e');
     }
   }
 
@@ -70,7 +70,7 @@ class CloudFoodService {
         );
       }).toList();
     } catch (e) {
-      debugPrint('Error searching global library: $e');
+      AppLogger.d('Error searching global library: $e');
       return [];
     }
   }

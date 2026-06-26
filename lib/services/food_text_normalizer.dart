@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+import 'package:metadash/core/logging/app_logger.dart';
 
 /// Single source of truth for food text normalization
 /// Ensures consistent display across all food search interfaces
@@ -18,7 +18,7 @@ class FoodTextNormalizer {
     // Step 1: Trim whitespace
     String normalized = text.trim();
     if (debug) {
-      print('  [normalize] Step 1 (trim): "$normalized"');
+      AppLogger.d('  [normalize] Step 1 (trim): "$normalized"');
     }
 
     // Step 2: Handle casing - BOTH all-caps AND mostly-lowercase
@@ -27,7 +27,7 @@ class FoodTextNormalizer {
     final isLowercase = _isMostlyLowercase(normalized);
 
     if (debug) {
-      print(
+      AppLogger.d(
         '  [normalize] isUppercase: $isUppercase, isLowercase: $isLowercase',
       );
     }
@@ -35,13 +35,13 @@ class FoodTextNormalizer {
     if (isUppercase) {
       normalized = _toTitleCasePreservingAcronyms(normalized);
       if (debug) {
-        print('  [normalize] Step 2 (uppercase→title): "$normalized"');
+        AppLogger.d('  [normalize] Step 2 (uppercase→title): "$normalized"');
       }
     } else if (isLowercase) {
       // Convert mostly-lowercase to Title Case too
       normalized = _toTitleCasePreservingAcronyms(normalized);
       if (debug) {
-        print('  [normalize] Step 2 (lowercase→title): "$normalized"');
+        AppLogger.d('  [normalize] Step 2 (lowercase→title): "$normalized"');
       }
     }
 
@@ -56,19 +56,19 @@ class FoodTextNormalizer {
       ' ',
     ); // Dashes → spaces (keep hyphens in compounds)
     if (debug) {
-      print('  [normalize] Step 3 (spacing): "$normalized"');
+      AppLogger.d('  [normalize] Step 3 (spacing): "$normalized"');
     }
 
     // Step 4: Remove packaging info noise (e.g., "500ml", "PET", "1.25L")
     normalized = _removePackagingNoise(normalized);
     if (debug) {
-      print('  [normalize] Step 4 (packaging): "$normalized"');
+      AppLogger.d('  [normalize] Step 4 (packaging): "$normalized"');
     }
 
     // Step 5: Remove duplicate brand terms
     normalized = _removeDuplicateBrandTerms(normalized);
     if (debug) {
-      print('  [normalize] Step 5 (dedup): "$normalized"');
+      AppLogger.d('  [normalize] Step 5 (dedup): "$normalized"');
     }
 
     return normalized;

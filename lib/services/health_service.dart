@@ -1,6 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'dart:io';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:health/health.dart';
 
 /// Service for syncing health data from HealthKit (iOS) and Google Fit / Health Connect (Android)
@@ -107,7 +106,7 @@ class HealthService {
         permissions: essential.map((_) => HealthDataAccess.READ).toList(),
       );
     } catch (e) {
-      print('Error requesting health permissions: $e');
+      AppLogger.d('Error requesting health permissions: $e');
       return false;
     }
   }
@@ -119,7 +118,7 @@ class HealthService {
       final results = await Future.wait(_dataTypes.map(_hasPermissionFor));
       return results.any((value) => value);
     } catch (e) {
-      print('Error checking health permissions: $e');
+      AppLogger.d('Error checking health permissions: $e');
       return false;
     }
   }
@@ -675,7 +674,7 @@ class HealthService {
       }
     } catch (e) {
       if (hasSteps) {
-        print('Error fetching steps: $e');
+        AppLogger.d('Error fetching steps: $e');
       }
     }
 
@@ -703,7 +702,7 @@ class HealthService {
       }
     } catch (e) {
       if (hasCalories) {
-        print('Error fetching active calories: $e');
+        AppLogger.d('Error fetching active calories: $e');
       }
     }
 
@@ -747,7 +746,7 @@ class HealthService {
       }
     } catch (e) {
       if (hasWorkouts) {
-        print('Error fetching workouts: $e');
+        AppLogger.d('Error fetching workouts: $e');
       }
     }
 
@@ -984,15 +983,17 @@ class HealthService {
       result['count'] = stepData.length;
       result['dataPoints'] = [];
 
-      print('\n=== DEBUG STEP DATA FOR ${date.toString().split(' ')[0]} ===');
-      print('Total data points: ${stepData.length}');
+      AppLogger.d(
+        '\n=== DEBUG STEP DATA FOR ${date.toString().split(' ')[0]} ===',
+      );
+      AppLogger.d('Total data points: ${stepData.length}');
 
       for (int i = 0; i < stepData.length; i++) {
         final point = stepData[i];
         final value = _extractNumericValue(point);
         final timeStr =
             '${point.dateFrom.hour}:${point.dateFrom.minute.toString().padLeft(2, '0')}';
-        print('[$i] $timeStr: $value steps');
+        AppLogger.d('[$i] $timeStr: $value steps');
         (result['dataPoints'] as List).add({
           'time': timeStr,
           'value': value,
@@ -1007,7 +1008,7 @@ class HealthService {
           final value = _extractNumericValue(point);
           return value > maxVal ? value : maxVal;
         });
-        print('MAX VALUE (raw sample max): $max');
+        AppLogger.d('MAX VALUE (raw sample max): $max');
         result['maxValue'] = max;
       }
 
@@ -1017,12 +1018,12 @@ class HealthService {
           endOfDay,
         );
         if (total != null) {
-          print('TOTAL STEPS (HealthKit interval): $total');
+          AppLogger.d('TOTAL STEPS (HealthKit interval): $total');
           result['totalStepsInterval'] = total;
         }
       } catch (_) {}
     } catch (e) {
-      print('Error fetching step data: $e');
+      AppLogger.d('Error fetching step data: $e');
       result['error'] = e.toString();
     }
 

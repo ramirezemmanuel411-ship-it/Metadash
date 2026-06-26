@@ -1,6 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'package:flutter/material.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import '../../../shared/palette.dart';
 import 'package:provider/provider.dart';
 import '../../../models/exercise_model.dart';
@@ -82,7 +81,7 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
             );
           }
         } catch (aiError) {
-          print('AI parsing failed: $aiError');
+          AppLogger.d('AI parsing failed: $aiError');
           // Fallback to basic exercise
           exercise = Exercise.described(description: _controller.text.trim());
         }

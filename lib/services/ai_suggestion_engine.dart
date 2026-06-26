@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import '../data/models/food_model.dart';
 import '../models/ai_suggestion.dart';
 
@@ -199,7 +199,7 @@ class AiSuggestionEngine {
     final cNeed = _need(input.cLeft);
     final fNeed = _need(input.fLeft);
 
-    debugPrint(
+    AppLogger.d(
       'AI SUGGESTIONS: calLeft=${input.calLeft}, pNeed=$pNeed, cNeed=$cNeed, fNeed=$fNeed, mode=$mode',
     );
 
@@ -212,7 +212,7 @@ class AiSuggestionEngine {
 
     if (mode == AiSuggestionMode.meal) {
       final meals = _buildMealSuggestions(input, candidates, calLeft);
-      debugPrint('AI SUGGESTIONS: returned ${meals.length} meal options');
+      AppLogger.d('AI SUGGESTIONS: returned ${meals.length} meal options');
       return AiSuggestionResponse(
         mode: AiSuggestionMode.meal,
         message: 'Here are meal ideas within your remaining targets.',
@@ -221,7 +221,7 @@ class AiSuggestionEngine {
     }
 
     final groups = _buildSingleItemGroups(input, candidates, calLeft);
-    debugPrint(
+    AppLogger.d(
       'AI SUGGESTIONS: returned ${groups.fold<int>(0, (sum, g) => sum + g.items.length)} items',
     );
     return AiSuggestionResponse(

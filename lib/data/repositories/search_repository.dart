@@ -1,6 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'dart:async';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../datasources/food_local_datasource.dart';
@@ -45,9 +44,9 @@ class SearchRepository {
             backendUrl ??
             'https://fatsecret-proxy-production-d58c.up.railway.app',
       );
-      print('✅ FatSecret datasource initialized successfully');
+      AppLogger.d('✅ FatSecret datasource initialized successfully');
     } catch (e) {
-      print(
+      AppLogger.d(
         '❌ FatSecret initialization failed: $e - will use fallback databases',
       );
     }
@@ -76,29 +75,31 @@ class SearchRepository {
       // ===== STAGE 1: Fetch Fresh from APIs (FatSecret primary) =====
       List<FoodModel> remoteResults = [];
 
-      print(
+      AppLogger.d(
         '🔍 FatSecret datasource available: ${_fatSecretDatasource != null}',
       );
 
       if (_fatSecretDatasource != null) {
         try {
-          print('🔍 Attempting FatSecret search for: $query');
+          AppLogger.d('🔍 Attempting FatSecret search for: $query');
           _debugLogRawResults('FATSECRET', query);
           final rawFatSecretData = await _fatSecretDatasource.searchFoods(
             query,
           );
           final fatSecretResults =
               FatSecretRemoteDatasource.parseFoodsFromSearch(rawFatSecretData);
-          print('✅ FatSecret returned ${fatSecretResults.length} results');
+          AppLogger.d(
+            '✅ FatSecret returned ${fatSecretResults.length} results',
+          );
           remoteResults.addAll(fatSecretResults);
           _debugLogResults('FATSECRET', query, fatSecretResults);
         } catch (e) {
-          print(
+          AppLogger.d(
             '❌ FatSecret search error: $e - Falling back to USDA/OpenFoodFacts',
           );
         }
       } else {
-        print('⚠️ FatSecret datasource is null - will use fallback');
+        AppLogger.d('⚠️ FatSecret datasource is null - will use fallback');
       }
 
       // FALLBACK: If FatSecret empty or failed, try USDA + OpenFoodFacts
@@ -114,7 +115,7 @@ class SearchRepository {
           remoteResults.addAll(fallbackResults);
           _debugLogResults('USDA/OFF_FALLBACK', query, fallbackResults);
         } catch (e) {
-          print('USDA/OpenFoodFacts fallback error: $e');
+          AppLogger.d('USDA/OpenFoodFacts fallback error: $e');
         }
       } else {
         // Only supplement with USDA/OFF when FatSecret returned few results.
@@ -136,7 +137,9 @@ class SearchRepository {
               _debugLogResults('USDA/OFF_SUPPLEMENT', query, fallbackResults);
             }
           } catch (e) {
-            print('USDA/OpenFoodFacts supplement error (non-critical): $e');
+            AppLogger.d(
+              'USDA/OpenFoodFacts supplement error (non-critical): $e',
+            );
           }
         }
       }
@@ -232,7 +235,7 @@ class SearchRepository {
         }
       }
     } catch (e) {
-      print('Search error: $e');
+      AppLogger.d('Search error: $e');
       // On error, return what we have locally
       final localResults = await _localDatasource.searchFoodsLocal(query);
       yield SearchResult(
@@ -368,33 +371,35 @@ class SearchRepository {
 
   /// Debug logging for ranked results
   void _debugLogResults(String stage, String query, List<FoodModel> results) {
-    print('\n========== FOOD SEARCH DEBUG [$stage] ==========');
-    print('Query: "$query"');
-    print('Total results: ${results.length}');
-    print('\nTop 10 results:');
+    AppLogger.d('\n========== FOOD SEARCH DEBUG [$stage] ==========');
+    AppLogger.d('Query: "$query"');
+    AppLogger.d('Total results: ${results.length}');
+    AppLogger.d('\nTop 10 results:');
 
     for (var i = 0; i < results.length && i < 10; i++) {
       final food = results[i];
-      print('\n[$i] ${food.id}');
-      print('  Raw name: ${food.name}');
-      print('  Display title: ${food.displayTitle}');
-      print('  Raw brand: ${food.brand ?? "(none)"}');
-      print('  Display brand: ${food.displayBrand}');
-      print('  Display subtitle: ${food.displaySubtitle}');
-      print('  Serving: ${food.servingSize} ${food.servingUnit}');
-      print('  Serving line: ${food.servingLine}');
-      print('  Calories: ${food.calories} cal');
-      print('  Calories display: ${food.calories} cal • ${food.servingLine}');
-      print('  Is beverage: ${food.isBeverage}');
-      print('  Nutrition basis: ${food.nutritionBasisType}');
-      print('  Missing serving: ${food.isMissingServing}');
-      print('  Canonical key: ${food.canonicalKey}');
-      print('  Source: ${food.source}');
+      AppLogger.d('\n[$i] ${food.id}');
+      AppLogger.d('  Raw name: ${food.name}');
+      AppLogger.d('  Display title: ${food.displayTitle}');
+      AppLogger.d('  Raw brand: ${food.brand ?? "(none)"}');
+      AppLogger.d('  Display brand: ${food.displayBrand}');
+      AppLogger.d('  Display subtitle: ${food.displaySubtitle}');
+      AppLogger.d('  Serving: ${food.servingSize} ${food.servingUnit}');
+      AppLogger.d('  Serving line: ${food.servingLine}');
+      AppLogger.d('  Calories: ${food.calories} cal');
+      AppLogger.d(
+        '  Calories display: ${food.calories} cal • ${food.servingLine}',
+      );
+      AppLogger.d('  Is beverage: ${food.isBeverage}');
+      AppLogger.d('  Nutrition basis: ${food.nutritionBasisType}');
+      AppLogger.d('  Missing serving: ${food.isMissingServing}');
+      AppLogger.d('  Canonical key: ${food.canonicalKey}');
+      AppLogger.d('  Source: ${food.source}');
     }
 
-    print('\n✓ Final sort: rankScore descending');
-    print('✓ Deduplication: applied via canonicalKey');
-    print('================================================\n');
+    AppLogger.d('\n✓ Final sort: rankScore descending');
+    AppLogger.d('✓ Deduplication: applied via canonicalKey');
+    AppLogger.d('================================================\n');
   }
 
   void _debugLogRawResults(String stage, String query) {
@@ -404,18 +409,18 @@ class SearchRepository {
         ? RawSearchDebugStore.latestResults
         : const <FoodSearchResultRaw>[];
 
-    print('\n🔎 [FOOD RAW $stage] Query: "$query"');
-    print('   Results returned: ${rawResults.length}');
+    AppLogger.d('\n🔎 [FOOD RAW $stage] Query: "$query"');
+    AppLogger.d('   Results returned: ${rawResults.length}');
 
     final preview = rawResults.take(5).toList();
     for (final raw in preview) {
-      print('   - id: ${raw.id}');
-      print('     source: ${raw.source}');
-      print('     foodNameRaw: ${raw.foodNameRaw ?? ''}');
-      print('     brandName: ${raw.brandName ?? ''}');
-      print('     calories: ${raw.calories ?? ''}');
-      print('     nutritionBasis: ${raw.nutritionBasis ?? ''}');
-      print('     servingUnit: ${raw.servingUnit ?? ''}');
+      AppLogger.d('   - id: ${raw.id}');
+      AppLogger.d('     source: ${raw.source}');
+      AppLogger.d('     foodNameRaw: ${raw.foodNameRaw ?? ''}');
+      AppLogger.d('     brandName: ${raw.brandName ?? ''}');
+      AppLogger.d('     calories: ${raw.calories ?? ''}');
+      AppLogger.d('     nutritionBasis: ${raw.nutritionBasis ?? ''}');
+      AppLogger.d('     servingUnit: ${raw.servingUnit ?? ''}');
     }
   }
 }

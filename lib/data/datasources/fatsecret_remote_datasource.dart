@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print
-
 /// FatSecret Remote Data Source
 /// Communicates with FatSecret OAuth 2.0 Proxy Server
 ///
@@ -15,6 +13,7 @@
 library;
 
 import 'dart:convert';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:http/http.dart' as http;
 import '../../data/models/food_model.dart';
 
@@ -50,8 +49,8 @@ class FatSecretRemoteDatasource {
         '$backendUrl/foods.search',
       ).replace(queryParameters: {'search_expression': query});
 
-      print('🔍 [FatSecret] Searching via proxy: $query');
-      print('   Proxy: $backendUrl');
+      AppLogger.d('🔍 [FatSecret] Searching via proxy: $query');
+      AppLogger.d('   Proxy: $backendUrl');
 
       final response = await httpClient
           .get(url)
@@ -72,7 +71,7 @@ class FatSecretRemoteDatasource {
             'FatSecret API error ${error['code']}: ${error['message']}',
           );
         }
-        print(
+        AppLogger.d(
           '✅ [FatSecret] Search successful: ${data['foods']?.length ?? 0} results',
         );
         return data;
@@ -84,7 +83,7 @@ class FatSecretRemoteDatasource {
         throw Exception('FatSecret search error: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ [FatSecret] Error searching: $e');
+      AppLogger.d('❌ [FatSecret] Error searching: $e');
       throw Exception('Error searching FatSecret: $e');
     }
   }
@@ -96,7 +95,7 @@ class FatSecretRemoteDatasource {
         '$backendUrl/food.get.v3.1',
       ).replace(queryParameters: {'food_id': foodId.toString()});
 
-      print('📊 [FatSecret] Getting nutrition for food $foodId');
+      AppLogger.d('📊 [FatSecret] Getting nutrition for food $foodId');
 
       final response = await httpClient
           .get(url)
@@ -112,7 +111,7 @@ class FatSecretRemoteDatasource {
         throw Exception('FatSecret nutrition error: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ [FatSecret] Error fetching nutrition: $e');
+      AppLogger.d('❌ [FatSecret] Error fetching nutrition: $e');
       throw Exception('Error fetching nutrition: $e');
     }
   }
@@ -124,7 +123,7 @@ class FatSecretRemoteDatasource {
         '$backendUrl/recipe.get.v3.1',
       ).replace(queryParameters: {'recipe_id': recipeId.toString()});
 
-      print('🍳 [FatSecret] Getting recipe $recipeId');
+      AppLogger.d('🍳 [FatSecret] Getting recipe $recipeId');
 
       final response = await httpClient
           .get(url)
@@ -139,7 +138,7 @@ class FatSecretRemoteDatasource {
         throw Exception('FatSecret recipe error: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ [FatSecret] Error fetching recipe: $e');
+      AppLogger.d('❌ [FatSecret] Error fetching recipe: $e');
       throw Exception('Error fetching recipe: $e');
     }
   }
@@ -198,7 +197,7 @@ class FatSecretRemoteDatasource {
           // foodName == brandName is set by _splitFoodAndBrand exactly when
           // the entire raw name was a company/store brand with no food part.
           if (brandName != null && foodName == brandName) {
-            print('⏭️  [FatSecret] Skipping brand stub: $rawFoodName');
+            AppLogger.d('⏭️  [FatSecret] Skipping brand stub: $rawFoodName');
             continue;
           }
 
@@ -232,12 +231,12 @@ class FatSecretRemoteDatasource {
 
           foods.add(food);
         } catch (e) {
-          print('⚠️  [FatSecret] Skipping malformed food item: $e');
+          AppLogger.d('⚠️  [FatSecret] Skipping malformed food item: $e');
           continue;
         }
       }
     } catch (e) {
-      print('⚠️  [FatSecret] Error parsing search results: $e');
+      AppLogger.d('⚠️  [FatSecret] Error parsing search results: $e');
     }
 
     return foods;

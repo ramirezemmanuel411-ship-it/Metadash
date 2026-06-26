@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'shared/palette.dart';
 import 'shared/widgets/floating_action_hub.dart';
 import 'features/dashboard/dashboard_screen.dart';
@@ -97,7 +98,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         if (!hasPermissions) return;
       } catch (e) {
         // If health service fails to check permissions, skip sync
-        debugPrint('Could not check health permissions: $e');
+        AppLogger.d('Could not check health permissions: $e');
         return;
       }
 
@@ -119,11 +120,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         }
       } catch (e) {
         // If sync fails, still let app continue
-        debugPrint('Health data sync failed: $e');
+        AppLogger.d('Health data sync failed: $e');
       }
     } catch (e) {
       // Catch all - don't let anything crash the app
-      debugPrint('Background health sync error (non-blocking): $e');
+      AppLogger.d('Background health sync error (non-blocking): $e');
     }
   }
 

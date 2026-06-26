@@ -1,6 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'dart:convert';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -286,7 +285,7 @@ Return ONLY this JSON format (no markdown, no explanations):
       try {
         return await _callGroq(prompt, model: model ?? 'llama-3.1-8b-instant');
       } catch (e) {
-        print('Groq failed, trying OpenAI fallback: $e');
+        AppLogger.d('Groq failed, trying OpenAI fallback: $e');
         if (!hasOpenAiKey) rethrow;
       }
     }

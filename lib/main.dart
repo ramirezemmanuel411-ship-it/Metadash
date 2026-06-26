@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'providers/dashboard_layout_provider.dart';
 import 'providers/food_plate_provider.dart';
@@ -50,7 +51,7 @@ void main() async {
         details.exception.toString().contains('PlatformException')) {
       // Silently handle platform-level errors (likely from debugger disconnect)
       // ignore: avoid_print
-      print(
+      AppLogger.d(
         'Platform error (likely debugger disconnect): ${details.exception}',
       );
     } else {
@@ -69,7 +70,7 @@ void main() async {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     // ignore: avoid_print
-    print(
+    AppLogger.d(
       'Note: .env file not found. AI features will be disabled. Create a .env file with your API keys.',
     );
   }
@@ -78,7 +79,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   // ignore: avoid_print
-  print('Firebase initialized: ${firebaseApp.name}');
+  AppLogger.d('Firebase initialized: ${firebaseApp.name}');
 
   final remoteConfig = FirebaseRemoteConfig.instance;
   await remoteConfig.setConfigSettings(

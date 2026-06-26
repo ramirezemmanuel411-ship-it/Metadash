@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import '../data/models/food_search_result_raw.dart';
 import '../models/canonical_food.dart';
 
@@ -301,7 +302,7 @@ class CanonicalFoodGroup {
 
     // Debug log
     if (kDebugMode) {
-      debugPrint(
+      AppLogger.d(
         '[$canonicalKey] → ${representative!.id} (${selectionReason ?? "score: ${best.$3}"})',
       );
     }

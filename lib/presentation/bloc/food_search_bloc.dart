@@ -1,6 +1,5 @@
-// ignore_for_file: avoid_print
-
 import 'dart:async';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../data/repositories/search_repository.dart';
@@ -88,7 +87,7 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
       // Clean up old data in background
       _repository.cleanupOldData();
     } catch (e) {
-      print('Error loading initial data: $e');
+      AppLogger.d('Error loading initial data: $e');
       emit(const domain.SearchInitial());
     }
   }
@@ -195,7 +194,7 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
         add(const LoadInitialData());
       }
     } catch (e) {
-      print('Error toggling favorite: $e');
+      AppLogger.d('Error toggling favorite: $e');
     }
   }
 
@@ -208,7 +207,7 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
       await _repository.clearRecentSearches();
       add(const LoadInitialData());
     } catch (e) {
-      print('Error clearing recent searches: $e');
+      AppLogger.d('Error clearing recent searches: $e');
     }
   }
 
