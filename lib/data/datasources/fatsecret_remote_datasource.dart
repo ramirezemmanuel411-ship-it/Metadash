@@ -62,6 +62,16 @@ class FatSecretRemoteDatasource {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
+        // FatSecret returns HTTP 200 with an {"error":{code,message}} body for
+        // API-level failures (notably code 21 = the caller's IP isn't on the
+        // FatSecret allowlist). Surface it instead of silently treating the
+        // missing "foods" field as an empty result set.
+        final error = data['error'];
+        if (error is Map) {
+          throw Exception(
+            'FatSecret API error ${error['code']}: ${error['message']}',
+          );
+        }
         print(
           '✅ [FatSecret] Search successful: ${data['foods']?.length ?? 0} results',
         );
