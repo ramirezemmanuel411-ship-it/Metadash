@@ -73,7 +73,9 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       carbsG: food.carbs.toInt(),
       fatG: food.fat.toInt(),
       source: 'search',
-      serving: food.displayBrand.isNotEmpty ? food.displayBrand : food.servingUnit,
+      serving: food.displayBrand.isNotEmpty
+          ? food.displayBrand
+          : food.servingUnit,
       // Carry the one-serving base macros + weight so the plate keypad can
       // rescale by weight (matches the food-detail add path).
       baseCalories: food.calories.toDouble(),
@@ -87,13 +89,15 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
 
   void _onSelectFood(FoodModel food) {
     if (widget.returnOnSelect) {
-      Navigator.of(context).pop(FoodItem(
-        name: food.name,
-        calories: food.calories.toInt(),
-        protein: food.protein,
-        carbs: food.carbs,
-        fat: food.fat,
-      ));
+      Navigator.of(context).pop(
+        FoodItem(
+          name: food.name,
+          calories: food.calories.toInt(),
+          protein: food.protein,
+          carbs: food.carbs,
+          fat: food.fat,
+        ),
+      );
       return;
     }
 
@@ -139,8 +143,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                 children: [
                   const Text(
                     'Add Food',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 17),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
                   ),
                   Text(
                     'Adding to $mealLabel',
@@ -160,22 +163,22 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
         children: [
           Column(
             children: [
-          _PremiumTabBar(
-            selected: _selected,
-            onTabSelected: (tab) => setState(() => _selected = tab),
-          ),
+              _PremiumTabBar(
+                selected: _selected,
+                onTabSelected: (tab) => setState(() => _selected = tab),
+              ),
 
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              transitionBuilder: (child, anim) =>
-                  FadeTransition(opacity: anim, child: child),
-              child: _buildTab(),
-            ),
-          ),
-        ],
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: _buildTab(),
+                ),
+              ),
+            ],
           ),
           // Food Plate floating pill — hidden on barcode tab
           if (_selected != FoodSearchTab.barcode)
@@ -183,9 +186,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
               bottom: 16,
               left: 0,
               right: 0,
-              child: Center(
-                child: FoodPlatePill(),
-              ),
+              child: Center(child: FoodPlatePill()),
             ),
         ],
       ),
@@ -233,10 +234,7 @@ class _PremiumTabBar extends StatelessWidget {
   final FoodSearchTab selected;
   final void Function(FoodSearchTab) onTabSelected;
 
-  const _PremiumTabBar({
-    required this.selected,
-    required this.onTabSelected,
-  });
+  const _PremiumTabBar({required this.selected, required this.onTabSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -274,9 +272,7 @@ class _PremiumTabBar extends StatelessWidget {
                     Icon(
                       t.$2,
                       size: 17,
-                      color: isSelected
-                          ? Colors.white
-                          : context.textSecondary,
+                      color: isSelected ? Colors.white : context.textSecondary,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -326,7 +322,7 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
   List<UserFoodItem> _globalFoods = [];
   bool _isLoading = true;
   bool _isSearchingGlobal = false;
-  int _subTab = 0;   // 0 = Saved Foods, 1 = Recipes
+  int _subTab = 0; // 0 = Saved Foods, 1 = Recipes
   bool _showSearch = false;
 
   @override
@@ -460,13 +456,20 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
                         controller: _searchController,
                         autofocus: true,
                         style: TextStyle(
-                            fontSize: 14, color: context.textPrimary),
+                          fontSize: 14,
+                          color: context.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'Search saved foods…',
                           hintStyle: TextStyle(
-                              fontSize: 14, color: context.textMuted),
-                          prefixIcon: Icon(Icons.search_rounded,
-                              color: context.textMuted, size: 20),
+                            fontSize: 14,
+                            color: context.textMuted,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: context.textMuted,
+                            size: 20,
+                          ),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? GestureDetector(
                                   onTap: () {
@@ -476,14 +479,19 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
                                   },
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
-                                    child: Icon(Icons.cancel_rounded,
-                                        size: 18, color: context.textMuted),
+                                    child: Icon(
+                                      Icons.cancel_rounded,
+                                      size: 18,
+                                      color: context.textMuted,
+                                    ),
                                   ),
                                 )
                               : null,
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                         ),
                         onChanged: (_) => _loadLibrary(),
                       ),
@@ -518,7 +526,8 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
               onPointerDown: (_) => _dragAccum = 0,
               onPointerMove: (e) {
                 _dragAccum += e.delta.dy;
-                final atTop = !_scrollController.hasClients ||
+                final atTop =
+                    !_scrollController.hasClients ||
                     _scrollController.position.pixels <= 1;
                 // Pull-down at top → reveal search bar
                 if (_dragAccum > 52 && atTop && !_showSearch) {
@@ -540,12 +549,12 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _subTab == 0
-                      ? (hasSearch
-                          ? (totalItemCount == 0
+                  ? (hasSearch
+                        ? (totalItemCount == 0
                               ? _buildEmptySearch()
                               : _buildSearchResults(totalItemCount))
-                          : _buildSavedFoodsContent())
-                      : _buildRecipesContent(),
+                        : _buildSavedFoodsContent())
+                  : _buildRecipesContent(),
             ),
           ),
         ],
@@ -585,9 +594,11 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off_rounded,
-              size: 40,
-              color: context.textMuted.withValues(alpha: 0.4)),
+          Icon(
+            Icons.search_off_rounded,
+            size: 40,
+            color: context.textMuted.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: 12),
           Text(
             'No matching foods found.',
@@ -617,8 +628,7 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
               children: [
-                Icon(Icons.public_rounded,
-                    size: 14, color: context.accent),
+                Icon(Icons.public_rounded, size: 14, color: context.accent),
                 const SizedBox(width: 6),
                 Text(
                   'COMMUNITY',
@@ -629,16 +639,17 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
                     letterSpacing: 1.1,
                   ),
                 ),
-                if (_isSearchingGlobal) ...
-                  [
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 11,
-                      height: 11,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: context.accent),
+                if (_isSearchingGlobal) ...[
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 11,
+                    height: 11,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.accent,
                     ),
-                  ],
+                  ),
+                ],
               ],
             ),
           );
@@ -661,9 +672,11 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    size: 13,
-                    color: context.textMuted.withValues(alpha: 0.35)),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 13,
+                  color: context.textMuted.withValues(alpha: 0.35),
+                ),
                 const SizedBox(width: 3),
                 Text(
                   'Pull down to search',
@@ -691,8 +704,7 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
             if (_libraryFoods.isNotEmpty) ...[
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: context.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -768,7 +780,9 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
               const SizedBox(height: 22),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: context.accent.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(20),
@@ -831,8 +845,7 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
         onTap: () => _logFood(food),
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: context.surface,
             borderRadius: BorderRadius.circular(14),
@@ -854,9 +867,7 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
                 ),
                 child: Center(
                   child: Text(
-                    food.name.isNotEmpty
-                        ? food.name[0].toUpperCase()
-                        : '?',
+                    food.name.isNotEmpty ? food.name[0].toUpperCase() : '?',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
@@ -908,8 +919,7 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
                   ),
                   Text(
                     'P${food.protein.toInt()} · C${food.carbs.toInt()} · F${food.fat.toInt()}',
-                    style:
-                        TextStyle(fontSize: 11, color: context.textMuted),
+                    style: TextStyle(fontSize: 11, color: context.textMuted),
                   ),
                 ],
               ),
@@ -962,7 +972,8 @@ class _ScannerStubState extends State<_ScannerStub> {
   /// rescale macros by weight.
   FoodModel _foodModelFromLegacy(Food f) {
     final unit = f.servingUnit.toLowerCase();
-    final isWeightOrVolume = unit == 'g' ||
+    final isWeightOrVolume =
+        unit == 'g' ||
         unit == 'gram' ||
         unit == 'grams' ||
         unit == 'ml' ||

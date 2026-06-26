@@ -523,7 +523,8 @@ class HealthService {
             point.dateFrom.month,
             point.dateFrom.day,
           );
-          mindfulnessByDay[day] = (mindfulnessByDay[day] ?? 0) +
+          mindfulnessByDay[day] =
+              (mindfulnessByDay[day] ?? 0) +
               point.dateTo.difference(point.dateFrom).inMinutes;
         }
       } catch (_) {}
@@ -862,8 +863,10 @@ class HealthService {
         endTime: endOfDay,
       );
       if (hrvData.isNotEmpty) {
-        final sum =
-            hrvData.fold<double>(0, (s, p) => s + _extractDoubleValue(p));
+        final sum = hrvData.fold<double>(
+          0,
+          (s, p) => s + _extractDoubleValue(p),
+        );
         hrv = sum / hrvData.length;
       }
     } catch (_) {}
@@ -877,8 +880,9 @@ class HealthService {
           endTime: endOfDay,
         );
         for (final point in mindData) {
-          mindfulnessMinutes +=
-              point.dateTo.difference(point.dateFrom).inMinutes;
+          mindfulnessMinutes += point.dateTo
+              .difference(point.dateFrom)
+              .inMinutes;
         }
       } catch (_) {}
     }

@@ -129,8 +129,7 @@ class _AuthLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor:
-          isDark ? Palette.nightBackground : Palette.dayBackground,
+      backgroundColor: isDark ? Palette.nightBackground : Palette.dayBackground,
       body: const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(Palette.forestGreen),

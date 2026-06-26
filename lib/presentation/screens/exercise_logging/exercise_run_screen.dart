@@ -95,7 +95,10 @@ class _ExerciseRunScreenState extends State<ExerciseRunScreen> {
     // Try to pull today's resting HR from the most recent daily log
     int restingHr = 60; // sensible default
     try {
-      final log = await userState.db.getDailyLogByUserAndDate(userId, DateTime.now());
+      final log = await userState.db.getDailyLogByUserAndDate(
+        userId,
+        DateTime.now(),
+      );
       if (log?.restingHeartRate != null && log!.restingHeartRate! > 30) {
         restingHr = log.restingHeartRate!;
       }
@@ -118,7 +121,8 @@ class _ExerciseRunScreenState extends State<ExerciseRunScreen> {
     return WorkoutIntensity.values[idx];
   }
 
-  bool get _isValid => _intensity != null && _duration != null && _duration! > 0;
+  bool get _isValid =>
+      _intensity != null && _duration != null && _duration! > 0;
 
   Future<void> _openActivitySheet() async {
     final result = await showModalBottomSheet<_CardioOption>(
@@ -162,14 +166,22 @@ class _ExerciseRunScreenState extends State<ExerciseRunScreen> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               children: [
-                _StepLabel(number: '1', title: 'Activity', accent: _cardioAccent),
+                _StepLabel(
+                  number: '1',
+                  title: 'Activity',
+                  accent: _cardioAccent,
+                ),
                 const SizedBox(height: 10),
                 _ActivityPickerCard(
                   activity: _activity,
                   onTap: _openActivitySheet,
                 ),
                 const SizedBox(height: 28),
-                _StepLabel(number: '2', title: 'Intensity', accent: _cardioAccent),
+                _StepLabel(
+                  number: '2',
+                  title: 'Intensity',
+                  accent: _cardioAccent,
+                ),
                 const SizedBox(height: 10),
                 _HeartRateStep(
                   controller: _hrCtrl,
@@ -195,7 +207,11 @@ class _ExerciseRunScreenState extends State<ExerciseRunScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                _StepLabel(number: '3', title: 'Duration', accent: _cardioAccent),
+                _StepLabel(
+                  number: '3',
+                  title: 'Duration',
+                  accent: _cardioAccent,
+                ),
                 const SizedBox(height: 10),
                 DurationSelector(
                   selectedDuration: _duration,
@@ -266,7 +282,9 @@ class _HeartRateStep extends StatelessWidget {
             children: [
               Icon(
                 Icons.favorite_rounded,
-                color: heartRate != null ? Colors.redAccent : context.colors.textMuted,
+                color: heartRate != null
+                    ? Colors.redAccent
+                    : context.colors.textMuted,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -274,26 +292,42 @@ class _HeartRateStep extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   keyboardType: TextInputType.number,
-                  style: TextStyle(fontSize: 15, color: context.colors.textPrimary),
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: context.colors.textPrimary,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Enter HR to auto-set intensity',
-                    hintStyle: TextStyle(fontSize: 14, color: context.colors.textMuted),
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: context.colors.textMuted,
+                    ),
                     border: InputBorder.none,
                     suffixText: heartRate != null ? 'bpm' : '',
-                    suffixStyle: TextStyle(fontSize: 13, color: context.colors.textMuted),
+                    suffixStyle: TextStyle(
+                      fontSize: 13,
+                      color: context.colors.textMuted,
+                    ),
                   ),
                   onChanged: (v) => onChanged(int.tryParse(v.trim())),
                 ),
               ),
               if (heartRate != null)
                 GestureDetector(
-                  onTap: () { controller.clear(); onChanged(null); },
-                  child: Icon(Icons.cancel_rounded, size: 18, color: context.colors.textMuted),
+                  onTap: () {
+                    controller.clear();
+                    onChanged(null);
+                  },
+                  child: Icon(
+                    Icons.cancel_rounded,
+                    size: 18,
+                    color: context.colors.textMuted,
+                  ),
                 ),
             ],
           ),
         ),
-        if (zoneColor != null) ...[  
+        if (zoneColor != null) ...[
           const SizedBox(height: 8),
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -311,15 +345,25 @@ class _HeartRateStep extends StatelessWidget {
                 Icon(Icons.bolt_rounded, size: 14, color: zoneColor),
                 Text(
                   zoneLabel!,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: zoneColor),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: zoneColor,
+                  ),
                 ),
                 Text(
                   '· $zoneRange',
-                  style: TextStyle(fontSize: 12, color: zoneColor.withValues(alpha: 0.8)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: zoneColor.withValues(alpha: 0.8),
+                  ),
                 ),
                 Text(
                   '· intensity auto-set',
-                  style: TextStyle(fontSize: 11, color: context.colors.textMuted),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: context.colors.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -341,7 +385,11 @@ class _StepLabel extends StatelessWidget {
   final String number;
   final String title;
   final Color accent;
-  const _StepLabel({required this.number, required this.title, required this.accent});
+  const _StepLabel({
+    required this.number,
+    required this.title,
+    required this.accent,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -524,8 +572,8 @@ class _IntensityOption extends StatelessWidget {
                   size: 20,
                   color: lit
                       ? (selected
-                          ? _flameColor
-                          : _flameColor.withValues(alpha: 0.55))
+                            ? _flameColor
+                            : _flameColor.withValues(alpha: 0.55))
                       : context.colors.surfaceVariant,
                 );
               }),
@@ -540,7 +588,9 @@ class _IntensityOption extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: selected ? _flameColor : context.colors.textPrimary,
+                      color: selected
+                          ? _flameColor
+                          : context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -557,7 +607,11 @@ class _IntensityOption extends StatelessWidget {
             AnimatedOpacity(
               duration: const Duration(milliseconds: 180),
               opacity: selected ? 1 : 0,
-              child: Icon(Icons.check_circle_rounded, color: _flameColor, size: 20),
+              child: Icon(
+                Icons.check_circle_rounded,
+                color: _flameColor,
+                size: 20,
+              ),
             ),
           ],
         ),
@@ -593,8 +647,9 @@ class _LogButton extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               backgroundColor: accent,
-              disabledBackgroundColor:
-                  context.colors.surfaceVariant.withValues(alpha: 0.5),
+              disabledBackgroundColor: context.colors.surfaceVariant.withValues(
+                alpha: 0.5,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -681,8 +736,10 @@ class _CardioSheetState extends State<_CardioSheet>
                 ),
               ),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Text(
@@ -841,13 +898,18 @@ class _CardioGrid extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off_rounded,
-                size: 48, color: context.colors.textMuted),
+            Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: context.colors.textMuted,
+            ),
             const SizedBox(height: 8),
             Text(
               emptyMessage!,
               style: TextStyle(
-                  fontSize: 15, color: context.colors.textSecondary),
+                fontSize: 15,
+                color: context.colors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -863,10 +925,8 @@ class _CardioGrid extends StatelessWidget {
         mainAxisSpacing: 10,
       ),
       itemCount: options.length,
-      itemBuilder: (context, i) => _CardioTile(
-        option: options[i],
-        onTap: () => onSelect(options[i]),
-      ),
+      itemBuilder: (context, i) =>
+          _CardioTile(option: options[i], onTap: () => onSelect(options[i])),
     );
   }
 }

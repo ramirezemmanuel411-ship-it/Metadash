@@ -75,10 +75,10 @@ class PassiveLearningRecord {
         userId: map['userId'] as int,
         date: DateTime.parse(map['date'] as String),
         predictedTDEE: (map['predictedTDEE'] as num).toDouble(),
-        actualWeightChangeLbs:
-            (map['actualWeightChangeLbs'] as num?)?.toDouble(),
-        expectedWeightChangeLbs:
-            (map['expectedWeightChangeLbs'] as num?)?.toDouble(),
+        actualWeightChangeLbs: (map['actualWeightChangeLbs'] as num?)
+            ?.toDouble(),
+        expectedWeightChangeLbs: (map['expectedWeightChangeLbs'] as num?)
+            ?.toDouble(),
         predictionErrorLbs: (map['predictionErrorLbs'] as num?)?.toDouble(),
         wearableFamily: map['wearableFamily'] as String?,
         workoutBucket: map['workoutBucket'] as String?,

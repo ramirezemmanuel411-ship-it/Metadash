@@ -264,10 +264,8 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        final feetCtrl =
-            FixedExtentScrollController(initialItem: tempFeet - 3);
-        final inchesCtrl =
-            FixedExtentScrollController(initialItem: tempInches);
+        final feetCtrl = FixedExtentScrollController(initialItem: tempFeet - 3);
+        final inchesCtrl = FixedExtentScrollController(initialItem: tempInches);
         return SizedBox(
           height: 320,
           child: Column(
@@ -288,8 +286,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                       onPressed: () {
                         setState(() {
                           _heightFeetController.text = tempFeet.toString();
-                          _heightInchesController.text =
-                              tempInches.toString();
+                          _heightInchesController.text = tempInches.toString();
                         });
                         Navigator.pop(ctx);
                       },
@@ -586,8 +583,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
     try {
       // Guard: if this email already exists, log in instead of failing with UNIQUE constraint
-      final existingUser = await widget.userState.db
-          .getUserProfileByEmail(_emailController.text.trim());
+      final existingUser = await widget.userState.db.getUserProfileByEmail(
+        _emailController.text.trim(),
+      );
       if (existingUser != null) {
         await widget.userState.loginUser(existingUser.id!);
         if (mounted) Navigator.of(context).pop(true);
@@ -634,10 +632,10 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
         final user = widget.userState.currentUser;
         if (user != null) {
           final settings = DataInputsSettings.defaults(user.id!).copyWith(
-            appleHealthConnected: _healthPermissionsGranted &&
-                platform == TargetPlatform.iOS,
-            googleFitConnected: _healthPermissionsGranted &&
-                platform == TargetPlatform.android,
+            appleHealthConnected:
+                _healthPermissionsGranted && platform == TargetPlatform.iOS,
+            googleFitConnected:
+                _healthPermissionsGranted && platform == TargetPlatform.android,
             wearableFamily: _selectedWearableFamily,
           );
           await widget.userState.db.createOrUpdateDataInputsSettings(settings);
@@ -761,7 +759,11 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           const SizedBox(height: 6),
           Text(
             'This helps us build your personal metabolic plan.',
-            style: TextStyle(fontSize: 15, color: colors.textMuted, height: 1.5),
+            style: TextStyle(
+              fontSize: 15,
+              color: colors.textMuted,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 32),
 
@@ -817,8 +819,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                       color: selected ? colors.accent : colors.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color:
-                            selected ? colors.accent : colors.divider,
+                        color: selected ? colors.accent : colors.divider,
                         width: selected ? 0 : 1.2,
                       ),
                     ),
@@ -846,8 +847,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
 
   Widget _buildPage2() {
     final colors = context.colors;
-    final weight =
-        _weightController.text.isEmpty ? '\u2014' : _weightController.text;
+    final weight = _weightController.text.isEmpty
+        ? '\u2014'
+        : _weightController.text;
     final feet = _heightFeetController.text.isEmpty
         ? '\u2014'
         : _heightFeetController.text;
@@ -873,19 +875,18 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           const SizedBox(height: 6),
           Text(
             'Used to calculate your metabolic rate accurately.',
-            style:
-                TextStyle(fontSize: 15, color: colors.textMuted, height: 1.5),
+            style: TextStyle(
+              fontSize: 15,
+              color: colors.textMuted,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 32),
 
           // ── Weight ────────────────────────────────────────────────
           _buildFieldLabel('Current Weight'),
           const SizedBox(height: 10),
-          _StatInputCard(
-            value: weight,
-            unit: 'lbs',
-            onTap: _showWeightPicker,
-          ),
+          _StatInputCard(value: weight, unit: 'lbs', onTap: _showWeightPicker),
           const SizedBox(height: 20),
 
           // ── Height ────────────────────────────────────────────────
@@ -949,11 +950,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                     ),
                   ),
                   // Divider
-                  Container(
-                    height: 52,
-                    width: 1,
-                    color: colors.divider,
-                  ),
+                  Container(height: 52, width: 1, color: colors.divider),
                   // Inches column
                   Expanded(
                     child: Padding(
@@ -1003,11 +1000,7 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                       ),
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: colors.textMuted,
-                    size: 20,
-                  ),
+                  Icon(Icons.chevron_right, color: colors.textMuted, size: 20),
                 ],
               ),
             ),
@@ -1629,7 +1622,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_calorieGoalController.text != baselineCalorie.toString()) {
-        setState(() => _calorieGoalController.text = baselineCalorie.toString());
+        setState(
+          () => _calorieGoalController.text = baselineCalorie.toString(),
+        );
       }
     });
 
@@ -1637,12 +1632,54 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     final macros = _calculateMacroTargets(calorieGoal, _dietType);
 
     const diets = [
-      _DietOption('Balanced', 'Flexible, adaptable & sustainable', Icons.balance, 30, 40, 30),
-      _DietOption('High Protein', 'Maximize muscle retention & satiety', Icons.fitness_center_rounded, 40, 35, 25),
-      _DietOption('Mediterranean', 'Heart-healthy, anti-inflammatory', Icons.spa_outlined, 18, 50, 32),
-      _DietOption('Ketogenic', 'Very low-carb, fat adaptation', Icons.local_fire_department_rounded, 25, 5, 70),
-      _DietOption('Low Carb', 'Steady energy, reduced insulin spikes', Icons.trending_down_rounded, 35, 25, 40),
-      _DietOption('Plant-Based', 'Whole foods, fiber-rich, gut health', Icons.eco_rounded, 20, 55, 25),
+      _DietOption(
+        'Balanced',
+        'Flexible, adaptable & sustainable',
+        Icons.balance,
+        30,
+        40,
+        30,
+      ),
+      _DietOption(
+        'High Protein',
+        'Maximize muscle retention & satiety',
+        Icons.fitness_center_rounded,
+        40,
+        35,
+        25,
+      ),
+      _DietOption(
+        'Mediterranean',
+        'Heart-healthy, anti-inflammatory',
+        Icons.spa_outlined,
+        18,
+        50,
+        32,
+      ),
+      _DietOption(
+        'Ketogenic',
+        'Very low-carb, fat adaptation',
+        Icons.local_fire_department_rounded,
+        25,
+        5,
+        70,
+      ),
+      _DietOption(
+        'Low Carb',
+        'Steady energy, reduced insulin spikes',
+        Icons.trending_down_rounded,
+        35,
+        25,
+        40,
+      ),
+      _DietOption(
+        'Plant-Based',
+        'Whole foods, fiber-rich, gut health',
+        Icons.eco_rounded,
+        20,
+        55,
+        25,
+      ),
     ];
 
     return SingleChildScrollView(
@@ -1663,7 +1700,11 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           const SizedBox(height: 6),
           Text(
             'We estimated your daily target. Pick a diet style to match.',
-            style: TextStyle(fontSize: 15, color: colors.textMuted, height: 1.5),
+            style: TextStyle(
+              fontSize: 15,
+              color: colors.textMuted,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 28),
 
@@ -1728,7 +1769,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
               decoration: BoxDecoration(
                 color: colors.accent.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: colors.accent.withValues(alpha: 0.22)),
+                border: Border.all(
+                  color: colors.accent.withValues(alpha: 0.22),
+                ),
               ),
               child: Row(
                 children: [
@@ -2003,15 +2046,69 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
     final colors = context.colors;
 
     const devices = [
-      _WearableOption('Apple Watch', 'appleWatch', Icons.watch_rounded, Color(0xFF1C1C1E), 0.82),
-      _WearableOption('Garmin', 'garmin', Icons.gps_fixed_rounded, Color(0xFF006DC6), 0.86),
-      _WearableOption('Fitbit / Sense', 'fitbit', Icons.monitor_heart_rounded, Color(0xFF00B0B9), 0.75),
-      _WearableOption('WHOOP', 'whoop', Icons.bolt_rounded, Color(0xFF1A1A2E), 0.78),
-      _WearableOption('Samsung Galaxy Watch', 'samsungGalaxyWatch', Icons.watch_outlined, Color(0xFF1428A0), 0.76),
-      _WearableOption('Polar', 'polar', Icons.favorite_rounded, Color(0xFFD0021B), 0.84),
-      _WearableOption('Oura Ring', 'oura', Icons.circle_outlined, Color(0xFF2D2D2D), 0.70),
-      _WearableOption('Pixel Watch', 'pixelWatch', Icons.watch_rounded, Color(0xFF4285F4), 0.76),
-      _WearableOption('None / Not sure', 'unknown', Icons.device_unknown_rounded, null, 0.75),
+      _WearableOption(
+        'Apple Watch',
+        'appleWatch',
+        Icons.watch_rounded,
+        Color(0xFF1C1C1E),
+        0.82,
+      ),
+      _WearableOption(
+        'Garmin',
+        'garmin',
+        Icons.gps_fixed_rounded,
+        Color(0xFF006DC6),
+        0.86,
+      ),
+      _WearableOption(
+        'Fitbit / Sense',
+        'fitbit',
+        Icons.monitor_heart_rounded,
+        Color(0xFF00B0B9),
+        0.75,
+      ),
+      _WearableOption(
+        'WHOOP',
+        'whoop',
+        Icons.bolt_rounded,
+        Color(0xFF1A1A2E),
+        0.78,
+      ),
+      _WearableOption(
+        'Samsung Galaxy Watch',
+        'samsungGalaxyWatch',
+        Icons.watch_outlined,
+        Color(0xFF1428A0),
+        0.76,
+      ),
+      _WearableOption(
+        'Polar',
+        'polar',
+        Icons.favorite_rounded,
+        Color(0xFFD0021B),
+        0.84,
+      ),
+      _WearableOption(
+        'Oura Ring',
+        'oura',
+        Icons.circle_outlined,
+        Color(0xFF2D2D2D),
+        0.70,
+      ),
+      _WearableOption(
+        'Pixel Watch',
+        'pixelWatch',
+        Icons.watch_rounded,
+        Color(0xFF4285F4),
+        0.76,
+      ),
+      _WearableOption(
+        'None / Not sure',
+        'unknown',
+        Icons.device_unknown_rounded,
+        null,
+        0.75,
+      ),
     ];
 
     return SingleChildScrollView(
@@ -2031,7 +2128,11 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           const SizedBox(height: 6),
           Text(
             'MetaDash adjusts calorie accuracy based on your device. Every wearable overcounts — we correct for it.',
-            style: TextStyle(fontSize: 15, color: colors.textMuted, height: 1.5),
+            style: TextStyle(
+              fontSize: 15,
+              color: colors.textMuted,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 24),
           Container(
@@ -2050,12 +2151,18 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                 return Column(
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _selectedWearableFamily = d.familyKey),
+                      onTap: () =>
+                          setState(() => _selectedWearableFamily = d.familyKey),
                       borderRadius: isLast
-                          ? const BorderRadius.vertical(bottom: Radius.circular(18))
+                          ? const BorderRadius.vertical(
+                              bottom: Radius.circular(18),
+                            )
                           : BorderRadius.zero,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 13,
+                        ),
                         child: Row(
                           children: [
                             Container(
@@ -2074,7 +2181,9 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: isSelected ? colors.accent : colors.textPrimary,
+                                  color: isSelected
+                                      ? colors.accent
+                                      : colors.textPrimary,
                                 ),
                               ),
                             ),
@@ -2084,14 +2193,22 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                               height: 22,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: isSelected ? colors.accent : Colors.transparent,
+                                color: isSelected
+                                    ? colors.accent
+                                    : Colors.transparent,
                                 border: Border.all(
-                                  color: isSelected ? colors.accent : colors.divider,
+                                  color: isSelected
+                                      ? colors.accent
+                                      : colors.divider,
                                   width: 1.5,
                                 ),
                               ),
                               child: isSelected
-                                  ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    )
                                   : null,
                             ),
                           ],
@@ -2141,11 +2258,13 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           if (user != null) {
             final existing =
                 await userState.db.getDataInputsSettings(user.id!) ??
-                    DataInputsSettings.defaults(user.id!);
+                DataInputsSettings.defaults(user.id!);
             // Default to Apple Watch on iOS (most common), unknown on Android
             final defaultFamily = isIOS ? 'appleWatch' : 'unknown';
             final updated = existing.copyWith(
-              appleHealthConnected: isIOS ? true : existing.appleHealthConnected,
+              appleHealthConnected: isIOS
+                  ? true
+                  : existing.appleHealthConnected,
               googleFitConnected: isIOS ? existing.googleFitConnected : true,
               // Only set if the user hasn't already chosen a device
               wearableFamily: existing.wearableFamily == 'unknown'
@@ -2225,8 +2344,11 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
             isIOS
                 ? 'Connect with Apple Health to automatically sync your steps, workouts, weight, sleep, and heart rate — so MetaDash can calculate your most accurate TDEE.'
                 : 'Connect with Google Health to automatically sync your activity data — powering your personalized metabolic estimate.',
-            style:
-                TextStyle(fontSize: 15, color: colors.textMuted, height: 1.6),
+            style: TextStyle(
+              fontSize: 15,
+              color: colors.textMuted,
+              height: 1.6,
+            ),
           ),
           const SizedBox(height: 28),
 
@@ -2452,8 +2574,10 @@ class _OnboardingTextField extends StatelessWidget {
         hintStyle: TextStyle(color: colors.textMuted),
         filled: true,
         fillColor: colors.surface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: colors.divider),
@@ -2685,6 +2809,11 @@ class _WearableOption {
   final IconData icon;
   final Color? color;
   final double multiplier;
-  const _WearableOption(this.name, this.familyKey, this.icon, this.color, this.multiplier);
+  const _WearableOption(
+    this.name,
+    this.familyKey,
+    this.icon,
+    this.color,
+    this.multiplier,
+  );
 }
-

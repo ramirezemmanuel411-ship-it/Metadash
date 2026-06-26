@@ -69,8 +69,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '7310437116',
     projectId: 'meta-dash-9a4f3',
     storageBucket: 'meta-dash-9a4f3.firebasestorage.app',
-    androidClientId: '7310437116-b258t1fhqsjgnd0p803j3kc9d8g2haoj.apps.googleusercontent.com',
-    iosClientId: '7310437116-vhlq8oh00mi8spomgdv7tbj33iv795sd.apps.googleusercontent.com',
+    androidClientId:
+        '7310437116-b258t1fhqsjgnd0p803j3kc9d8g2haoj.apps.googleusercontent.com',
+    iosClientId:
+        '7310437116-vhlq8oh00mi8spomgdv7tbj33iv795sd.apps.googleusercontent.com',
     iosBundleId: 'app.Metadash',
   );
 }

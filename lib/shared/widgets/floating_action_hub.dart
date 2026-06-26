@@ -323,12 +323,14 @@ class _RadialMenuOverlayState extends State<_RadialMenuOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 180),
     );
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
   }
 
@@ -347,9 +349,7 @@ class _RadialMenuOverlayState extends State<_RadialMenuOverlay>
             onTap: widget.onDismiss,
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.18),
-              ),
+              child: Container(color: Colors.black.withValues(alpha: 0.18)),
             ),
           ),
         ),
@@ -554,8 +554,8 @@ class _RadialMenu extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color: isDark
-                          ? Colors.black.withValues(alpha: 0.32)
-                          : context.colors.textMuted.withValues(alpha: 0.15),
+                            ? Colors.black.withValues(alpha: 0.32)
+                            : context.colors.textMuted.withValues(alpha: 0.15),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -634,10 +634,12 @@ class _RadialItemWidget extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final resolvedBackground =
         backgroundColor ?? (isDark ? _nightSurface : theme.colorScheme.surface);
-    final resolvedIconColor =
-        isDark ? _nightAccentBlue : theme.colorScheme.primary;
-    final resolvedLabelColor =
-        isDark ? _nightTextPrimary : theme.colorScheme.onSurface;
+    final resolvedIconColor = isDark
+        ? _nightAccentBlue
+        : theme.colorScheme.primary;
+    final resolvedLabelColor = isDark
+        ? _nightTextPrimary
+        : theme.colorScheme.onSurface;
 
     return GestureDetector(
       onTap: () {

@@ -100,8 +100,8 @@ class AiRouter {
     Map<String, dynamic>? diaryContext,
     AiRouteMode? forceMode,
   }) async {
-    final mode = forceMode ??
-        detectIntent(text: userText, diaryContext: diaryContext);
+    final mode =
+        forceMode ?? detectIntent(text: userText, diaryContext: diaryContext);
 
     switch (mode) {
       case AiRouteMode.restaurantOrderHelper:
@@ -134,7 +134,8 @@ class AiRouter {
     final imageBytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(imageBytes);
 
-    String prompt = '''You are a nutrition expert analyzing a food photo for a metabolic tracking app.
+    String prompt =
+        '''You are a nutrition expert analyzing a food photo for a metabolic tracking app.
 
 Identify every food item visible in the image. Estimate reasonable portion sizes.
 ${description != null && description.isNotEmpty ? '\nUser context: "$description"\nUse this to refine portions. Trust image for item identification.' : ''}
@@ -175,11 +176,13 @@ Rules:
 
       final items = (json['items'] as List? ?? [])
           .cast<Map<String, dynamic>>()
-          .map((e) => AiStructuredFoodEntry.fromJson({
-                ...e,
-                'source': 'AI photo estimate',
-                'confidence': json['confidence'] ?? 'medium',
-              }))
+          .map(
+            (e) => AiStructuredFoodEntry.fromJson({
+              ...e,
+              'source': 'AI photo estimate',
+              'confidence': json['confidence'] ?? 'medium',
+            }),
+          )
           .toList();
 
       final assumptions = (json['assumptions'] as List? ?? [])
@@ -210,7 +213,8 @@ Rules:
     final proteinLeft = context?['proteinRemaining'] ?? 'unknown';
     final userGoal = context?['goal'] ?? 'maintain weight';
 
-    final prompt = '''You are a nutrition assistant helping someone order at a restaurant.
+    final prompt =
+        '''You are a nutrition assistant helping someone order at a restaurant.
 
 User request: "$userText"
 
@@ -259,31 +263,32 @@ Rules:
           .asMap()
           .entries
           .map((e) {
-        final idx = e.key;
-        final opt = e.value;
-        final isBest = (json['best_index'] ?? 0) == idx;
-        final entry = AiStructuredFoodEntry(
-          name: opt['title'] ?? 'Menu item',
-          serving: '1 order',
-          calories: _parseInt(opt['calories']),
-          protein: _parseInt(opt['protein']),
-          carbs: _parseInt(opt['carbs']),
-          fat: _parseInt(opt['fat']),
-          confidence: 'medium',
-          source: 'Restaurant estimate',
-        );
-        return AiSuggestionOption(
-          title: opt['title'] ?? 'Option',
-          description: opt['description'],
-          calories: _parseInt(opt['calories']),
-          protein: _parseInt(opt['protein']),
-          carbs: _parseInt(opt['carbs']),
-          fat: _parseInt(opt['fat']),
-          reasoning: opt['reasoning'],
-          isRecommended: isBest,
-          entry: entry,
-        );
-      }).toList();
+            final idx = e.key;
+            final opt = e.value;
+            final isBest = (json['best_index'] ?? 0) == idx;
+            final entry = AiStructuredFoodEntry(
+              name: opt['title'] ?? 'Menu item',
+              serving: '1 order',
+              calories: _parseInt(opt['calories']),
+              protein: _parseInt(opt['protein']),
+              carbs: _parseInt(opt['carbs']),
+              fat: _parseInt(opt['fat']),
+              confidence: 'medium',
+              source: 'Restaurant estimate',
+            );
+            return AiSuggestionOption(
+              title: opt['title'] ?? 'Option',
+              description: opt['description'],
+              calories: _parseInt(opt['calories']),
+              protein: _parseInt(opt['protein']),
+              carbs: _parseInt(opt['carbs']),
+              fat: _parseInt(opt['fat']),
+              reasoning: opt['reasoning'],
+              isRecommended: isBest,
+              entry: entry,
+            );
+          })
+          .toList();
 
       final bestEntry = options.isNotEmpty
           ? options[json['best_index'] ?? 0].entry
@@ -315,7 +320,8 @@ Rules:
     final fatLeft = context?['fatRemaining'] ?? 'unknown';
     final userGoal = context?['goal'] ?? 'maintain weight';
 
-    final prompt = '''You are a nutrition strategist for a metabolic tracking app.
+    final prompt =
+        '''You are a nutrition strategist for a metabolic tracking app.
 
 User request: "$userText"
 
@@ -365,31 +371,32 @@ Rules:
           .asMap()
           .entries
           .map((e) {
-        final idx = e.key;
-        final opt = e.value;
-        final isBest = (json['best_index'] ?? 0) == idx;
-        final entry = AiStructuredFoodEntry(
-          name: opt['title'] ?? 'Meal',
-          serving: '1 serving',
-          calories: _parseInt(opt['calories']),
-          protein: _parseInt(opt['protein']),
-          carbs: _parseInt(opt['carbs']),
-          fat: _parseInt(opt['fat']),
-          confidence: 'medium',
-          source: 'AI meal strategy',
-        );
-        return AiSuggestionOption(
-          title: opt['title'] ?? 'Option',
-          description: opt['description'],
-          calories: _parseInt(opt['calories']),
-          protein: _parseInt(opt['protein']),
-          carbs: _parseInt(opt['carbs']),
-          fat: _parseInt(opt['fat']),
-          reasoning: opt['reasoning'],
-          isRecommended: isBest,
-          entry: entry,
-        );
-      }).toList();
+            final idx = e.key;
+            final opt = e.value;
+            final isBest = (json['best_index'] ?? 0) == idx;
+            final entry = AiStructuredFoodEntry(
+              name: opt['title'] ?? 'Meal',
+              serving: '1 serving',
+              calories: _parseInt(opt['calories']),
+              protein: _parseInt(opt['protein']),
+              carbs: _parseInt(opt['carbs']),
+              fat: _parseInt(opt['fat']),
+              confidence: 'medium',
+              source: 'AI meal strategy',
+            );
+            return AiSuggestionOption(
+              title: opt['title'] ?? 'Option',
+              description: opt['description'],
+              calories: _parseInt(opt['calories']),
+              protein: _parseInt(opt['protein']),
+              carbs: _parseInt(opt['carbs']),
+              fat: _parseInt(opt['fat']),
+              reasoning: opt['reasoning'],
+              isRecommended: isBest,
+              entry: entry,
+            );
+          })
+          .toList();
 
       final bestEntry = options.isNotEmpty
           ? options[json['best_index'] ?? 0].entry
@@ -412,7 +419,8 @@ Rules:
   // ── Mode 4 — Structured Food Logger ───────────────────────────────────────
 
   Future<AiRouterResult> _runLoggerMode(String userText) async {
-    final prompt = '''You are a nutrition expert for a food tracking app.
+    final prompt =
+        '''You are a nutrition expert for a food tracking app.
 
 Parse this food description into structured nutritional data.
 If multiple items are mentioned, list each separately.
@@ -454,11 +462,13 @@ Rules:
 
       final items = (json['items'] as List? ?? [])
           .cast<Map<String, dynamic>>()
-          .map((e) => AiStructuredFoodEntry.fromJson({
-                ...e,
-                'source': 'AI estimate',
-                'confidence': json['confidence'] ?? 'medium',
-              }))
+          .map(
+            (e) => AiStructuredFoodEntry.fromJson({
+              ...e,
+              'source': 'AI estimate',
+              'confidence': json['confidence'] ?? 'medium',
+            }),
+          )
           .toList();
 
       return AiRouterResult(

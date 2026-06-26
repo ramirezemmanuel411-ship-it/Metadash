@@ -188,8 +188,10 @@ class FatSecretRemoteDatasource {
           // brand_name is a separate field but is frequently absent.
           final rawFoodName = (foodJson['food_name'] ?? 'Unknown').toString();
           final rawBrandName = foodJson['brand_name']?.toString();
-          final (foodName, brandName) =
-              _splitFoodAndBrand(rawFoodName, rawBrandName);
+          final (foodName, brandName) = _splitFoodAndBrand(
+            rawFoodName,
+            rawBrandName,
+          );
 
           // Skip brand-only stubs — entries where no real food name could be
           // recovered (e.g. food_name = "Kirkland Signature" with no descriptor).
@@ -245,15 +247,31 @@ class FatSecretRemoteDatasource {
 
   /// Corporate suffixes to strip from food/brand display names.
   static const _corpSuffixes = [
-    ', Inc.', ', Inc', ' Inc.', ' Inc',
-    ', LLC', ' LLC',
-    ', Ltd.', ', Ltd', ' Ltd.', ' Ltd',
-    ', Corp.', ', Corp', ' Corp.', ' Corp',
-    ', Co.', ' Co.',
-    ' Corporation', ' Company',
-    ' Brands', ' Foods Co', ' Foods Company',
-    ' International', ' Enterprises',
-    ' S Corp', ' S. Corp',
+    ', Inc.',
+    ', Inc',
+    ' Inc.',
+    ' Inc',
+    ', LLC',
+    ' LLC',
+    ', Ltd.',
+    ', Ltd',
+    ' Ltd.',
+    ' Ltd',
+    ', Corp.',
+    ', Corp',
+    ' Corp.',
+    ' Corp',
+    ', Co.',
+    ' Co.',
+    ' Corporation',
+    ' Company',
+    ' Brands',
+    ' Foods Co',
+    ' Foods Company',
+    ' International',
+    ' Enterprises',
+    ' S Corp',
+    ' S. Corp',
   ];
 
   /// Known grocery store chains and private-label brands.
@@ -264,7 +282,11 @@ class FatSecretRemoteDatasource {
     // Walmart
     'great value', "sam's choice", 'equate', 'mainstays',
     // Target
-    'good & gather', 'market pantry', 'archer farms', 'up & up', 'simply balanced',
+    'good & gather',
+    'market pantry',
+    'archer farms',
+    'up & up',
+    'simply balanced',
     // Kroger / Albertsons
     'simple truth', 'simple truth organic', 'private selection',
     'kroger', 'lucerne', 'signature select', 'open nature',

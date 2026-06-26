@@ -196,7 +196,8 @@ class Exercise extends Equatable {
       WorkoutIntensity.intense => 1.15,
       _ => 1.0,
     };
-    return ((baseMet * intensityMod * weightKg * durationMinutes!) / 60).round();
+    return ((baseMet * intensityMod * weightKg * durationMinutes!) / 60)
+        .round();
   }
 
   @override

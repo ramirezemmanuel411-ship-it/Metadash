@@ -95,8 +95,7 @@ class FoodTextNormalizer {
     ];
     final cleaned = parts.where((part) {
       final lower = part.toLowerCase();
-      return part.isNotEmpty &&
-          !noisePatterns.any((noise) => lower == noise);
+      return part.isNotEmpty && !noisePatterns.any((noise) => lower == noise);
     }).toList();
 
     if (cleaned.isEmpty) return '';
@@ -108,12 +107,30 @@ class FoodTextNormalizer {
 
     // Words that should never appear as a standalone brand subtitle.
     const invalidBrands = {
-      'inc', 'inc.', 'llc', 'corp', 'corp.', 'ltd', 'ltd.', 'co', 'co.',
-      'rotisserie', 'grilled', 'roasted', 'baked', 'fried', 'smoked',
-      'boiled', 'steamed', 'raw', 'cooked', 'fresh', 'frozen', 'dried',
+      'inc',
+      'inc.',
+      'llc',
+      'corp',
+      'corp.',
+      'ltd',
+      'ltd.',
+      'co',
+      'co.',
+      'rotisserie',
+      'grilled',
+      'roasted',
+      'baked',
+      'fried',
+      'smoked',
+      'boiled',
+      'steamed',
+      'raw',
+      'cooked',
+      'fresh',
+      'frozen',
+      'dried',
     };
-    if (stripped.isEmpty ||
-        invalidBrands.contains(stripped.toLowerCase())) {
+    if (stripped.isEmpty || invalidBrands.contains(stripped.toLowerCase())) {
       return '';
     }
     return stripped;
@@ -125,14 +142,30 @@ class FoodTextNormalizer {
   ///           "Oscar Mayer Foods Corp." → "Oscar Mayer"
   static String _stripCorporateSuffixesFinal(String s) {
     const suffixes = [
-      ', Inc.', ', Inc', ' Inc.', ' Inc',
-      ' LLC', ', LLC',
-      ', Ltd.', ', Ltd', ' Ltd.', ' Ltd',
-      ', Corp.', ', Corp', ' Corp.', ' Corp',
-      ', Co.', ' Co.',
-      ' Corporation', ' Company',
-      ' Brands', ' Foods Co', ' Foods Company',
-      ' International', ' Enterprises', ' S Corp',
+      ', Inc.',
+      ', Inc',
+      ' Inc.',
+      ' Inc',
+      ' LLC',
+      ', LLC',
+      ', Ltd.',
+      ', Ltd',
+      ' Ltd.',
+      ' Ltd',
+      ', Corp.',
+      ', Corp',
+      ' Corp.',
+      ' Corp',
+      ', Co.',
+      ' Co.',
+      ' Corporation',
+      ' Company',
+      ' Brands',
+      ' Foods Co',
+      ' Foods Company',
+      ' International',
+      ' Enterprises',
+      ' S Corp',
     ];
     var result = s;
     bool changed = true;

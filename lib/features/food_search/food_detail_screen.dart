@@ -9,7 +9,6 @@ import '../../models/diary_entry_food.dart';
 import '../../data/models/food_model.dart';
 import '../../shared/widgets/serving_picker.dart';
 
-
 class FoodDetailScreen extends StatefulWidget {
   final FoodModel food;
   final String? mealName;
@@ -43,30 +42,43 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     // Appends "(Xg)" to a label if it doesn't already mention grams.
     String withG(String lbl, double? g) {
       if (g == null || g <= 0) return lbl;
-      final alreadyHasG = RegExp(r'\d+\s*g[\)\s]|\d+\s*g$', caseSensitive: false).hasMatch(lbl);
+      final alreadyHasG = RegExp(
+        r'\d+\s*g[\)\s]|\d+\s*g$',
+        caseSensitive: false,
+      ).hasMatch(lbl);
       if (alreadyHasG) return lbl;
-      final gStr = g == g.truncateToDouble() ? g.truncate().toString() : g.toStringAsFixed(1);
+      final gStr = g == g.truncateToDouble()
+          ? g.truncate().toString()
+          : g.toStringAsFixed(1);
       return '$lbl ($gStr g)';
     }
 
     final def = food.servingSize > 0
         ? '${_fmtD(food.servingSize)} ${food.servingUnit}'
         : food.servingUnit.isNotEmpty
-            ? '1 ${food.servingUnit}'
-            : '1 serving';
+        ? '1 ${food.servingUnit}'
+        : '1 serving';
     final list = <({String label, double? grams})>[
-      (label: withG(def, food.servingWeightGrams), grams: food.servingWeightGrams),
+      (
+        label: withG(def, food.servingWeightGrams),
+        grams: food.servingWeightGrams,
+      ),
     ];
     for (final opt in food.servingOptions) {
       if (opt.label == null && opt.unit == null) continue;
-      final lbl = opt.label ??
-          '${opt.quantity != null ? _fmtD(opt.quantity!) : ""} ${opt.unit ?? ""}'.trim();
+      final lbl =
+          opt.label ??
+          '${opt.quantity != null ? _fmtD(opt.quantity!) : ""} ${opt.unit ?? ""}'
+              .trim();
       list.add((label: withG(lbl, opt.weightGrams), grams: opt.weightGrams));
     }
-    final hasGrams = food.servingWeightGrams != null && food.servingWeightGrams! > 0;
-    final already100g = list.any((o) =>
-        o.label.toLowerCase().contains('100g') ||
-        o.label.toLowerCase().contains('100 g'));
+    final hasGrams =
+        food.servingWeightGrams != null && food.servingWeightGrams! > 0;
+    final already100g = list.any(
+      (o) =>
+          o.label.toLowerCase().contains('100g') ||
+          o.label.toLowerCase().contains('100 g'),
+    );
     if (hasGrams && !already100g) {
       list.add((label: '100 g', grams: 100.0));
     }
@@ -90,8 +102,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   double get _carbs => food.carbs * _m;
   double get _fat => food.fat * _m;
 
-  String _fmtD(double v) =>
-      v == v.truncateToDouble() ? v.truncate().toString() : v.toStringAsFixed(1);
+  String _fmtD(double v) => v == v.truncateToDouble()
+      ? v.truncate().toString()
+      : v.toStringAsFixed(1);
 
   String _fmtG(double v, {String unit = 'g'}) {
     final s = v >= 10 ? v.round().toString() : v.toStringAsFixed(1);
@@ -120,8 +133,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         elevation: 0,
         actions: [
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_horiz,
-                color: Theme.of(context).appBarTheme.foregroundColor),
+            icon: Icon(
+              Icons.more_horiz,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
             onSelected: (v) => _handleOverflow(context, v),
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'favorite', child: Text('Favourite')),
@@ -150,8 +165,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 // 2 — Quantity (primary interaction)
                 ServingPicker(
                   servings: _servings,
-                  isLiquid: food.servingVolumeMl != null &&
-                      food.servingVolumeMl! > 0,
+                  isLiquid:
+                      food.servingVolumeMl != null && food.servingVolumeMl! > 0,
                   baseCalories: food.calories.toDouble(),
                   onChanged: (qty, idx, label) => setState(() {
                     _quantity = qty;
@@ -187,8 +202,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             kcal: _kcal,
             isEditing: isEditing,
             onAddToTray: () => _addToPlate(context),
-            onLogNow: () =>
-                isEditing ? _saveEdit(context) : _logNow(context),
+            onLogNow: () => isEditing ? _saveEdit(context) : _logNow(context),
           ),
         ],
       ),
@@ -209,8 +223,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         serving: _servingLabel.isNotEmpty
             ? _servingLabel
             : _quantity == 1.0
-                ? _servings[_servingIdx].label
-                : '${_fmtD(_quantity)} × ${_servings[_servingIdx].label}',
+            ? _servings[_servingIdx].label
+            : '${_fmtD(_quantity)} × ${_servings[_servingIdx].label}',
         baseCalories: food.calories.toDouble(),
         baseProtein: food.protein,
         baseCarbs: food.carbs,
@@ -256,7 +270,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     final today = DateTime.now();
     final maps = await us.db.getFoodEntriesForDay(user.id!, today);
     int total = 0;
-    for (final m in maps) { total += (m['calories'] as int?) ?? 0; }
+    for (final m in maps) {
+      total += (m['calories'] as int?) ?? 0;
+    }
     if (mounted) {
       setState(() {
         _todayKcal = total;
@@ -283,8 +299,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       serving: _servingLabel.isNotEmpty
           ? _servingLabel
           : _quantity == 1.0
-              ? _servings[_servingIdx].label
-              : '${_fmtD(_quantity)} × ${_servings[_servingIdx].label}',
+          ? _servings[_servingIdx].label
+          : '${_fmtD(_quantity)} × ${_servings[_servingIdx].label}',
     );
     await us.db.addFoodEntry(entry);
     widget.onSaved?.call();
@@ -317,7 +333,8 @@ class _FoodHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = food.displayTitle;
     final rawBrand = food.displayBrand;
-    final brand = (rawBrand.isNotEmpty &&
+    final brand =
+        (rawBrand.isNotEmpty &&
             rawBrand.toLowerCase() != 'generic' &&
             rawBrand.toLowerCase() != title.toLowerCase())
         ? rawBrand
@@ -333,32 +350,42 @@ class _FoodHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Name + brand
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+          ),
           if (brand != null && brand.isNotEmpty) ...[
             const SizedBox(height: 2),
-            Text(brand,
-                style: TextStyle(fontSize: 13, color: colors.textMuted)),
+            Text(
+              brand,
+              style: TextStyle(fontSize: 13, color: colors.textMuted),
+            ),
           ],
           const SizedBox(height: 12),
           // Large calorie display
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Icon(Icons.local_fire_department_rounded,
-                  color: colors.accent, size: 24),
+              Icon(
+                Icons.local_fire_department_rounded,
+                color: colors.accent,
+                size: 24,
+              ),
               const SizedBox(width: 4),
               Text(
                 kcal.round().toString(),
                 style: const TextStyle(
-                    fontSize: 38, fontWeight: FontWeight.bold, height: 1.0),
+                  fontSize: 38,
+                  fontWeight: FontWeight.bold,
+                  height: 1.0,
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 5, left: 5),
-                child: Text('kcal',
-                    style: TextStyle(
-                        fontSize: 15, color: colors.textSecondary)),
+                child: Text(
+                  'kcal',
+                  style: TextStyle(fontSize: 15, color: colors.textSecondary),
+                ),
               ),
             ],
           ),
@@ -368,19 +395,22 @@ class _FoodHeader extends StatelessWidget {
             child: Row(
               children: [
                 _HeaderMacroTile(
-                    value: fmtG(protein),
-                    label: 'Protein',
-                    color: Palette.macroProtein),
+                  value: fmtG(protein),
+                  label: 'Protein',
+                  color: Palette.macroProtein,
+                ),
                 _VertDivider(color: colors.divider),
                 _HeaderMacroTile(
-                    value: fmtG(carbs),
-                    label: 'Carbs',
-                    color: Palette.macroCarbs),
+                  value: fmtG(carbs),
+                  label: 'Carbs',
+                  color: Palette.macroCarbs,
+                ),
                 _VertDivider(color: colors.divider),
                 _HeaderMacroTile(
-                    value: fmtG(fat),
-                    label: 'Fat',
-                    color: Palette.macroFat),
+                  value: fmtG(fat),
+                  label: 'Fat',
+                  color: Palette.macroFat,
+                ),
               ],
             ),
           ),
@@ -424,12 +454,12 @@ class _NutritionCardState extends State<_NutritionCard> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final protein = widget.protein;
-    final carbs   = widget.carbs;
-    final fat     = widget.fat;
+    final carbs = widget.carbs;
+    final fat = widget.fat;
     final total = protein * 4 + carbs * 4 + fat * 9;
     final pPct = total > 0 ? protein * 4 / total * 100 : 0.0;
-    final cPct = total > 0 ? carbs   * 4 / total * 100 : 0.0;
-    final fPct = total > 0 ? fat     * 9 / total * 100 : 0.0;
+    final cPct = total > 0 ? carbs * 4 / total * 100 : 0.0;
+    final fPct = total > 0 ? fat * 9 / total * 100 : 0.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -444,28 +474,40 @@ class _NutritionCardState extends State<_NutritionCard> {
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 0),
             child: Row(
               children: [
-                Text('Macros',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  'Macros',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const Spacer(),
                 GestureDetector(
                   onTap: () => setState(() => _expanded = !_expanded),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 4, vertical: 4),
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Nutrition Facts',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: colors.accent,
-                                fontWeight: FontWeight.w500)),
+                        Text(
+                          'Nutrition Facts',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.accent,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         AnimatedRotation(
                           turns: _expanded ? 0.5 : 0.0,
                           duration: const Duration(milliseconds: 200),
-                          child: Icon(Icons.keyboard_arrow_down_rounded,
-                              color: colors.accent, size: 18),
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: colors.accent,
+                            size: 18,
+                          ),
                         ),
                       ],
                     ),
@@ -481,35 +523,37 @@ class _NutritionCardState extends State<_NutritionCard> {
             child: Column(
               children: [
                 _MacroProgressRow(
-                    color: Palette.macroProtein,
-                    name: 'Protein',
-                    value: widget.fmtG(protein),
-                    pct: pPct),
-                Divider(
-                    height: 1, thickness: 0.5, color: colors.divider),
+                  color: Palette.macroProtein,
+                  name: 'Protein',
+                  value: widget.fmtG(protein),
+                  pct: pPct,
+                ),
+                Divider(height: 1, thickness: 0.5, color: colors.divider),
                 _MacroProgressRow(
-                    color: Palette.macroCarbs,
-                    name: 'Carbohydrates',
-                    value: widget.fmtG(carbs),
-                    pct: cPct),
-                Divider(
-                    height: 1, thickness: 0.5, color: colors.divider),
+                  color: Palette.macroCarbs,
+                  name: 'Carbohydrates',
+                  value: widget.fmtG(carbs),
+                  pct: cPct,
+                ),
+                Divider(height: 1, thickness: 0.5, color: colors.divider),
                 _MacroProgressRow(
-                    color: Palette.macroFat,
-                    name: 'Fat',
-                    value: widget.fmtG(fat),
-                    pct: fPct),
+                  color: Palette.macroFat,
+                  name: 'Fat',
+                  value: widget.fmtG(fat),
+                  pct: fPct,
+                ),
               ],
             ),
           ),
           // ── Expandable nutrition facts ───────────────────────────────────
           if (_expanded) ...[
             Divider(
-                height: 1,
-                thickness: 0.5,
-                color: colors.divider,
-                indent: 16,
-                endIndent: 16),
+              height: 1,
+              thickness: 0.5,
+              color: colors.divider,
+              indent: 16,
+              endIndent: 16,
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: _NutritionFactsContent(
@@ -529,8 +573,11 @@ class _NutritionCardState extends State<_NutritionCard> {
 class _HeaderMacroTile extends StatelessWidget {
   final String value, label;
   final Color color;
-  const _HeaderMacroTile(
-      {required this.value, required this.label, required this.color});
+  const _HeaderMacroTile({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -538,13 +585,19 @@ class _HeaderMacroTile extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(value,
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, color: context.colors.textMuted)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: context.colors.textMuted),
+          ),
         ],
       ),
     );
@@ -575,29 +628,36 @@ class _MacroProgressRow extends StatelessWidget {
               Container(
                 width: 9,
                 height: 9,
-                decoration:
-                    BoxDecoration(color: color, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(name,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500)),
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: colors.primary)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: colors.primary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
           Row(
             children: [
               const SizedBox(width: 17),
-              Text('${pct.round()}%',
-                  style:
-                      TextStyle(fontSize: 11, color: colors.textMuted)),
+              Text(
+                '${pct.round()}%',
+                style: TextStyle(fontSize: 11, color: colors.textMuted),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -631,7 +691,6 @@ class _VertDivider extends StatelessWidget {
       Container(width: 0.5, height: 36, color: color);
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Energy Impact
 // ─────────────────────────────────────────────────────────────────────────────
@@ -664,13 +723,17 @@ class _EnergyImpact extends StatelessWidget {
     if (loading) {
       return Container(
         decoration: BoxDecoration(
-            color: colors.surface, borderRadius: BorderRadius.circular(14)),
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
         padding: const EdgeInsets.all(20),
         child: const Center(
-            child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2))),
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
       );
     }
 
@@ -686,7 +749,9 @@ class _EnergyImpact extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-          color: colors.surface, borderRadius: BorderRadius.circular(14)),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,10 +759,11 @@ class _EnergyImpact extends StatelessWidget {
           Text(
             'ENERGY IMPACT',
             style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: colors.textMuted,
-                letterSpacing: 0.5),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: colors.textMuted,
+              letterSpacing: 0.5,
+            ),
           ),
           const SizedBox(height: 4),
           _ImpactRow(
@@ -746,26 +812,31 @@ class _ImpactRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style:
-                        TextStyle(fontSize: 11, color: colors.textMuted)),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 11, color: colors.textMuted),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   '$before → $after',
                   style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: colors.primary),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: colors.primary,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          Text(delta,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: colors.accent)),
+          Text(
+            delta,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colors.accent,
+            ),
+          ),
         ],
       ),
     );
@@ -776,7 +847,12 @@ class _ImpactRow extends StatelessWidget {
 // Nutrient helper (top-level so _NutritionFacts can use it)
 // ─────────────────────────────────────────────────────────────────────────────
 
-double? _nv(FoodModel food, double m, {required int usdaId, required String offKey}) {
+double? _nv(
+  FoodModel food,
+  double m, {
+  required int usdaId,
+  required String offKey,
+}) {
   final raw = food.rawJson;
   if (raw == null) return null;
   final list = raw['foodNutrients'] as List?;
@@ -786,7 +862,8 @@ double? _nv(FoodModel food, double m, {required int usdaId, required String offK
       if (id == usdaId || id?.toString() == '$usdaId') {
         var v = (n['value'] ?? n['amount'] as num?)?.toDouble();
         if (v == null) continue;
-        if (food.nutritionBasis == 'per100g' || food.nutritionBasis == 'per_100g') {
+        if (food.nutritionBasis == 'per100g' ||
+            food.nutritionBasis == 'per_100g') {
           v = v * (food.servingWeightGrams ?? 100) / 100;
         }
         return v * m;
@@ -795,7 +872,8 @@ double? _nv(FoodModel food, double m, {required int usdaId, required String offK
   }
   final nm = raw['nutriments'] as Map?;
   if (nm != null) {
-    var v = (nm['${offKey}_serving'] ?? nm['${offKey}_100g'] as num?)?.toDouble();
+    var v = (nm['${offKey}_serving'] ?? nm['${offKey}_100g'] as num?)
+        ?.toDouble();
     if (v != null) {
       if (nm['${offKey}_serving'] == null) {
         v = v * (food.servingWeightGrams ?? 100) / 100;
@@ -834,93 +912,94 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
   double get m => widget.m;
   String Function(double, {String unit}) get fmtG => widget.fmtG;
 
-  double? _n(int usdaId, String offKey) => _nv(food, m, usdaId: usdaId, offKey: offKey);
+  double? _n(int usdaId, String offKey) =>
+      _nv(food, m, usdaId: usdaId, offKey: offKey);
   String _v(double? val, {String unit = 'g'}) =>
       val != null ? fmtG(val, unit: unit) : '\u2014';
 
   @override
   Widget build(BuildContext context) {
     // ── Macros ────────────────────────────────────────────────────────────────
-    final protein      = food.protein * m;
-    final carbs        = food.carbs   * m;
-    final fat          = food.fat     * m;
+    final protein = food.protein * m;
+    final carbs = food.carbs * m;
+    final fat = food.fat * m;
 
     // ── Carb subs ─────────────────────────────────────────────────────────────
-    final fiber         = _n(1079, 'fiber');
-    final insolFiber    = _n(1084, 'insoluble-fiber');
-    final solFiber      = _n(1082, 'soluble-fiber');
-    final sugars        = _n(2000, 'sugars');
-    final addedSugars   = _n(1235, 'added-sugars');
+    final fiber = _n(1079, 'fiber');
+    final insolFiber = _n(1084, 'insoluble-fiber');
+    final solFiber = _n(1082, 'soluble-fiber');
+    final sugars = _n(2000, 'sugars');
+    final addedSugars = _n(1235, 'added-sugars');
     final sugarAlcohols = _n(1086, 'sugar-alcohols');
-    final starch        = _n(1009, 'starch');
-    final netCarbs      = fiber != null
+    final starch = _n(1009, 'starch');
+    final netCarbs = fiber != null
         ? (carbs - fiber).clamp(0, double.infinity) as double
         : null;
 
     // ── Fat subs ──────────────────────────────────────────────────────────────
-    final satFat       = _n(1258, 'saturated-fat');
-    final transFat     = _n(1257, 'trans-fat');
-    final monoFat      = _n(1292, 'monounsaturated-fat');
-    final polyFat      = _n(1293, 'polyunsaturated-fat');
-    final omega3       = _n(1404, 'omega-3');
-    final omega6       = _n(1269, 'linoleic-acid');
-    final cholesterol  = _n(1253, 'cholesterol');
+    final satFat = _n(1258, 'saturated-fat');
+    final transFat = _n(1257, 'trans-fat');
+    final monoFat = _n(1292, 'monounsaturated-fat');
+    final polyFat = _n(1293, 'polyunsaturated-fat');
+    final omega3 = _n(1404, 'omega-3');
+    final omega6 = _n(1269, 'linoleic-acid');
+    final cholesterol = _n(1253, 'cholesterol');
 
     // ── Amino acids ───────────────────────────────────────────────────────────
-    final tryptophan    = _n(1210, 'tryptophan');
-    final threonine     = _n(1211, 'threonine');
-    final isoleucine    = _n(1212, 'isoleucine');
-    final leucine       = _n(1213, 'leucine');
-    final lysine        = _n(1214, 'lysine');
-    final methionine    = _n(1215, 'methionine');
-    final cystine       = _n(1216, 'cystine');
+    final tryptophan = _n(1210, 'tryptophan');
+    final threonine = _n(1211, 'threonine');
+    final isoleucine = _n(1212, 'isoleucine');
+    final leucine = _n(1213, 'leucine');
+    final lysine = _n(1214, 'lysine');
+    final methionine = _n(1215, 'methionine');
+    final cystine = _n(1216, 'cystine');
     final phenylalanine = _n(1217, 'phenylalanine');
-    final tyrosine      = _n(1218, 'tyrosine');
-    final valine        = _n(1219, 'valine');
-    final histidine     = _n(1220, 'histidine');
+    final tyrosine = _n(1218, 'tyrosine');
+    final valine = _n(1219, 'valine');
+    final histidine = _n(1220, 'histidine');
 
     // ── Vitamins ──────────────────────────────────────────────────────────────
-    final vitA       = _n(1106, 'vitamin-a');
-    final vitC       = _n(1162, 'vitamin-c');
-    final vitD       = _n(1114, 'vitamin-d');
-    final vitE       = _n(1109, 'vitamin-e');
-    final vitK       = _n(1185, 'vitamin-k');
-    final thiamine   = _n(1165, 'thiamin');
+    final vitA = _n(1106, 'vitamin-a');
+    final vitC = _n(1162, 'vitamin-c');
+    final vitD = _n(1114, 'vitamin-d');
+    final vitE = _n(1109, 'vitamin-e');
+    final vitK = _n(1185, 'vitamin-k');
+    final thiamine = _n(1165, 'thiamin');
     final riboflavin = _n(1166, 'riboflavin');
-    final niacin     = _n(1167, 'niacin');
-    final b5         = _n(1170, 'pantothenic-acid');
-    final b6         = _n(1175, 'vitamin-b6');
-    final biotin     = _n(1176, 'biotin');
-    final folate     = _n(1177, 'folate');
-    final b12        = _n(1178, 'vitamin-b12');
-    final choline    = _n(1180, 'choline');
+    final niacin = _n(1167, 'niacin');
+    final b5 = _n(1170, 'pantothenic-acid');
+    final b6 = _n(1175, 'vitamin-b6');
+    final biotin = _n(1176, 'biotin');
+    final folate = _n(1177, 'folate');
+    final b12 = _n(1178, 'vitamin-b12');
+    final choline = _n(1180, 'choline');
 
     // ── Minerals ──────────────────────────────────────────────────────────────
-    final calcium    = _n(1087, 'calcium');
-    final chloride   = _n(1088, 'chloride');
-    final iron       = _n(1089, 'iron');
-    final magnesium  = _n(1090, 'magnesium');
+    final calcium = _n(1087, 'calcium');
+    final chloride = _n(1088, 'chloride');
+    final iron = _n(1089, 'iron');
+    final magnesium = _n(1090, 'magnesium');
     final phosphorus = _n(1091, 'phosphorus');
-    final potassium  = _n(1092, 'potassium');
-    final sodium     = _n(1093, 'sodium');
-    final zinc       = _n(1095, 'zinc');
-    final chromium   = _n(1096, 'chromium');
-    final copper     = _n(1098, 'copper');
-    final fluoride   = _n(1099, 'fluoride');
-    final iodine     = _n(1100, 'iodine');
-    final manganese  = _n(1101, 'manganese');
+    final potassium = _n(1092, 'potassium');
+    final sodium = _n(1093, 'sodium');
+    final zinc = _n(1095, 'zinc');
+    final chromium = _n(1096, 'chromium');
+    final copper = _n(1098, 'copper');
+    final fluoride = _n(1099, 'fluoride');
+    final iodine = _n(1100, 'iodine');
+    final manganese = _n(1101, 'manganese');
     final molybdenum = _n(1102, 'molybdenum');
-    final selenium   = _n(1103, 'selenium');
+    final selenium = _n(1103, 'selenium');
 
     // ── Other ─────────────────────────────────────────────────────────────────
 
-    final water       = _n(1051, 'water');
-    final caffeine    = _n(1057, 'caffeine');
-    final alcohol     = _n(1018, 'alcohol');
+    final water = _n(1051, 'water');
+    final caffeine = _n(1057, 'caffeine');
+    final alcohol = _n(1018, 'alcohol');
 
-    final teal  = Palette.macroProtein;  // protein — matches diary ring
-    final amber = Palette.macroCarbs;    // carbs   — matches diary ring
-    final red   = Palette.macroFat;      // fat     — matches diary ring
+    final teal = Palette.macroProtein; // protein — matches diary ring
+    final amber = Palette.macroCarbs; // carbs   — matches diary ring
+    final red = Palette.macroFat; // fat     — matches diary ring
 
     // ── Tab content ───────────────────────────────────────────────────────────
     final tabContent = <int, Widget>{
@@ -929,36 +1008,39 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _MacroSection(label: 'Protein', value: _v(protein), color: teal),
-          _NRow(label: 'Tryptophan',    value: _v(tryptophan)),
-          _NRow(label: 'Threonine',     value: _v(threonine)),
-          _NRow(label: 'Isoleucine',    value: _v(isoleucine)),
-          _NRow(label: 'Leucine',       value: _v(leucine)),
-          _NRow(label: 'Lysine',        value: _v(lysine)),
-          _NRow(label: 'Methionine',    value: _v(methionine)),
-          _NRow(label: 'Cystine',       value: _v(cystine)),
+          _NRow(label: 'Tryptophan', value: _v(tryptophan)),
+          _NRow(label: 'Threonine', value: _v(threonine)),
+          _NRow(label: 'Isoleucine', value: _v(isoleucine)),
+          _NRow(label: 'Leucine', value: _v(leucine)),
+          _NRow(label: 'Lysine', value: _v(lysine)),
+          _NRow(label: 'Methionine', value: _v(methionine)),
+          _NRow(label: 'Cystine', value: _v(cystine)),
           _NRow(label: 'Phenylalanine', value: _v(phenylalanine)),
-          _NRow(label: 'Tyrosine',      value: _v(tyrosine)),
-          _NRow(label: 'Valine',        value: _v(valine)),
-          _NRow(label: 'Histidine',     value: _v(histidine)),
+          _NRow(label: 'Tyrosine', value: _v(tyrosine)),
+          _NRow(label: 'Valine', value: _v(valine)),
+          _NRow(label: 'Histidine', value: _v(histidine)),
           const SizedBox(height: 8),
           _MacroSection(label: 'Carbohydrates', value: _v(carbs), color: amber),
-          if (netCarbs != null) _NRow(label: 'Net Carbs',       value: _v(netCarbs)),
-          _NRow(label: 'Dietary Fiber',    value: _v(fiber)),
-          _NRow(label: '  Soluble Fiber',  value: _v(solFiber)),
-          _NRow(label: '  Insoluble Fiber',value: _v(insolFiber)),
-          _NRow(label: 'Total Sugars',     value: _v(sugars)),
-          _NRow(label: '  Added Sugars',   value: _v(addedSugars)),
+          if (netCarbs != null) _NRow(label: 'Net Carbs', value: _v(netCarbs)),
+          _NRow(label: 'Dietary Fiber', value: _v(fiber)),
+          _NRow(label: '  Soluble Fiber', value: _v(solFiber)),
+          _NRow(label: '  Insoluble Fiber', value: _v(insolFiber)),
+          _NRow(label: 'Total Sugars', value: _v(sugars)),
+          _NRow(label: '  Added Sugars', value: _v(addedSugars)),
           _NRow(label: '  Sugar Alcohols', value: _v(sugarAlcohols)),
-          _NRow(label: 'Starch',           value: _v(starch)),
+          _NRow(label: 'Starch', value: _v(starch)),
           const SizedBox(height: 8),
           _MacroSection(label: 'Total Fat', value: _v(fat), color: red),
-          _NRow(label: 'Saturated Fat',    value: _v(satFat)),
-          _NRow(label: 'Trans Fat',        value: _v(transFat)),
-          _NRow(label: 'Monounsaturated',  value: _v(monoFat)),
-          _NRow(label: 'Polyunsaturated',  value: _v(polyFat)),
-          _NRow(label: '  Omega-3',        value: _v(omega3)),
-          _NRow(label: '  Omega-6',        value: _v(omega6)),
-          _NRow(label: 'Cholesterol',      value: _v(cholesterol, unit: 'mg')),
+          _NRow(label: 'Saturated Fat', value: _v(satFat)),
+          _NRow(label: 'Trans Fat', value: _v(transFat)),
+          _NRow(label: 'Monounsaturated', value: _v(monoFat)),
+          _NRow(label: 'Polyunsaturated', value: _v(polyFat)),
+          _NRow(label: '  Omega-3', value: _v(omega3)),
+          _NRow(label: '  Omega-6', value: _v(omega6)),
+          _NRow(
+            label: 'Cholesterol',
+            value: _v(cholesterol, unit: 'mg'),
+          ),
         ],
       ),
 
@@ -966,20 +1048,62 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
       1: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _NRow(label: 'Vitamin A',              value: _v(vitA,       unit: 'mcg')),
-          _NRow(label: 'Vitamin C',              value: _v(vitC,       unit: 'mg')),
-          _NRow(label: 'Vitamin D',              value: _v(vitD,       unit: 'mcg')),
-          _NRow(label: 'Vitamin E',              value: _v(vitE,       unit: 'mg')),
-          _NRow(label: 'Vitamin K',              value: _v(vitK,       unit: 'mcg')),
-          _NRow(label: 'B1 · Thiamine',          value: _v(thiamine,   unit: 'mg')),
-          _NRow(label: 'B2 · Riboflavin',        value: _v(riboflavin, unit: 'mg')),
-          _NRow(label: 'B3 · Niacin',            value: _v(niacin,     unit: 'mg')),
-          _NRow(label: 'B5 · Pantothenic Acid',  value: _v(b5,         unit: 'mg')),
-          _NRow(label: 'B6 · Pyridoxine',        value: _v(b6,         unit: 'mg')),
-          _NRow(label: 'B7 · Biotin',            value: _v(biotin,     unit: 'mcg')),
-          _NRow(label: 'B9 · Folate',            value: _v(folate,     unit: 'mcg')),
-          _NRow(label: 'B12 · Cobalamin',        value: _v(b12,        unit: 'mcg')),
-          _NRow(label: 'Choline',                value: _v(choline,    unit: 'mg')),
+          _NRow(
+            label: 'Vitamin A',
+            value: _v(vitA, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'Vitamin C',
+            value: _v(vitC, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Vitamin D',
+            value: _v(vitD, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'Vitamin E',
+            value: _v(vitE, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Vitamin K',
+            value: _v(vitK, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'B1 · Thiamine',
+            value: _v(thiamine, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'B2 · Riboflavin',
+            value: _v(riboflavin, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'B3 · Niacin',
+            value: _v(niacin, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'B5 · Pantothenic Acid',
+            value: _v(b5, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'B6 · Pyridoxine',
+            value: _v(b6, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'B7 · Biotin',
+            value: _v(biotin, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'B9 · Folate',
+            value: _v(folate, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'B12 · Cobalamin',
+            value: _v(b12, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'Choline',
+            value: _v(choline, unit: 'mg'),
+          ),
         ],
       ),
 
@@ -987,21 +1111,66 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
       2: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _NRow(label: 'Calcium',    value: _v(calcium,    unit: 'mg')),
-          _NRow(label: 'Iron',       value: _v(iron,       unit: 'mg')),
-          _NRow(label: 'Potassium',  value: _v(potassium,  unit: 'mg')),
-          _NRow(label: 'Sodium',     value: _v(sodium,     unit: 'mg')),
-          _NRow(label: 'Chloride',   value: _v(chloride,   unit: 'mg')),
-          _NRow(label: 'Magnesium',  value: _v(magnesium,  unit: 'mg')),
-          _NRow(label: 'Phosphorus', value: _v(phosphorus, unit: 'mg')),
-          _NRow(label: 'Zinc',       value: _v(zinc,       unit: 'mg')),
-          _NRow(label: 'Copper',     value: _v(copper,     unit: 'mg')),
-          _NRow(label: 'Manganese',  value: _v(manganese,  unit: 'mg')),
-          _NRow(label: 'Selenium',   value: _v(selenium,   unit: 'mcg')),
-          _NRow(label: 'Iodine',     value: _v(iodine,     unit: 'mcg')),
-          _NRow(label: 'Chromium',   value: _v(chromium,   unit: 'mcg')),
-          _NRow(label: 'Molybdenum', value: _v(molybdenum, unit: 'mcg')),
-          _NRow(label: 'Fluoride',   value: _v(fluoride,   unit: 'mcg')),
+          _NRow(
+            label: 'Calcium',
+            value: _v(calcium, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Iron',
+            value: _v(iron, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Potassium',
+            value: _v(potassium, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Sodium',
+            value: _v(sodium, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Chloride',
+            value: _v(chloride, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Magnesium',
+            value: _v(magnesium, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Phosphorus',
+            value: _v(phosphorus, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Zinc',
+            value: _v(zinc, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Copper',
+            value: _v(copper, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Manganese',
+            value: _v(manganese, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Selenium',
+            value: _v(selenium, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'Iodine',
+            value: _v(iodine, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'Chromium',
+            value: _v(chromium, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'Molybdenum',
+            value: _v(molybdenum, unit: 'mcg'),
+          ),
+          _NRow(
+            label: 'Fluoride',
+            value: _v(fluoride, unit: 'mcg'),
+          ),
         ],
       ),
 
@@ -1009,78 +1178,85 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
       3: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _NRow(label: 'Water',       value: _v(water,       unit: 'g')),
-          _NRow(label: 'Caffeine',    value: _v(caffeine,    unit: 'mg')),
-          _NRow(label: 'Alcohol',     value: _v(alcohol,     unit: 'g')),
+          _NRow(
+            label: 'Water',
+            value: _v(water, unit: 'g'),
+          ),
+          _NRow(
+            label: 'Caffeine',
+            value: _v(caffeine, unit: 'mg'),
+          ),
+          _NRow(
+            label: 'Alcohol',
+            value: _v(alcohol, unit: 'g'),
+          ),
         ],
       ),
     };
 
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Tab chips ─────────────────────────────────────────────────────
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: List.generate(_tabs.length, (i) {
-                final active = _tab == i;
-                return Padding(
-                  padding: EdgeInsets.only(right: i < _tabs.length - 1 ? 8 : 0),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _tab = i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: active
-                            ? context.colors.accent
-                            : context.colors.accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _tabs[i],
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: active
-                              ? Colors.white
-                              : context.colors.accent,
-                        ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Tab chips ─────────────────────────────────────────────────────
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(_tabs.length, (i) {
+              final active = _tab == i;
+              return Padding(
+                padding: EdgeInsets.only(right: i < _tabs.length - 1 ? 8 : 0),
+                child: GestureDetector(
+                  onTap: () => setState(() => _tab = i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? context.colors.accent
+                          : context.colors.accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _tabs[i],
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: active ? Colors.white : context.colors.accent,
                       ),
                     ),
                   ),
-                );
-              }),
+                ),
+              );
+            }),
+          ),
+        ),
+
+        const SizedBox(height: 14),
+        Divider(height: 1, thickness: 0.5, color: context.colors.divider),
+        const SizedBox(height: 6),
+
+        // ── Animated content ──────────────────────────────────────────────
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.04),
+                end: Offset.zero,
+              ).animate(anim),
+              child: child,
             ),
           ),
-
-          const SizedBox(height: 14),
-          Divider(height: 1, thickness: 0.5, color: context.colors.divider),
-          const SizedBox(height: 6),
-
-          // ── Animated content ──────────────────────────────────────────────
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.04),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-            ),
-            child: KeyedSubtree(
-              key: ValueKey(_tab),
-              child: tabContent[_tab]!,
-            ),
-          ),
-        ],
-      );
+          child: KeyedSubtree(key: ValueKey(_tab), child: tabContent[_tab]!),
+        ),
+      ],
+    );
   }
 }
 
@@ -1088,7 +1264,11 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
 class _MacroSection extends StatelessWidget {
   final String label, value;
   final Color color;
-  const _MacroSection({required this.label, required this.value, required this.color});
+  const _MacroSection({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1097,17 +1277,23 @@ class _MacroSection extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: color)),
-          ),
-          Text(value,
+            child: Text(
+              label,
               style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: color)),
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -1125,19 +1311,23 @@ class _NRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
-                style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: context.colors.textSecondary,
+              ),
+            ),
           ),
-          Text(value,
-              style: TextStyle(fontSize: 13, color: context.colors.textSecondary)),
+          Text(
+            value,
+            style: TextStyle(fontSize: 13, color: context.colors.textSecondary),
+          ),
         ],
       ),
     );
   }
 }
-
-
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action Area
@@ -1164,8 +1354,7 @@ class _ActionArea extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       decoration: BoxDecoration(
         color: colors.background,
-        border:
-            Border(top: BorderSide(color: colors.divider, width: 0.5)),
+        border: Border(top: BorderSide(color: colors.divider, width: 0.5)),
       ),
       child: isEditing
           ? SizedBox(
@@ -1175,12 +1364,17 @@ class _ActionArea extends StatelessWidget {
                   backgroundColor: colors.accent,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: onLogNow,
-                child: Text('Save Changes · $kcalStr',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Save Changes · $kcalStr',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             )
           : Column(
@@ -1193,12 +1387,17 @@ class _ActionArea extends StatelessWidget {
                       backgroundColor: colors.accent,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: onAddToTray,
-                    child: Text('Add to Food Tray · $kcalStr',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Add to Food Tray · $kcalStr',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1210,12 +1409,17 @@ class _ActionArea extends StatelessWidget {
                       side: BorderSide(color: colors.accent, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: onLogNow,
-                    child: const Text('Log Food Now',
-                        style: TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w600)),
+                    child: const Text(
+                      'Log Food Now',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -1223,4 +1427,3 @@ class _ActionArea extends StatelessWidget {
     );
   }
 }
-

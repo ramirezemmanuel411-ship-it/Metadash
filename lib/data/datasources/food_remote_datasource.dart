@@ -727,10 +727,24 @@ class FoodRemoteDatasource {
   /// Store / private-label brands that show up as the *first* comma-part of a
   /// USDA branded description, ahead of the real food name.
   static const _usdaStoreBrands = {
-    'kirkland', 'kirkland signature', 'great value', "sam's choice", 'equate',
-    'good & gather', 'market pantry', 'simple truth', 'signature select',
-    '365', '365 everyday value', "member's mark", 'private selection',
-    "trader joe's", 'up & up', 'kroger', 'open nature', 'lucerne',
+    'kirkland',
+    'kirkland signature',
+    'great value',
+    "sam's choice",
+    'equate',
+    'good & gather',
+    'market pantry',
+    'simple truth',
+    'signature select',
+    '365',
+    '365 everyday value',
+    "member's mark",
+    'private selection',
+    "trader joe's",
+    'up & up',
+    'kroger',
+    'open nature',
+    'lucerne',
   };
 
   Map<String, String?> _parseUSDABrandAndName(
@@ -784,10 +798,10 @@ class FoodRemoteDatasource {
               .trim();
           final resolvedBrand =
               (brandName != null && brandName.trim().isNotEmpty)
-                  ? brandName.trim()
-                  : (brandOwner != null && brandOwner.trim().isNotEmpty)
-                      ? brandOwner.trim()
-                      : (brandParts.isNotEmpty ? brandParts.first : null);
+              ? brandName.trim()
+              : (brandOwner != null && brandOwner.trim().isNotEmpty)
+              ? brandOwner.trim()
+              : (brandParts.isNotEmpty ? brandParts.first : null);
           return {
             'name': food.isEmpty ? foodName : food,
             'brand': resolvedBrand,

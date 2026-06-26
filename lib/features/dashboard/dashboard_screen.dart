@@ -331,8 +331,7 @@ class _DashboardBody extends StatelessWidget {
         case 'weekly_deficit':
           {
             final weekLbs = weekTotalDeficit / 3500;
-            final energyTint =
-                Theme.of(context).brightness == Brightness.dark
+            final energyTint = Theme.of(context).brightness == Brightness.dark
                 ? Palette.widgetEnergyDay
                 : Palette.forestGreen;
             final weekStatus = weekLbs < -0.05
@@ -944,12 +943,7 @@ class _CompactCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ConceptIconTile(
-              color: color,
-              icon: icon,
-              size: 30,
-              iconSize: 16,
-            ),
+            _ConceptIconTile(color: color, icon: icon, size: 30, iconSize: 16),
             const Spacer(),
             Text(
               value,
@@ -1109,9 +1103,7 @@ class _CalorieBalanceCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: insetSurface,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: rimColor,
-                      ),
+                      border: Border.all(color: rimColor),
                     ),
                     child: Row(
                       children: [
@@ -1125,11 +1117,7 @@ class _CalorieBalanceCard extends StatelessWidget {
                             secondaryTextColor: conceptSecondary,
                           ),
                         ),
-                        Container(
-                          width: 1,
-                          height: 38,
-                          color: rimColor,
-                        ),
+                        Container(width: 1, height: 38, color: rimColor),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.only(left: 18),
@@ -1304,11 +1292,7 @@ class _ConceptIconTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: iconSize,
-      ),
+      child: Icon(icon, color: color, size: iconSize),
     );
   }
 }
@@ -1425,8 +1409,18 @@ String _formatTimeOfDay(DateTime t) {
 }
 
 const List<String> _kMonthAbbr = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String _formatShortDate(DateTime d) {
@@ -1601,7 +1595,9 @@ class _GoalProjectionCard extends StatelessWidget {
       sub = "You're at your goal weight";
     } else if (!onPace) {
       headline = '${remaining.toStringAsFixed(1)} lb to go';
-      sub = needToLose ? 'Not in a deficit this week' : 'Not in a surplus this week';
+      sub = needToLose
+          ? 'Not in a deficit this week'
+          : 'Not in a surplus this week';
     } else {
       final weeks = remaining / towardRate;
       if (weeks > 104) {

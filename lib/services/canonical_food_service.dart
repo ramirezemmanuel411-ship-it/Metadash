@@ -84,7 +84,8 @@ class CanonicalFoodService {
         // Only use canonical.displayName when the name is empty, unknown, or
         // clearly a corporate record (contains Inc / LLC / Corp / Ltd).
         final nameLower = originalFood.name.trim().toLowerCase();
-        final isCorporateName = nameLower.isEmpty ||
+        final isCorporateName =
+            nameLower.isEmpty ||
             nameLower == 'unknown' ||
             RegExp(r'\b(inc|llc|corp|ltd)\b').hasMatch(nameLower) ||
             nameLower.endsWith(' co') ||

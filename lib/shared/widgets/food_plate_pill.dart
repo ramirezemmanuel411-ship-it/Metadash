@@ -48,15 +48,13 @@ class _PillContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final count  = plate.itemCount;
-    final kcal   = plate.totalCalories;
+    final count = plate.itemCount;
+    final kcal = plate.totalCalories;
 
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => FoodPlateScreen(onAdded: onAdded),
-          ),
+          MaterialPageRoute(builder: (_) => FoodPlateScreen(onAdded: onAdded)),
         );
       },
       child: Container(
@@ -79,7 +77,11 @@ class _PillContent extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(Icons.dinner_dining_outlined, size: 16, color: colors.onPrimary),
+                Icon(
+                  Icons.dinner_dining_outlined,
+                  size: 16,
+                  color: colors.onPrimary,
+                ),
                 Positioned(
                   top: -4,
                   right: -5,
@@ -132,7 +134,11 @@ class _PillContent extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 6),
-            Icon(Icons.chevron_right, size: 14, color: colors.onPrimary.withOpacity(0.7)),
+            Icon(
+              Icons.chevron_right,
+              size: 14,
+              color: colors.onPrimary.withOpacity(0.7),
+            ),
           ],
         ),
       ),

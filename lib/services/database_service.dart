@@ -438,9 +438,7 @@ class DatabaseService {
         );
       } catch (_) {}
       try {
-        await db.execute(
-          'ALTER TABLE daily_logs ADD COLUMN averageMets REAL',
-        );
+        await db.execute('ALTER TABLE daily_logs ADD COLUMN averageMets REAL');
       } catch (_) {}
       try {
         await db.execute('''

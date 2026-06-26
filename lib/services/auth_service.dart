@@ -75,7 +75,8 @@ class AuthService {
         message: 'Google sign-in was cancelled.',
       );
     }
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
@@ -105,17 +106,17 @@ class AuthService {
       nonce: hashedNonce,
     );
 
-    final oauthCredential = OAuthProvider('apple.com').credential(
-      idToken: appleCredential.identityToken,
-      rawNonce: rawNonce,
-    );
+    final oauthCredential = OAuthProvider(
+      'apple.com',
+    ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
     final result = await _auth.signInWithCredential(oauthCredential);
 
     // Apple only returns the name on the first authorization — capture it.
     final given = appleCredential.givenName;
     final family = appleCredential.familyName;
     if ((given != null || family != null) &&
-        (result.user?.displayName == null || result.user!.displayName!.isEmpty)) {
+        (result.user?.displayName == null ||
+            result.user!.displayName!.isEmpty)) {
       final displayName = [given, family].whereType<String>().join(' ').trim();
       if (displayName.isNotEmpty) {
         await result.user?.updateDisplayName(displayName);

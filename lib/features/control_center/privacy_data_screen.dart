@@ -90,7 +90,8 @@ class _PrivacyDataScreenState extends State<PrivacyDataScreen> {
               _PrvSwitchRow(
                 icon: Icons.bar_chart_outlined,
                 title: 'Usage Analytics',
-                subtitle: 'Anonymous usage patterns — helps us improve features',
+                subtitle:
+                    'Anonymous usage patterns — helps us improve features',
                 value: _analyticsEnabled,
                 onChanged: (v) => setState(() => _analyticsEnabled = v),
               ),
@@ -134,7 +135,8 @@ class _PrivacyDataScreenState extends State<PrivacyDataScreen> {
               _PrvTapRow(
                 icon: Icons.delete_outline,
                 title: 'Delete All Data',
-                subtitle: 'Permanently erase all your MetaDash logs and settings',
+                subtitle:
+                    'Permanently erase all your MetaDash logs and settings',
                 iconColor: Colors.red,
                 titleColor: Colors.red,
                 onTap: () => _confirmDelete(context),
@@ -173,10 +175,7 @@ class _PrivacyDataScreenState extends State<PrivacyDataScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'Delete',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -193,14 +192,14 @@ class _PrvSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        label,
-        style: TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: context.colors.textMuted,
-        ),
-      );
+    label,
+    style: TextStyle(
+      fontSize: 11.5,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.8,
+      color: context.colors.textMuted,
+    ),
+  );
 }
 
 class _PrvCard extends StatelessWidget {
@@ -209,24 +208,22 @@ class _PrvCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: context.colors.divider.withValues(alpha: 0.08),
-          ),
-        ),
-        child: Column(children: children),
-      );
+    decoration: BoxDecoration(
+      color: context.colors.surface,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: context.colors.divider.withValues(alpha: 0.08)),
+    ),
+    child: Column(children: children),
+  );
 }
 
 class _PrvDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Divider(
-        height: 1,
-        indent: 52,
-        color: context.colors.divider.withValues(alpha: 0.6),
-      );
+    height: 1,
+    indent: 52,
+    color: context.colors.divider.withValues(alpha: 0.6),
+  );
 }
 
 class _PrvPermissionRow extends StatelessWidget {
@@ -410,7 +407,11 @@ class _PrvTapRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right, size: 18, color: context.colors.textMuted),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: context.colors.textMuted,
+            ),
           ],
         ),
       ),

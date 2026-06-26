@@ -17,7 +17,8 @@ class AccountScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out?'),
         content: const Text(
-            "You'll need to sign in again to access your dashboard."),
+          "You'll need to sign in again to access your dashboard.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -39,8 +40,18 @@ class AccountScreen extends StatelessWidget {
   }
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   String _monthAbbr(int month) => _months[(month - 1).clamp(0, 11)];
@@ -61,28 +72,38 @@ class AccountScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: context.colors.surface,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => Padding(
         padding: EdgeInsets.fromLTRB(
-            24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+          24,
+          20,
+          24,
+          MediaQuery.of(context).viewInsets.bottom + 32,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
               child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                      color: context.colors.divider,
-                      borderRadius: BorderRadius.circular(2))),
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: context.colors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-            Text(title,
-                style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary)),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: context.colors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
@@ -95,10 +116,13 @@ class AccountScreen extends StatelessWidget {
                 filled: true,
                 fillColor: context.colors.surfaceVariant,
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -106,23 +130,28 @@ class AccountScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: context.colors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12))),
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 onPressed: () async {
                   final trimmed = controller.text.trim();
                   if (trimmed.isEmpty) return;
                   final errorMsg = save(trimmed);
                   Navigator.of(context).pop();
                   if (errorMsg.isNotEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(errorMsg)));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(errorMsg)));
                   }
                 },
-                child: const Text('Save',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Save',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -131,38 +160,54 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  void _editHeight(BuildContext context, UserState userState, UserProfile user) {
+  void _editHeight(
+    BuildContext context,
+    UserState userState,
+    UserProfile user,
+  ) {
     final feetCtrl = TextEditingController(
-        text: '${(user.height ~/ 12).toInt()}');
+      text: '${(user.height ~/ 12).toInt()}',
+    );
     final inchCtrl = TextEditingController(
-        text: '${(user.height % 12).round()}');
+      text: '${(user.height % 12).round()}',
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: context.colors.surface,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => Padding(
         padding: EdgeInsets.fromLTRB(
-            24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+          24,
+          20,
+          24,
+          MediaQuery.of(context).viewInsets.bottom + 32,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
               child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                      color: context.colors.divider,
-                      borderRadius: BorderRadius.circular(2))),
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: context.colors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-            Text('Height',
-                style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: context.colors.textPrimary)),
+            Text(
+              'Height',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: context.colors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -179,13 +224,18 @@ class AccountScreen extends StatelessWidget {
                       filled: true,
                       fillColor: context.colors.surfaceVariant,
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       suffixText: 'ft',
-                      suffixStyle:
-                          TextStyle(color: context.colors.textMuted, fontSize: 13),
+                      suffixStyle: TextStyle(
+                        color: context.colors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -202,13 +252,18 @@ class AccountScreen extends StatelessWidget {
                       filled: true,
                       fillColor: context.colors.surfaceVariant,
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       suffixText: 'in',
-                      suffixStyle:
-                          TextStyle(color: context.colors.textMuted, fontSize: 13),
+                      suffixStyle: TextStyle(
+                        color: context.colors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),
@@ -219,11 +274,13 @@ class AccountScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: context.colors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12))),
+                  backgroundColor: context.colors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 onPressed: () async {
                   final feet = int.tryParse(feetCtrl.text.trim()) ?? 0;
                   final inches = int.tryParse(inchCtrl.text.trim()) ?? 0;
@@ -231,10 +288,13 @@ class AccountScreen extends StatelessWidget {
                   if (totalInches <= 0) return;
                   Navigator.of(context).pop();
                   await userState.updateCurrentUser(
-                      user.copyWith(height: totalInches));
+                    user.copyWith(height: totalInches),
+                  );
                 },
-                child: const Text('Save',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Save',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ],
@@ -248,8 +308,9 @@ class AccountScreen extends StatelessWidget {
     final userState = context.watch<UserState>();
     final user = userState.currentUser;
     final heightIn = user?.height.round() ?? 0;
-    final heightStr =
-        heightIn > 0 ? "${heightIn ~/ 12}'${heightIn % 12}\"" : '—';
+    final heightStr = heightIn > 0
+        ? "${heightIn ~/ 12}'${heightIn % 12}\""
+        : '—';
     final dob = user?.dateOfBirth;
     final dobStr = dob != null
         ? '${_monthAbbr(dob.month)} ${dob.day}, ${dob.year}'
@@ -337,8 +398,9 @@ class AccountScreen extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2E8B57)
-                                .withValues(alpha: 0.12),
+                            color: const Color(
+                              0xFF2E8B57,
+                            ).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
@@ -370,14 +432,16 @@ class AccountScreen extends StatelessWidget {
                   onTap: user == null
                       ? () {}
                       : () => _editField(
-                            context, userState, user,
-                            title: 'Display Name',
-                            currentValue: user.name,
-                            save: (v) {
-                              userState.updateCurrentUser(user.copyWith(name: v));
-                              return '';
-                            },
-                          ),
+                          context,
+                          userState,
+                          user,
+                          title: 'Display Name',
+                          currentValue: user.name,
+                          save: (v) {
+                            userState.updateCurrentUser(user.copyWith(name: v));
+                            return '';
+                          },
+                        ),
                 ),
                 _AccDivider(),
                 _AccRow(
@@ -406,43 +470,59 @@ class AccountScreen extends StatelessWidget {
                 _AccRow(
                   icon: Icons.monitor_weight_outlined,
                   title: 'Current Weight',
-                  value: user != null ? '${user.weight.toStringAsFixed(1)} lbs' : '—',
+                  value: user != null
+                      ? '${user.weight.toStringAsFixed(1)} lbs'
+                      : '—',
                   onTap: user == null
                       ? () {}
                       : () => _editField(
-                            context, userState, user,
-                            title: 'Current Weight',
-                            currentValue: user.weight.toStringAsFixed(1),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            hint: 'Weight in lbs',
-                            save: (v) {
-                              final val = double.tryParse(v);
-                              if (val == null || val <= 0) return 'Enter a valid weight';
-                              userState.updateCurrentUser(user.copyWith(weight: val));
-                              return '';
-                            },
+                          context,
+                          userState,
+                          user,
+                          title: 'Current Weight',
+                          currentValue: user.weight.toStringAsFixed(1),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
                           ),
+                          hint: 'Weight in lbs',
+                          save: (v) {
+                            final val = double.tryParse(v);
+                            if (val == null || val <= 0)
+                              return 'Enter a valid weight';
+                            userState.updateCurrentUser(
+                              user.copyWith(weight: val),
+                            );
+                            return '';
+                          },
+                        ),
                 ),
                 _AccDivider(),
                 _AccRow(
                   icon: Icons.directions_walk_outlined,
                   title: 'Daily Steps Goal',
-                  value: user != null ? '${user.dailyStepsGoal.toString()} steps' : '—',
+                  value: user != null
+                      ? '${user.dailyStepsGoal.toString()} steps'
+                      : '—',
                   onTap: user == null
                       ? () {}
                       : () => _editField(
-                            context, userState, user,
-                            title: 'Daily Steps Goal',
-                            currentValue: user.dailyStepsGoal.toString(),
-                            keyboardType: TextInputType.number,
-                            hint: 'Steps per day',
-                            save: (v) {
-                              final val = int.tryParse(v);
-                              if (val == null || val <= 0) return 'Enter a valid number';
-                              userState.updateCurrentUser(user.copyWith(dailyStepsGoal: val));
-                              return '';
-                            },
-                          ),
+                          context,
+                          userState,
+                          user,
+                          title: 'Daily Steps Goal',
+                          currentValue: user.dailyStepsGoal.toString(),
+                          keyboardType: TextInputType.number,
+                          hint: 'Steps per day',
+                          save: (v) {
+                            final val = int.tryParse(v);
+                            if (val == null || val <= 0)
+                              return 'Enter a valid number';
+                            userState.updateCurrentUser(
+                              user.copyWith(dailyStepsGoal: val),
+                            );
+                            return '';
+                          },
+                        ),
                 ),
               ],
             ),
@@ -460,17 +540,21 @@ class AccountScreen extends StatelessWidget {
                   onTap: user == null
                       ? () {}
                       : () => _editField(
-                            context, userState, user,
-                            title: 'Email Address',
-                            currentValue: user.email,
-                            keyboardType: TextInputType.emailAddress,
-                            hint: 'your@email.com',
-                            save: (v) {
-                              if (!v.contains('@')) return 'Enter a valid email';
-                              userState.updateCurrentUser(user.copyWith(email: v));
-                              return '';
-                            },
-                          ),
+                          context,
+                          userState,
+                          user,
+                          title: 'Email Address',
+                          currentValue: user.email,
+                          keyboardType: TextInputType.emailAddress,
+                          hint: 'your@email.com',
+                          save: (v) {
+                            if (!v.contains('@')) return 'Enter a valid email';
+                            userState.updateCurrentUser(
+                              user.copyWith(email: v),
+                            );
+                            return '';
+                          },
+                        ),
                 ),
                 _AccDivider(),
                 _AccRow(
@@ -508,7 +592,10 @@ class AccountScreen extends StatelessWidget {
               onTap: () => _signOut(context),
               borderRadius: BorderRadius.circular(14),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -562,7 +649,9 @@ class _AccCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.colors.divider.withValues(alpha: 0.08)),
+        border: Border.all(
+          color: context.colors.divider.withValues(alpha: 0.08),
+        ),
       ),
       child: child,
     );
@@ -616,13 +705,14 @@ class _AccRow extends StatelessWidget {
             ),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 13,
-                color: context.colors.textMuted,
-              ),
+              style: TextStyle(fontSize: 13, color: context.colors.textMuted),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 18, color: context.colors.textMuted),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: context.colors.textMuted,
+            ),
           ],
         ),
       ),

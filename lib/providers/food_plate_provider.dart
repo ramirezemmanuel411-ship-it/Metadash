@@ -37,11 +37,11 @@ class FoodPlateItem {
     double? baseCarbs,
     double? baseFat,
     this.baseGrams,
-  })  : addedAt = addedAt ?? DateTime.now(),
-        baseCalories = baseCalories ?? calories.toDouble(),
-        baseProtein = baseProtein ?? proteinG.toDouble(),
-        baseCarbs = baseCarbs ?? carbsG.toDouble(),
-        baseFat = baseFat ?? fatG.toDouble();
+  }) : addedAt = addedAt ?? DateTime.now(),
+       baseCalories = baseCalories ?? calories.toDouble(),
+       baseProtein = baseProtein ?? proteinG.toDouble(),
+       baseCarbs = baseCarbs ?? carbsG.toDouble(),
+       baseFat = baseFat ?? fatG.toDouble();
 
   FoodPlateItem copyWith({
     int? calories,
@@ -144,9 +144,9 @@ class FoodPlateProvider extends ChangeNotifier {
   int get itemCount => _items.length;
 
   int get totalCalories => _items.fold(0, (s, i) => s + i.calories);
-  int get totalProtein  => _items.fold(0, (s, i) => s + i.proteinG);
-  int get totalCarbs    => _items.fold(0, (s, i) => s + i.carbsG);
-  int get totalFat      => _items.fold(0, (s, i) => s + i.fatG);
+  int get totalProtein => _items.fold(0, (s, i) => s + i.proteinG);
+  int get totalCarbs => _items.fold(0, (s, i) => s + i.carbsG);
+  int get totalFat => _items.fold(0, (s, i) => s + i.fatG);
 
   void add(FoodPlateItem item) {
     _items.add(item);

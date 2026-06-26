@@ -121,15 +121,17 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
               children: [
                 Text(
                   'Quick Add',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 7),
+                    horizontal: 14,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
                     color: calories > 0
                         ? context.accent.withValues(alpha: 0.12)
@@ -141,9 +143,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: calories > 0
-                          ? context.accent
-                          : context.textMuted,
+                      color: calories > 0 ? context.accent : context.textMuted,
                     ),
                   ),
                 ),
@@ -167,10 +167,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
                     isText: true,
                     required: true,
                   ),
-                  Divider(
-                      height: 1,
-                      indent: 46,
-                      color: context.divider),
+                  Divider(height: 1, indent: 46, color: context.divider),
                   _premiumRow(
                     context,
                     'Brand / Serving',
@@ -188,15 +185,25 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
               children: [
                 Expanded(
                   child: _macroCard(
-                    context, 'Protein', proteinCtrl, Palette.macroProtein)),
+                    context,
+                    'Protein',
+                    proteinCtrl,
+                    Palette.macroProtein,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _macroCard(
-                    context, 'Carbs', carbsCtrl, Palette.macroCarbs)),
+                    context,
+                    'Carbs',
+                    carbsCtrl,
+                    Palette.macroCarbs,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _macroCard(
-                    context, 'Fat', fatCtrl, Palette.macroFat)),
+                  child: _macroCard(context, 'Fat', fatCtrl, Palette.macroFat),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -220,44 +227,43 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
                     ),
                     subtitle: Text(
                       'Access this food quickly in future logs',
-                      style:
-                          TextStyle(fontSize: 12, color: context.textMuted),
+                      style: TextStyle(fontSize: 12, color: context.textMuted),
                     ),
                     value: saveToLibrary,
-                    onChanged: (v) =>
-                        setState(() => saveToLibrary = v),
+                    onChanged: (v) => setState(() => saveToLibrary = v),
                     activeThumbColor: context.accent,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                   ),
-                  if (saveToLibrary) ...
-                    [
-                      Divider(
-                          height: 1,
-                          indent: 16,
-                          color: context.divider),
-                      SwitchListTile(
-                        title: Text(
-                          'Share with Community',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: context.textPrimary,
-                          ),
+                  if (saveToLibrary) ...[
+                    Divider(height: 1, indent: 16, color: context.divider),
+                    SwitchListTile(
+                      title: Text(
+                        'Share with Community',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: context.textPrimary,
                         ),
-                        subtitle: Text(
-                          'Help others discover this food',
-                          style: TextStyle(
-                              fontSize: 12, color: context.textMuted),
-                        ),
-                        value: shareGlobally,
-                        onChanged: (v) =>
-                            setState(() => shareGlobally = v),
-                        activeThumbColor: context.accent,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
                       ),
-                    ],
+                      subtitle: Text(
+                        'Help others discover this food',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.textMuted,
+                        ),
+                      ),
+                      value: shareGlobally,
+                      onChanged: (v) => setState(() => shareGlobally = v),
+                      activeThumbColor: context.accent,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -269,8 +275,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
               child: FilledButton.icon(
                 onPressed: _onAdd,
                 icon: const Icon(Icons.add_rounded),
-                label:
-                    Text('Log to ${widget.mealName?.name ?? 'Today'}'),
+                label: Text('Log to ${widget.mealName?.name ?? 'Today'}'),
                 style: FilledButton.styleFrom(
                   backgroundColor: context.accent,
                   padding: const EdgeInsets.symmetric(vertical: 15),
@@ -311,8 +316,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
               Container(
                 width: 6,
                 height: 6,
-                decoration:
-                    BoxDecoration(color: color, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 5),
               Text(
@@ -332,8 +336,9 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
               Expanded(
                 child: TextField(
                   controller: ctrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   textAlign: TextAlign.left,
                   style: TextStyle(
                     fontSize: 22,
@@ -400,8 +405,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
           Expanded(
             child: TextField(
               controller: ctrl,
-              keyboardType:
-                  isText ? TextInputType.text : TextInputType.number,
+              keyboardType: isText ? TextInputType.text : TextInputType.number,
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: 14,
@@ -410,8 +414,7 @@ class _FoodManualEntryState extends State<FoodManualEntry> {
               ),
               decoration: InputDecoration(
                 hintText: required ? 'Required' : 'Optional',
-                hintStyle:
-                    TextStyle(fontSize: 13, color: context.textMuted),
+                hintStyle: TextStyle(fontSize: 13, color: context.textMuted),
                 isDense: true,
                 border: InputBorder.none,
               ),

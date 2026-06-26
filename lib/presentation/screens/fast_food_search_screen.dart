@@ -74,8 +74,10 @@ class _FastFoodSearchScreenLegacyState
       final userState = context.read<UserState>();
       final user = userState.currentUser;
       if (user == null) return;
-      final maps = await userState.db
-          .getFoodEntriesForDay(user.id!, DateTime.now());
+      final maps = await userState.db.getFoodEntriesForDay(
+        user.id!,
+        DateTime.now(),
+      );
       if (mounted) setState(() => _recentlyLogged = maps.take(8).toList());
     } catch (_) {}
   }
@@ -147,9 +149,7 @@ class _FastFoodSearchScreenLegacyState
               if (query.isEmpty) {
                 context.read<FoodSearchBloc>().add(const ClearSearch());
               } else if (query.length > 1) {
-                context
-                    .read<FoodSearchBloc>()
-                    .add(SearchQueryChanged(query));
+                context.read<FoodSearchBloc>().add(SearchQueryChanged(query));
               }
               setState(() {});
             },
@@ -169,9 +169,7 @@ class _FastFoodSearchScreenLegacyState
                   ? GestureDetector(
                       onTap: () {
                         _searchController.clear();
-                        context
-                            .read<FoodSearchBloc>()
-                            .add(const ClearSearch());
+                        context.read<FoodSearchBloc>().add(const ClearSearch());
                         setState(() {});
                       },
                       child: Padding(
@@ -208,14 +206,15 @@ class _FastFoodSearchScreenLegacyState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.search_rounded,
-                    size: 36,
-                    color: context.textMuted.withValues(alpha: 0.35)),
+                Icon(
+                  Icons.search_rounded,
+                  size: 36,
+                  color: context.textMuted.withValues(alpha: 0.35),
+                ),
                 const SizedBox(height: 12),
                 Text(
                   'No recent searches',
-                  style: TextStyle(
-                      fontSize: 14, color: context.textSecondary),
+                  style: TextStyle(fontSize: 14, color: context.textSecondary),
                 ),
               ],
             ),
@@ -249,9 +248,11 @@ class _FastFoodSearchScreenLegacyState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.restaurant_rounded,
-                  size: 52,
-                  color: context.textMuted.withValues(alpha: 0.3)),
+              Icon(
+                Icons.restaurant_rounded,
+                size: 52,
+                color: context.textMuted.withValues(alpha: 0.3),
+              ),
               const SizedBox(height: 14),
               Text(
                 'Search for any food',
@@ -332,14 +333,15 @@ class _FastFoodSearchScreenLegacyState
                   Text(
                     serving,
                     style: TextStyle(
-                        fontSize: 12, color: context.textSecondary),
+                      fontSize: 12,
+                      color: context.textSecondary,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 Text(
                   '$calories cal  ·  ${protein}p  ${carbs}c  ${fat}f',
-                  style:
-                      TextStyle(fontSize: 11.5, color: context.textMuted),
+                  style: TextStyle(fontSize: 11.5, color: context.textMuted),
                 ),
               ],
             ),
@@ -355,8 +357,7 @@ class _FastFoodSearchScreenLegacyState
                 color: context.accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(Icons.add_rounded,
-                  size: 18, color: context.accent),
+              child: Icon(Icons.add_rounded, size: 18, color: context.accent),
             ),
           ),
         ],
@@ -382,8 +383,11 @@ class _FastFoodSearchScreenLegacyState
                 color: context.surfaceVariant,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(Icons.history_rounded,
-                  size: 16, color: context.textMuted),
+              child: Icon(
+                Icons.history_rounded,
+                size: 16,
+                color: context.textMuted,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -396,8 +400,7 @@ class _FastFoodSearchScreenLegacyState
                 ),
               ),
             ),
-            Icon(Icons.north_west_rounded,
-                size: 13, color: context.textMuted),
+            Icon(Icons.north_west_rounded, size: 13, color: context.textMuted),
           ],
         ),
       ),
@@ -454,8 +457,7 @@ class _FastFoodSearchScreenLegacyState
                       height: 11,
                       width: 140,
                       decoration: BoxDecoration(
-                        color:
-                            context.surfaceVariant.withValues(alpha: 0.6),
+                        color: context.surfaceVariant.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
@@ -534,18 +536,35 @@ class _FastFoodSearchScreenLegacyState
 
     // Food name — always the primary title
     final foodName = food.displayTitle;
-    final leadingLetter =
-        foodName.isNotEmpty ? foodName[0].toUpperCase() : '?';
+    final leadingLetter = foodName.isNotEmpty ? foodName[0].toUpperCase() : '?';
 
     // Brand — secondary line, hide if empty, generic, same-as-name,
     // or a bare cooking descriptor / standalone corporate suffix.
     final brand = food.displayBrand;
     const invalidBrandDisplay = {
-      'inc', 'inc.', 'llc', 'corp', 'corp.', 'ltd', 'ltd.', 'co',
-      'rotisserie', 'grilled', 'roasted', 'baked', 'fried', 'smoked',
-      'boiled', 'steamed', 'raw', 'cooked', 'fresh', 'frozen',
+      'inc',
+      'inc.',
+      'llc',
+      'corp',
+      'corp.',
+      'ltd',
+      'ltd.',
+      'co',
+      'rotisserie',
+      'grilled',
+      'roasted',
+      'baked',
+      'fried',
+      'smoked',
+      'boiled',
+      'steamed',
+      'raw',
+      'cooked',
+      'fresh',
+      'frozen',
     };
-    final showBrand = brand.isNotEmpty &&
+    final showBrand =
+        brand.isNotEmpty &&
         brand.toLowerCase() != 'generic' &&
         brand.toLowerCase() != foodName.toLowerCase() &&
         !invalidBrandDisplay.contains(brand.toLowerCase().trim());
@@ -557,8 +576,7 @@ class _FastFoodSearchScreenLegacyState
     return InkWell(
       onTap: () => widget.onFoodSelected(food),
       child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
             // Avatar
@@ -657,15 +675,13 @@ class _FastFoodSearchScreenLegacyState
     );
   }
 
-  Color _verificationColor(FoodVerificationLevel level) =>
-      switch (level) {
-        FoodVerificationLevel.metadashVerified => const Color(0xFF2E8B57),
-        FoodVerificationLevel.consensusVerified => const Color(0xFF4C7FA8),
-        FoodVerificationLevel.verifiedSource => const Color(0xFF2E8B57),
-        FoodVerificationLevel.community ||
-        FoodVerificationLevel.needsReview =>
-          const Color(0xFF888888),
-      };
+  Color _verificationColor(FoodVerificationLevel level) => switch (level) {
+    FoodVerificationLevel.metadashVerified => const Color(0xFF2E8B57),
+    FoodVerificationLevel.consensusVerified => const Color(0xFF4C7FA8),
+    FoodVerificationLevel.verifiedSource => const Color(0xFF2E8B57),
+    FoodVerificationLevel.community ||
+    FoodVerificationLevel.needsReview => const Color(0xFF888888),
+  };
 
   Widget _buildEmptyView(domain.SearchEmpty state) {
     return Center(
@@ -682,10 +698,7 @@ class _FastFoodSearchScreenLegacyState
             const SizedBox(height: 16),
             Text(
               'No results for',
-              style: TextStyle(
-                fontSize: 14,
-                color: context.colors.textMuted,
-              ),
+              style: TextStyle(fontSize: 14, color: context.colors.textMuted),
             ),
             const SizedBox(height: 4),
             Text(
@@ -738,10 +751,7 @@ class _FastFoodSearchScreenLegacyState
             Text(
               'Check your connection and try again',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: context.colors.textMuted,
-              ),
+              style: TextStyle(fontSize: 13, color: context.colors.textMuted),
             ),
           ],
         ),
@@ -749,4 +759,3 @@ class _FastFoodSearchScreenLegacyState
     );
   }
 }
-

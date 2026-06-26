@@ -29,12 +29,12 @@ enum FoodVerificationLevel {
 extension FoodVerificationLevelX on FoodVerificationLevel {
   /// Human-readable label shown in the badge
   String get label => switch (this) {
-        FoodVerificationLevel.metadashVerified => 'MetaDash Verified',
-        FoodVerificationLevel.consensusVerified => 'Consensus Verified',
-        FoodVerificationLevel.verifiedSource => 'Verified Source',
-        FoodVerificationLevel.community => 'Community Entry',
-        FoodVerificationLevel.needsReview => 'Needs Review',
-      };
+    FoodVerificationLevel.metadashVerified => 'MetaDash Verified',
+    FoodVerificationLevel.consensusVerified => 'Consensus Verified',
+    FoodVerificationLevel.verifiedSource => 'Verified Source',
+    FoodVerificationLevel.community => 'Community Entry',
+    FoodVerificationLevel.needsReview => 'Needs Review',
+  };
 
   /// Whether a trust badge should be rendered for this level
   bool get showsBadge => index >= FoodVerificationLevel.verifiedSource.index;
@@ -84,10 +84,11 @@ class FoodQualityEngine {
     String query = '',
   }) {
     if (foods.isEmpty) return foods;
-    final scored = foods
-        .map((food) => (food, evaluate(food, query: query).qualityScore))
-        .toList()
-      ..sort((a, b) => b.$2.compareTo(a.$2));
+    final scored =
+        foods
+            .map((food) => (food, evaluate(food, query: query).qualityScore))
+            .toList()
+          ..sort((a, b) => b.$2.compareTo(a.$2));
     return scored.map((t) => t.$1).toList();
   }
 
@@ -231,7 +232,8 @@ class FoodQualityEngine {
   ///   • Calorie density: > 950 kcal per 100g exceeds pure fat
   ///   • Serving size: > 10,000g is unrealistic
   static ({bool isValid, List<String> flags}) validateNutrition(
-      FoodModel food) {
+    FoodModel food,
+  ) {
     final flags = <String>[];
 
     // Missing calories
@@ -246,8 +248,7 @@ class FoodQualityEngine {
       if (totalMacroWeight > 0) {
         final expectedCal =
             (food.protein * 4) + (food.carbs * 4) + (food.fat * 9);
-        final deviation =
-            (food.calories - expectedCal).abs() / food.calories;
+        final deviation = (food.calories - expectedCal).abs() / food.calories;
         if (deviation > 0.25) {
           flags.add('macro_calorie_mismatch');
         }

@@ -237,42 +237,52 @@ class _PlanCard extends StatelessWidget {
                             color: context.colors.textPrimary,
                           ),
                         ),
-                        if (isCurrent) ...[const SizedBox(width: 8), Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2E8B57).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: const Text(
-                            'Active',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF2E8B57),
+                        if (isCurrent) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF2E8B57,
+                              ).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: const Text(
+                              'Active',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF2E8B57),
+                              ),
                             ),
                           ),
-                        )],
-                        if (highlight) ...[const SizedBox(width: 8), Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: context.colors.accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          child: Text(
-                            'Recommended',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: context.colors.accent,
+                        ],
+                        if (highlight) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: context.colors.accent.withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              'Recommended',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: context.colors.accent,
+                              ),
                             ),
                           ),
-                        )],
+                        ],
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -291,13 +301,18 @@ class _PlanCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: highlight ? context.colors.accent : context.colors.textPrimary,
+                  color: highlight
+                      ? context.colors.accent
+                      : context.colors.textPrimary,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          Divider(height: 1, color: context.colors.divider.withValues(alpha: 0.5)),
+          Divider(
+            height: 1,
+            color: context.colors.divider.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 12),
           ...features.map(
             (f) => Padding(
@@ -307,7 +322,9 @@ class _PlanCard extends StatelessWidget {
                   Icon(
                     Icons.check_circle,
                     size: 15,
-                    color: highlight ? context.colors.accent : const Color(0xFF2E8B57),
+                    color: highlight
+                        ? context.colors.accent
+                        : const Color(0xFF2E8B57),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -334,24 +351,22 @@ class _SubCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: context.colors.divider.withValues(alpha: 0.08),
-          ),
-        ),
-        child: Column(children: children),
-      );
+    decoration: BoxDecoration(
+      color: context.colors.surface,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: context.colors.divider.withValues(alpha: 0.08)),
+    ),
+    child: Column(children: children),
+  );
 }
 
 class _SubDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Divider(
-        height: 1,
-        indent: 52,
-        color: context.colors.divider.withValues(alpha: 0.6),
-      );
+    height: 1,
+    indent: 52,
+    color: context.colors.divider.withValues(alpha: 0.6),
+  );
 }
 
 class _SubTapRow extends StatelessWidget {
@@ -386,7 +401,11 @@ class _SubTapRow extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: context.colors.textMuted),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: context.colors.textMuted,
+            ),
           ],
         ),
       ),

@@ -168,8 +168,10 @@ class SearchRepository {
         );
 
         // Quality pipeline: re-rank by verification level + nutrition validation
-        final qualityRanked =
-            FoodQualityEngine.sortByQuality(canonicalAll, query: query);
+        final qualityRanked = FoodQualityEngine.sortByQuality(
+          canonicalAll,
+          query: query,
+        );
 
         // Final guard: drop any entry whose food name is still a bare corporate
         // record (ends with Inc / LLC / Corp / Ltd). These are manufacturer
@@ -214,8 +216,10 @@ class SearchRepository {
             query: query,
             maxResults: 50,
           );
-          final qualityLocal =
-              FoodQualityEngine.sortByQuality(canonicalLocal, query: query);
+          final qualityLocal = FoodQualityEngine.sortByQuality(
+            canonicalLocal,
+            query: query,
+          );
           final finalLocal = _dropCorporateNameEntries(qualityLocal);
 
           yield SearchResult(

@@ -287,11 +287,7 @@ class _DataInputRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: context.colors.textSecondary,
-            ),
+            Icon(icon, size: 22, color: context.colors.textSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

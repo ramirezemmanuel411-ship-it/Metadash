@@ -48,9 +48,7 @@ class _ExerciseMainScreenState extends State<ExerciseMainScreen> {
   void _navigateToWeightLifting() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const ExerciseWeightLiftingScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const ExerciseWeightLiftingScreen()),
     );
   }
 
@@ -70,8 +68,7 @@ class _ExerciseMainScreenState extends State<ExerciseMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final motivational =
-        _burnedToday > 0 ? 'keep it up!' : 'ready to move?';
+    final motivational = _burnedToday > 0 ? 'keep it up!' : 'ready to move?';
 
     return Scaffold(
       appBar: AppBar(

@@ -113,11 +113,7 @@ class _StatusRow extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            size: 20,
-            color: context.colors.textMuted,
-          ),
+          Icon(Icons.chevron_right, size: 20, color: context.colors.textMuted),
         ],
       ),
     );

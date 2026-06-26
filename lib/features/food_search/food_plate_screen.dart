@@ -21,29 +21,41 @@ enum _Meal { breakfast, lunch, dinner, snack }
 extension _MealLabel on _Meal {
   String get label {
     switch (this) {
-      case _Meal.breakfast: return 'Breakfast';
-      case _Meal.lunch:     return 'Lunch';
-      case _Meal.dinner:    return 'Dinner';
-      case _Meal.snack:     return 'Snack';
+      case _Meal.breakfast:
+        return 'Breakfast';
+      case _Meal.lunch:
+        return 'Lunch';
+      case _Meal.dinner:
+        return 'Dinner';
+      case _Meal.snack:
+        return 'Snack';
     }
   }
 
   IconData get icon {
     switch (this) {
-      case _Meal.breakfast: return Icons.wb_sunny_outlined;
-      case _Meal.lunch:     return Icons.light_mode_outlined;
-      case _Meal.dinner:    return Icons.nights_stay_outlined;
-      case _Meal.snack:     return Icons.local_cafe_outlined;
+      case _Meal.breakfast:
+        return Icons.wb_sunny_outlined;
+      case _Meal.lunch:
+        return Icons.light_mode_outlined;
+      case _Meal.dinner:
+        return Icons.nights_stay_outlined;
+      case _Meal.snack:
+        return Icons.local_cafe_outlined;
     }
   }
 
   /// Representative hour used when building the diary timestamp.
   int get hour {
     switch (this) {
-      case _Meal.breakfast: return 8;
-      case _Meal.lunch:     return 12;
-      case _Meal.dinner:    return 18;
-      case _Meal.snack:     return 21;
+      case _Meal.breakfast:
+        return 8;
+      case _Meal.lunch:
+        return 12;
+      case _Meal.dinner:
+        return 18;
+      case _Meal.snack:
+        return 21;
     }
   }
 }
@@ -75,9 +87,14 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
       if (mounted) setState(() => _loadingImpact = false);
       return;
     }
-    final maps = await userState.db.getFoodEntriesForDay(user.id!, DateTime.now());
+    final maps = await userState.db.getFoodEntriesForDay(
+      user.id!,
+      DateTime.now(),
+    );
     int total = 0;
-    for (final m in maps) { total += (m['calories'] as int?) ?? 0; }
+    for (final m in maps) {
+      total += (m['calories'] as int?) ?? 0;
+    }
     if (mounted) {
       setState(() {
         _todayKcal = total;
@@ -88,9 +105,9 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
   }
 
   Future<void> _commitToDay(BuildContext context) async {
-    final plate    = context.read<FoodPlateProvider>();
+    final plate = context.read<FoodPlateProvider>();
     final userState = context.read<UserState>();
-    final user     = userState.currentUser;
+    final user = userState.currentUser;
 
     if (user == null) return;
 
@@ -104,10 +121,7 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
 
     try {
       for (final item in plate.items) {
-        final entry = item.toDiaryEntry(
-          userId: user.id!,
-          timestamp: timestamp,
-        );
+        final entry = item.toDiaryEntry(userId: user.id!, timestamp: timestamp);
         await userState.db.addFoodEntry(entry);
       }
 
@@ -121,9 +135,9 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final plate  = context.watch<FoodPlateProvider>();
+    final plate = context.watch<FoodPlateProvider>();
     final colors = context.colors;
-    final items  = plate.items;
+    final items = plate.items;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -134,11 +148,18 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Food Plate', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            const Text(
+              'Food Plate',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            ),
             if (items.isNotEmpty)
               Text(
                 '${items.length} item${items.length == 1 ? '' : 's'} · ${plate.totalCalories} kcal',
-                style: TextStyle(fontSize: 12, color: colors.textMuted, fontWeight: FontWeight.w400),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.textMuted,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
           ],
         ),
@@ -150,7 +171,10 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
                   context: context,
                   builder: (_) => AlertDialog(
                     backgroundColor: colors.surface,
-                    title: Text('Clear plate?', style: TextStyle(color: colors.textPrimary)),
+                    title: Text(
+                      'Clear plate?',
+                      style: TextStyle(color: colors.textPrimary),
+                    ),
                     content: Text(
                       'All ${items.length} staged item${items.length == 1 ? '' : 's'} will be removed.',
                       style: TextStyle(color: colors.textSecondary),
@@ -158,11 +182,17 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: Text('Cancel', style: TextStyle(color: colors.textMuted)),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(color: colors.textMuted),
+                        ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: Text('Clear', style: TextStyle(color: colors.accent)),
+                        child: Text(
+                          'Clear',
+                          style: TextStyle(color: colors.accent),
+                        ),
                       ),
                     ],
                   ),
@@ -172,7 +202,10 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
                   }
                 });
               },
-              child: Text('Clear', style: TextStyle(color: colors.textMuted, fontSize: 14)),
+              child: Text(
+                'Clear',
+                style: TextStyle(color: colors.textMuted, fontSize: 14),
+              ),
             ),
         ],
       ),
@@ -190,17 +223,20 @@ class _FoodPlateScreenState extends State<FoodPlateScreen> {
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (i > 0) Divider(height: 1, color: colors.divider),
+                            if (i > 0)
+                              Divider(height: 1, color: colors.divider),
                             _PlateItemTile(
                               key: ValueKey(items[i].id),
                               item: items[i],
                               colors: colors,
-                              onDelete: () => context.read<FoodPlateProvider>().remove(items[i].id),
+                              onDelete: () => context
+                                  .read<FoodPlateProvider>()
+                                  .remove(items[i].id),
                               onServingChanged: (qty, unit) =>
                                   context.read<FoodPlateProvider>().update(
-                                items[i].id,
-                                items[i].rescaled(qty, unit),
-                              ),
+                                    items[i].id,
+                                    items[i].rescaled(qty, unit),
+                                  ),
                             ),
                           ],
                         );
@@ -262,13 +298,21 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Your plate is empty',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: colors.textPrimary),
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: colors.textPrimary,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Search for food and tap "Add to Plate"\nto stage it here before logging.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: colors.textMuted, height: 1.5),
+            style: TextStyle(
+              fontSize: 14,
+              color: colors.textMuted,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -307,13 +351,23 @@ class _PlateItemTileState extends State<_PlateItemTile> {
   // like "piece"/"slice"/"item" aren't measurements — they're just servings, so
   // they're folded into the "serving" pill rather than listed separately.
   static const _commonUnits = [
-    'serving', 'g', 'oz',
-    'lb', 'ml', 'fl oz', 'cup', 'tbsp', 'tsp',
+    'serving',
+    'g',
+    'oz',
+    'lb',
+    'ml',
+    'fl oz',
+    'cup',
+    'tbsp',
+    'tsp',
   ];
   static const _unitDividerIndex = 3;
 
   static ({String num, String unit}) _parse(String serving) {
-    final stripped = serving.trim().replaceFirst(RegExp(r'^\d+\.?\d*\s*[x×]\s*'), '');
+    final stripped = serving.trim().replaceFirst(
+      RegExp(r'^\d+\.?\d*\s*[x×]\s*'),
+      '',
+    );
     final m = RegExp(r'^(\d*\.?\d+)\s*(.*)$').firstMatch(stripped);
     if (m != null) {
       return (num: m.group(1) ?? stripped, unit: m.group(2)?.trim() ?? '');
@@ -386,7 +440,8 @@ class _PlateItemTileState extends State<_PlateItemTile> {
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = '${widget.item.calories} kcal · P ${widget.item.proteinG}g · C ${widget.item.carbsG}g · F ${widget.item.fatG}g';
+    final subtitle =
+        '${widget.item.calories} kcal · P ${widget.item.proteinG}g · C ${widget.item.carbsG}g · F ${widget.item.fatG}g';
 
     return Dismissible(
       key: ValueKey(widget.item.id),
@@ -431,7 +486,10 @@ class _PlateItemTileState extends State<_PlateItemTile> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: widget.colors.textMuted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: widget.colors.textMuted,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -443,7 +501,10 @@ class _PlateItemTileState extends State<_PlateItemTile> {
             GestureDetector(
               onTap: _openNumpad,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: widget.colors.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
@@ -469,7 +530,11 @@ class _PlateItemTileState extends State<_PlateItemTile> {
                       ),
                     ),
                     const SizedBox(width: 2),
-                    Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: widget.colors.textMuted),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 14,
+                      color: widget.colors.textMuted,
+                    ),
                   ],
                 ),
               ),
@@ -480,7 +545,11 @@ class _PlateItemTileState extends State<_PlateItemTile> {
               onTap: widget.onDelete,
               child: Padding(
                 padding: const EdgeInsets.only(left: 8),
-                child: Icon(Icons.remove_circle_outline, size: 20, color: widget.colors.textMuted),
+                child: Icon(
+                  Icons.remove_circle_outline,
+                  size: 20,
+                  color: widget.colors.textMuted,
+                ),
               ),
             ),
           ],
@@ -572,7 +641,12 @@ class _ServingNumpadState extends State<_ServingNumpad> {
     });
   }
 
-  Widget _key(String label, {bool isDone = false, bool isBack = false, bool isGray = false}) {
+  Widget _key(
+    String label, {
+    bool isDone = false,
+    bool isBack = false,
+    bool isGray = false,
+  }) {
     final c = widget.colors;
     return Expanded(
       child: Padding(
@@ -588,31 +662,35 @@ class _ServingNumpadState extends State<_ServingNumpad> {
                   Navigator.of(context).pop();
                 }
               : label.isEmpty
-                  ? null
-                  : () => _press(label),
+              ? null
+              : () => _press(label),
           child: Container(
             height: 60,
             decoration: BoxDecoration(
               color: isDone
                   ? c.accent
                   : isGray || isBack
-                      ? c.surfaceVariant
-                      : c.background,
+                  ? c.surfaceVariant
+                  : c.background,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
               child: isBack
-                  ? Icon(Icons.backspace_outlined, size: 20, color: c.textSecondary)
+                  ? Icon(
+                      Icons.backspace_outlined,
+                      size: 20,
+                      color: c.textSecondary,
+                    )
                   : label.isEmpty
-                      ? const SizedBox.shrink()
-                      : Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: isDone ? 15 : 22,
-                            fontWeight: isDone ? FontWeight.w700 : FontWeight.w500,
-                            color: isDone ? c.onPrimary : c.textPrimary,
-                          ),
-                        ),
+                  ? const SizedBox.shrink()
+                  : Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: isDone ? 15 : 22,
+                        fontWeight: isDone ? FontWeight.w700 : FontWeight.w500,
+                        color: isDone ? c.onPrimary : c.textPrimary,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -635,8 +713,12 @@ class _ServingNumpadState extends State<_ServingNumpad> {
           children: [
             const SizedBox(height: 10),
             Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(color: c.divider, borderRadius: BorderRadius.circular(2)),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: c.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
             const SizedBox(height: 16),
             // Quantity + unit (left) and live calories + grams (right)
@@ -648,15 +730,18 @@ class _ServingNumpadState extends State<_ServingNumpad> {
                   Text(
                     _qty,
                     style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        color: c.textPrimary),
+                      fontSize: 30,
+                      fontWeight: FontWeight.w700,
+                      color: c.textPrimary,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(_unit,
-                        style: TextStyle(fontSize: 18, color: c.accent)),
+                    child: Text(
+                      _unit,
+                      style: TextStyle(fontSize: 18, color: c.accent),
+                    ),
                   ),
                   const Spacer(),
                   Text(
@@ -703,7 +788,9 @@ class _ServingNumpadState extends State<_ServingNumpad> {
                           duration: const Duration(milliseconds: 140),
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 7),
+                            horizontal: 16,
+                            vertical: 7,
+                          ),
                           decoration: BoxDecoration(
                             color: widget.units[i] == _unit
                                 ? c.accent
@@ -733,10 +820,38 @@ class _ServingNumpadState extends State<_ServingNumpad> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Column(
                 children: [
-                  Row(children: [_key('1'), _key('2'), _key('3'), _key('⌫', isBack: true)]),
-                  Row(children: [_key('4'), _key('5'), _key('6'), _key('', isGray: true)]),
-                  Row(children: [_key('7'), _key('8'), _key('9'), _key('', isGray: true)]),
-                  Row(children: [_key('.'), _key('0'), _key('', isGray: true), _key('Done', isDone: true)]),
+                  Row(
+                    children: [
+                      _key('1'),
+                      _key('2'),
+                      _key('3'),
+                      _key('⌫', isBack: true),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      _key('4'),
+                      _key('5'),
+                      _key('6'),
+                      _key('', isGray: true),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      _key('7'),
+                      _key('8'),
+                      _key('9'),
+                      _key('', isGray: true),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      _key('.'),
+                      _key('0'),
+                      _key('', isGray: true),
+                      _key('Done', isDone: true),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -768,10 +883,30 @@ class _TotalsBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _MacroChip(label: 'Calories', value: '${plate.totalCalories}', unit: 'kcal', color: colors.accent),
-          _MacroChip(label: 'Protein',  value: '${plate.totalProtein}',  unit: 'g',    color: Palette.macroProtein),
-          _MacroChip(label: 'Carbs',    value: '${plate.totalCarbs}',    unit: 'g',    color: Palette.macroCarbs),
-          _MacroChip(label: 'Fat',      value: '${plate.totalFat}',      unit: 'g',    color: Palette.macroFat),
+          _MacroChip(
+            label: 'Calories',
+            value: '${plate.totalCalories}',
+            unit: 'kcal',
+            color: colors.accent,
+          ),
+          _MacroChip(
+            label: 'Protein',
+            value: '${plate.totalProtein}',
+            unit: 'g',
+            color: Palette.macroProtein,
+          ),
+          _MacroChip(
+            label: 'Carbs',
+            value: '${plate.totalCarbs}',
+            unit: 'g',
+            color: Palette.macroCarbs,
+          ),
+          _MacroChip(
+            label: 'Fat',
+            value: '${plate.totalFat}',
+            unit: 'g',
+            color: Palette.macroFat,
+          ),
         ],
       ),
     );
@@ -783,24 +918,30 @@ class _MacroChip extends StatelessWidget {
   final String value;
   final String unit;
   final Color color;
-  const _MacroChip({required this.label, required this.value, required this.unit, required this.color});
+  const _MacroChip({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: colors.textMuted),
-        ),
+        Text(label, style: TextStyle(fontSize: 11, color: colors.textMuted)),
         const SizedBox(height: 2),
         RichText(
           text: TextSpan(
             children: [
               TextSpan(
                 text: value,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
               ),
               TextSpan(
                 text: ' $unit',
@@ -870,7 +1011,9 @@ class _MealSelector extends StatelessWidget {
                       meal.label,
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                        fontWeight: isActive
+                            ? FontWeight.w700
+                            : FontWeight.w400,
                         color: isActive ? colors.accent : colors.textMuted,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -917,7 +1060,9 @@ class _CommitButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: colors.cta,
             padding: const EdgeInsets.symmetric(vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onPressed: onPressed,
           child: Text(
@@ -969,15 +1114,18 @@ class _PlateImpactStrip extends StatelessWidget {
           child: SizedBox(
             width: 14,
             height: 14,
-            child: CircularProgressIndicator(strokeWidth: 1.5, color: colors.textMuted),
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              color: colors.textMuted,
+            ),
           ),
         ),
       );
     }
 
-    final afterKcal   = todayKcal + plateKcal;
-    final balance     = afterKcal - calGoal;
-    final isDeficit   = balance <= 0;
+    final afterKcal = todayKcal + plateKcal;
+    final balance = afterKcal - calGoal;
+    final isDeficit = balance <= 0;
     final balanceColor = isDeficit ? colors.accent : const Color(0xFFE57373);
     final balanceLabel = isDeficit
         ? 'Deficit ${balance.abs()} kcal'
@@ -1000,12 +1148,20 @@ class _PlateImpactStrip extends StatelessWidget {
               children: [
                 Text(
                   'After meal',
-                  style: TextStyle(fontSize: 10, color: colors.textMuted, letterSpacing: 0.3),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: colors.textMuted,
+                    letterSpacing: 0.3,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '$todayKcal → $afterKcal kcal',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.textPrimary),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
                 ),
               ],
             ),
@@ -1018,12 +1174,20 @@ class _PlateImpactStrip extends StatelessWidget {
               children: [
                 Text(
                   "Today's balance",
-                  style: TextStyle(fontSize: 10, color: colors.textMuted, letterSpacing: 0.3),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: colors.textMuted,
+                    letterSpacing: 0.3,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   balanceLabel,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: balanceColor),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: balanceColor,
+                  ),
                 ),
               ],
             ),
@@ -1043,7 +1207,8 @@ class _PlateNutrientsDropdown extends StatefulWidget {
   const _PlateNutrientsDropdown({required this.plate});
 
   @override
-  State<_PlateNutrientsDropdown> createState() => _PlateNutrientsDropdownState();
+  State<_PlateNutrientsDropdown> createState() =>
+      _PlateNutrientsDropdownState();
 }
 
 class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
@@ -1054,51 +1219,51 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
 
   // Each entry: (label, unit)
   static const _vitamins = [
-    ('Vitamin A',           'mcg'),
-    ('Vitamin C',           'mg'),
-    ('Vitamin D',           'mcg'),
-    ('Vitamin E',           'mg'),
-    ('Vitamin K',           'mcg'),
-    ('B1 · Thiamine',       'mg'),
-    ('B2 · Riboflavin',     'mg'),
-    ('B3 · Niacin',         'mg'),
-    ('B5 · Pantothenic',    'mg'),
-    ('B6 · Pyridoxine',     'mg'),
-    ('B7 · Biotin',         'mcg'),
-    ('B9 · Folate',         'mcg'),
-    ('B12 · Cobalamin',     'mcg'),
-    ('Choline',             'mg'),
+    ('Vitamin A', 'mcg'),
+    ('Vitamin C', 'mg'),
+    ('Vitamin D', 'mcg'),
+    ('Vitamin E', 'mg'),
+    ('Vitamin K', 'mcg'),
+    ('B1 · Thiamine', 'mg'),
+    ('B2 · Riboflavin', 'mg'),
+    ('B3 · Niacin', 'mg'),
+    ('B5 · Pantothenic', 'mg'),
+    ('B6 · Pyridoxine', 'mg'),
+    ('B7 · Biotin', 'mcg'),
+    ('B9 · Folate', 'mcg'),
+    ('B12 · Cobalamin', 'mcg'),
+    ('Choline', 'mg'),
   ];
 
   static const _minerals = [
-    ('Calcium',     'mg'),
-    ('Iron',        'mg'),
-    ('Potassium',   'mg'),
-    ('Sodium',      'mg'),
-    ('Chloride',    'mg'),
-    ('Magnesium',   'mg'),
-    ('Phosphorus',  'mg'),
-    ('Zinc',        'mg'),
-    ('Copper',      'mg'),
-    ('Manganese',   'mg'),
-    ('Selenium',    'mcg'),
-    ('Iodine',      'mcg'),
-    ('Chromium',    'mcg'),
-    ('Molybdenum',  'mcg'),
-    ('Fluoride',    'mcg'),
+    ('Calcium', 'mg'),
+    ('Iron', 'mg'),
+    ('Potassium', 'mg'),
+    ('Sodium', 'mg'),
+    ('Chloride', 'mg'),
+    ('Magnesium', 'mg'),
+    ('Phosphorus', 'mg'),
+    ('Zinc', 'mg'),
+    ('Copper', 'mg'),
+    ('Manganese', 'mg'),
+    ('Selenium', 'mcg'),
+    ('Iodine', 'mcg'),
+    ('Chromium', 'mcg'),
+    ('Molybdenum', 'mcg'),
+    ('Fluoride', 'mcg'),
   ];
 
   static const _more = [
-    ('Dietary Fiber',   'g'),
-    ('Total Sugars',    'g'),
-    ('Added Sugars',    'g'),
-    ('Net Carbs',       'g'),
-    ('Cholesterol',     'mg'),
-    ('Saturated Fat',   'g'),
-    ('Trans Fat',       'g'),
-    ('Water',           'g'),
-    ('Caffeine',        'mg'),
-    ('Alcohol',         'g'),
+    ('Dietary Fiber', 'g'),
+    ('Total Sugars', 'g'),
+    ('Added Sugars', 'g'),
+    ('Net Carbs', 'g'),
+    ('Cholesterol', 'mg'),
+    ('Saturated Fat', 'g'),
+    ('Trans Fat', 'g'),
+    ('Water', 'g'),
+    ('Caffeine', 'mg'),
+    ('Alcohol', 'g'),
   ];
 
   @override
@@ -1106,7 +1271,10 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
     final colors = context.colors;
 
     return Container(
-      decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
       clipBehavior: Clip.hardEdge,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1138,7 +1306,11 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
                   AnimatedRotation(
                     turns: _expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 220),
-                    child: Icon(Icons.expand_more_rounded, size: 20, color: colors.textMuted),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      size: 20,
+                      color: colors.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -1147,7 +1319,9 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
           // ── Expandable body ──────────────────────────────────────────────────
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 260),
-            crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             firstChild: const SizedBox.shrink(),
             secondChild: _buildBody(colors),
           ),
@@ -1183,9 +1357,14 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
                     onTap: () => setState(() => _tab = i),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
-                        color: active ? colors.accent : colors.accent.withValues(alpha: 0.10),
+                        color: active
+                            ? colors.accent
+                            : colors.accent.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -1209,7 +1388,14 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
               key: ValueKey(_tab),
               child: Column(
                 children: rows
-                    .map((r) => _MicroRow(label: r.$1, unit: r.$2, value: null, colors: colors))
+                    .map(
+                      (r) => _MicroRow(
+                        label: r.$1,
+                        unit: r.$2,
+                        value: null,
+                        colors: colors,
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -1241,9 +1427,14 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
                     onTap: () => setState(() => _tab = i),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
-                        color: active ? colors.accent : colors.accent.withValues(alpha: 0.10),
+                        color: active
+                            ? colors.accent
+                            : colors.accent.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -1262,35 +1453,140 @@ class _PlateNutrientsDropdownState extends State<_PlateNutrientsDropdown> {
           ),
           const SizedBox(height: 8),
           // ── Protein ───────────────────────────────────────────────────────────────
-          _MacroHeader(label: 'Protein', value: '${plate.totalProtein}g', color: Palette.macroProtein, colors: colors),
-          _MicroRow(label: '  Tryptophan',    unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Threonine',     unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Isoleucine',    unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Leucine',       unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Lysine',        unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Methionine',    unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Phenylalanine', unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Valine',        unit: 'g',  value: null, colors: colors),
+          _MacroHeader(
+            label: 'Protein',
+            value: '${plate.totalProtein}g',
+            color: Palette.macroProtein,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Tryptophan',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Threonine',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Isoleucine',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(label: '  Leucine', unit: 'g', value: null, colors: colors),
+          _MicroRow(label: '  Lysine', unit: 'g', value: null, colors: colors),
+          _MicroRow(
+            label: '  Methionine',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Phenylalanine',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(label: '  Valine', unit: 'g', value: null, colors: colors),
           const SizedBox(height: 8),
           // ── Carbohydrates ───────────────────────────────────────────────────────
-          _MacroHeader(label: 'Carbohydrates', value: '${plate.totalCarbs}g', color: Palette.macroCarbs, colors: colors),
-          _MicroRow(label: '  Dietary Fiber',  unit: 'g', value: null, colors: colors),
-          _MicroRow(label: '    Soluble',      unit: 'g', value: null, colors: colors),
-          _MicroRow(label: '    Insoluble',    unit: 'g', value: null, colors: colors),
-          _MicroRow(label: '  Total Sugars',   unit: 'g', value: null, colors: colors),
-          _MicroRow(label: '    Added Sugars', unit: 'g', value: null, colors: colors),
-          _MicroRow(label: '  Net Carbs',      unit: 'g', value: null, colors: colors),
-          _MicroRow(label: '  Starch',         unit: 'g', value: null, colors: colors),
+          _MacroHeader(
+            label: 'Carbohydrates',
+            value: '${plate.totalCarbs}g',
+            color: Palette.macroCarbs,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Dietary Fiber',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '    Soluble',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '    Insoluble',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Total Sugars',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '    Added Sugars',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Net Carbs',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(label: '  Starch', unit: 'g', value: null, colors: colors),
           const SizedBox(height: 8),
           // ── Fat ───────────────────────────────────────────────────────────────────
-          _MacroHeader(label: 'Total Fat', value: '${plate.totalFat}g', color: Palette.macroFat, colors: colors),
-          _MicroRow(label: '  Saturated Fat',   unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Trans Fat',       unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Monounsaturated', unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Polyunsaturated', unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '    Omega-3',       unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '    Omega-6',       unit: 'g',  value: null, colors: colors),
-          _MicroRow(label: '  Cholesterol',     unit: 'mg', value: null, colors: colors),
+          _MacroHeader(
+            label: 'Total Fat',
+            value: '${plate.totalFat}g',
+            color: Palette.macroFat,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Saturated Fat',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Trans Fat',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Monounsaturated',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Polyunsaturated',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '    Omega-3',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '    Omega-6',
+            unit: 'g',
+            value: null,
+            colors: colors,
+          ),
+          _MicroRow(
+            label: '  Cholesterol',
+            unit: 'mg',
+            value: null,
+            colors: colors,
+          ),
           const SizedBox(height: 8),
           _noteRow(colors),
         ],
@@ -1316,7 +1612,12 @@ class _MacroHeader extends StatelessWidget {
   final String label, value;
   final Color color;
   final MetaDashColors colors;
-  const _MacroHeader({required this.label, required this.value, required this.color, required this.colors});
+  const _MacroHeader({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.colors,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1327,12 +1628,20 @@ class _MacroHeader extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
           Text(
             value,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
           ),
         ],
       ),

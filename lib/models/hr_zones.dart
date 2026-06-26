@@ -43,10 +43,14 @@ class HrZones {
     return HrZones._(
       maxHr: max,
       restingHr: restingHr,
-      z1Lo: t(0.50), z1Hi: t(0.60),
-      z2Lo: t(0.60), z2Hi: t(0.70),
-      z3Lo: t(0.70), z3Hi: t(0.80),
-      z4Lo: t(0.80), z4Hi: t(0.90),
+      z1Lo: t(0.50),
+      z1Hi: t(0.60),
+      z2Lo: t(0.60),
+      z2Hi: t(0.70),
+      z3Lo: t(0.70),
+      z3Hi: t(0.80),
+      z4Lo: t(0.80),
+      z4Hi: t(0.90),
       z5Lo: t(0.90),
     );
   }
@@ -73,11 +77,16 @@ class HrZones {
 
   String rangeFor(int zone) {
     switch (zone) {
-      case 1: return '< $z2Lo bpm';
-      case 2: return '$z2Lo–${z3Lo - 1} bpm';
-      case 3: return '$z3Lo–${z4Lo - 1} bpm';
-      case 4: return '$z4Lo–${z5Lo - 1} bpm';
-      default: return '$z5Lo+ bpm';
+      case 1:
+        return '< $z2Lo bpm';
+      case 2:
+        return '$z2Lo–${z3Lo - 1} bpm';
+      case 3:
+        return '$z3Lo–${z4Lo - 1} bpm';
+      case 4:
+        return '$z4Lo–${z5Lo - 1} bpm';
+      default:
+        return '$z5Lo+ bpm';
     }
   }
 

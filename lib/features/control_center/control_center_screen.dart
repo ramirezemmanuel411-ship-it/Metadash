@@ -33,40 +33,58 @@ class ControlCenterScreen extends StatelessWidget {
                   icon: Icons.psychology_outlined,
                   title: 'Metabolic Engine',
                   subtitle: 'Configure energy and fat modeling.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const MetabolicEngineScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MetabolicEngineScreen(),
+                    ),
+                  ),
                 ),
                 _CardDivider(),
                 _ControlRow(
                   icon: Icons.flag_outlined,
                   title: 'Goal Strategy',
                   subtitle: 'Configure goal behavior and progress logic.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const GoalStrategyScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GoalStrategyScreen(),
+                    ),
+                  ),
                 ),
                 _CardDivider(),
                 _ControlRow(
                   icon: Icons.input_outlined,
                   title: 'Data & Inputs',
                   subtitle: 'Manage modeling inputs and wearable data.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const DataInputsScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DataInputsScreen()),
+                  ),
                 ),
                 _CardDivider(),
                 _ControlRow(
                   icon: Icons.bar_chart_outlined,
                   title: 'Dashboard Layout',
                   subtitle: 'Control dashboards and modeling visibility.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const DashboardLayoutScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DashboardLayoutScreen(),
+                    ),
+                  ),
                 ),
                 _CardDivider(),
                 _ControlRow(
                   icon: Icons.tune_outlined,
                   title: 'Interface & Workflow',
                   subtitle: 'Customize layout and logging behavior.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const InterfaceWorkflowScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const InterfaceWorkflowScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -79,32 +97,46 @@ class ControlCenterScreen extends StatelessWidget {
                   icon: Icons.person_outline,
                   title: 'Account',
                   subtitle: 'Manage profile information and credentials.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const AccountScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AccountScreen()),
+                  ),
                 ),
                 _CardDivider(),
                 _ControlRow(
                   icon: Icons.notifications_outlined,
                   title: 'Notifications',
                   subtitle: 'Configure reminders and system alerts.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  ),
                 ),
                 _CardDivider(),
                 _ControlRow(
                   icon: Icons.lock_outline,
                   title: 'Privacy & Data',
                   subtitle: 'Manage permissions and data controls.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const PrivacyDataScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PrivacyDataScreen(),
+                    ),
+                  ),
                 ),
                 _CardDivider(),
                 _ControlRow(
                   icon: Icons.credit_card_outlined,
                   title: 'Subscription',
                   subtitle: 'Manage plan and billing details.',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SubscriptionScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SubscriptionScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -156,10 +188,7 @@ class _ControlCard extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.hardEdge,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: children,
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 }

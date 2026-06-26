@@ -405,9 +405,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add: $e')));
     }
   }
 
@@ -622,21 +622,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
     if (est == null) return;
 
     context.read<FoodPlateProvider>().add(
-          FoodPlateItem(
-            id: '${DateTime.now().millisecondsSinceEpoch}_ai',
-            name: est.itemName,
-            calories: est.calories,
-            proteinG: est.proteinG,
-            carbsG: est.carbsG,
-            fatG: est.fatG,
-            source: _capturedImage != null ? 'ai_camera' : 'ai_chat',
-            serving: _resolveServingFromAssumptions(est.assumptions),
-            baseCalories: est.calories.toDouble(),
-            baseProtein: est.proteinG.toDouble(),
-            baseCarbs: est.carbsG.toDouble(),
-            baseFat: est.fatG.toDouble(),
-          ),
-        );
+      FoodPlateItem(
+        id: '${DateTime.now().millisecondsSinceEpoch}_ai',
+        name: est.itemName,
+        calories: est.calories,
+        proteinG: est.proteinG,
+        carbsG: est.carbsG,
+        fatG: est.fatG,
+        source: _capturedImage != null ? 'ai_camera' : 'ai_chat',
+        serving: _resolveServingFromAssumptions(est.assumptions),
+        baseCalories: est.calories.toDouble(),
+        baseProtein: est.proteinG.toDouble(),
+        baseCarbs: est.carbsG.toDouble(),
+        baseFat: est.fatG.toDouble(),
+      ),
+    );
 
     // No toast — the floating Food Tray button (with its count badge) is the
     // feedback that the item landed on the plate.
@@ -751,8 +751,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       if (_routerResult != null)
                         _buildRouterResultCard(_routerResult!),
 
-                      if (_routerResult == null &&
-                          _suggestionResponse != null)
+                      if (_routerResult == null && _suggestionResponse != null)
                         _buildSuggestionResponse(_suggestionResponse!),
 
                       // Legacy estimate card
@@ -1104,9 +1103,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? accent
-                          : surface,
+                      color: selected ? accent : surface,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: selected ? accent : context.colors.divider,
@@ -1190,10 +1187,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             ),
             child: Text(
               result.detail!,
-              style: TextStyle(
-                fontSize: 12,
-                color: context.colors.textMuted,
-              ),
+              style: TextStyle(fontSize: 12, color: context.colors.textMuted),
             ),
           ),
         ],
@@ -1764,21 +1758,21 @@ class _RouterModeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, color) = switch (mode) {
       AiRouteMode.visionFoodEstimate => (
-          Icons.camera_alt_outlined,
-          const Color(0xFF4C7FA8)
-        ),
+        Icons.camera_alt_outlined,
+        const Color(0xFF4C7FA8),
+      ),
       AiRouteMode.restaurantOrderHelper => (
-          Icons.restaurant_outlined,
-          const Color(0xFFEF8C2E)
-        ),
+        Icons.restaurant_outlined,
+        const Color(0xFFEF8C2E),
+      ),
       AiRouteMode.mealStrategyHelper => (
-          Icons.tips_and_updates_outlined,
-          const Color(0xFF2E8B57)
-        ),
+        Icons.tips_and_updates_outlined,
+        const Color(0xFF2E8B57),
+      ),
       AiRouteMode.structuredFoodLogger => (
-          Icons.receipt_long_outlined,
-          const Color(0xFF2E8B57)
-        ),
+        Icons.receipt_long_outlined,
+        const Color(0xFF2E8B57),
+      ),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1930,11 +1924,7 @@ class _RouterEntryRow extends StatelessWidget {
                 color: Palette.macroCarbs,
               ),
               const SizedBox(width: 8),
-              _MacroChip(
-                label: 'F',
-                value: entry.fat,
-                color: Palette.macroFat,
-              ),
+              _MacroChip(label: 'F', value: entry.fat, color: Palette.macroFat),
               const Spacer(),
               Text(
                 'Source: ${entry.source}',
@@ -1967,24 +1957,26 @@ class _MacroChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: RichText(
-        text: TextSpan(children: [
-          TextSpan(
-            text: label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
-          ),
-          TextSpan(
-            text: ' ${value}g',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: context.colors.textPrimary,
+            TextSpan(
+              text: ' ${value}g',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: context.colors.textPrimary,
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -2029,15 +2021,20 @@ class _FoodTrayButton extends StatelessWidget {
                   clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
-                    Icon(Icons.dinner_dining_outlined,
-                        color: colors.onPrimary, size: 24),
+                    Icon(
+                      Icons.dinner_dining_outlined,
+                      color: colors.onPrimary,
+                      size: 24,
+                    ),
                     Positioned(
                       top: 2,
                       right: 2,
                       child: Container(
                         padding: const EdgeInsets.all(2),
-                        constraints:
-                            const BoxConstraints(minWidth: 17, minHeight: 17),
+                        constraints: const BoxConstraints(
+                          minWidth: 17,
+                          minHeight: 17,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,

@@ -270,7 +270,8 @@ class CalorieCalculationService {
     // If the engine has enough signal, use it; otherwise fall back to legacy.
     final double engineWorkoutCalories;
     final double engineWalkingSteps;
-    if (telemetry.hasTelemetrySignal && (includeStrength || !_isStrengthBucket(telemetry.bucket))) {
+    if (telemetry.hasTelemetrySignal &&
+        (includeStrength || !_isStrengthBucket(telemetry.bucket))) {
       engineWorkoutCalories = calculateWorkoutCaloriesFromTelemetry(telemetry);
       // De-duplicate steps: subtract workout steps only for locomotion workouts.
       final nonWorkoutSteps = StepDeduplicator.nonWorkoutSteps(
@@ -290,8 +291,8 @@ class CalorieCalculationService {
         includeStrengthInExpenditure: includeStrength,
         useTrackedWorkoutCalories: useTrackedWorkoutCalories,
       );
-      engineWalkingSteps =
-          (log.stepsCount - (log.runningSteps ?? 0)).toDouble();
+      engineWalkingSteps = (log.stepsCount - (log.runningSteps ?? 0))
+          .toDouble();
     }
     // ─────────────────────────────────────────────────────────────────────────
 

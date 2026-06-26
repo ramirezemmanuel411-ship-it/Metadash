@@ -128,7 +128,8 @@ class _ExerciseWeightLiftingScreenState
     return WorkoutIntensity.values[idx];
   }
 
-  bool get _isValid => _intensity != null && _duration != null && _duration! > 0;
+  bool get _isValid =>
+      _intensity != null && _duration != null && _duration! > 0;
 
   Future<void> _openActivitySheet() async {
     final result = await showModalBottomSheet<_WorkoutOption>(
@@ -219,11 +220,7 @@ class _ExerciseWeightLiftingScreenState
               ],
             ),
           ),
-          _LogButton(
-            activity: _activity,
-            enabled: _isValid,
-            onPressed: _onLog,
-          ),
+          _LogButton(activity: _activity, enabled: _isValid, onPressed: _onLog),
         ],
       ),
     );
@@ -572,8 +569,8 @@ class _IntensityOption extends StatelessWidget {
                   size: 20,
                   color: lit
                       ? (selected
-                          ? _flameColor
-                          : _flameColor.withValues(alpha: 0.55))
+                            ? _flameColor
+                            : _flameColor.withValues(alpha: 0.55))
                       : context.colors.surfaceVariant,
                 );
               }),
@@ -588,7 +585,9 @@ class _IntensityOption extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: selected ? _flameColor : context.colors.textPrimary,
+                      color: selected
+                          ? _flameColor
+                          : context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -643,8 +642,9 @@ class _LogButton extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               backgroundColor: _accent,
-              disabledBackgroundColor:
-                  context.colors.surfaceVariant.withValues(alpha: 0.5),
+              disabledBackgroundColor: context.colors.surfaceVariant.withValues(
+                alpha: 0.5,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -684,7 +684,6 @@ class _ActivitySheetState extends State<_ActivitySheet>
   void initState() {
     super.initState();
     _tabs = TabController(length: _categories.length, vsync: this);
-
   }
 
   @override
@@ -716,8 +715,7 @@ class _ActivitySheetState extends State<_ActivitySheet>
         return Container(
           decoration: BoxDecoration(
             color: context.colors.background,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
@@ -736,8 +734,10 @@ class _ActivitySheetState extends State<_ActivitySheet>
 
               // Header row
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Text(
@@ -810,8 +810,7 @@ class _ActivitySheetState extends State<_ActivitySheet>
                             )
                           : null,
                       border: InputBorder.none,
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 11),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
                     ),
                   ),
                 ),
@@ -869,8 +868,7 @@ class _ActivitySheetState extends State<_ActivitySheet>
                               (cat) => _ActivityGrid(
                                 options: cat.options,
                                 scrollController: scrollController,
-                                onSelect: (opt) =>
-                                    Navigator.pop(context, opt),
+                                onSelect: (opt) => Navigator.pop(context, opt),
                               ),
                             )
                             .toList(),
@@ -906,13 +904,18 @@ class _ActivityGrid extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off_rounded,
-                size: 48, color: context.colors.textMuted),
+            Icon(
+              Icons.search_off_rounded,
+              size: 48,
+              color: context.colors.textMuted,
+            ),
             const SizedBox(height: 8),
             Text(
               emptyMessage!,
               style: TextStyle(
-                  fontSize: 15, color: context.colors.textSecondary),
+                fontSize: 15,
+                color: context.colors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -928,10 +931,8 @@ class _ActivityGrid extends StatelessWidget {
         mainAxisSpacing: 10,
       ),
       itemCount: options.length,
-      itemBuilder: (context, i) => _ActivityTile(
-        option: options[i],
-        onTap: () => onSelect(options[i]),
-      ),
+      itemBuilder: (context, i) =>
+          _ActivityTile(option: options[i], onTap: () => onSelect(options[i])),
     );
   }
 }

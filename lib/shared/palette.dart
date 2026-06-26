@@ -34,31 +34,37 @@ class Palette {
 
   // Macro nutrient identity colors — shared across diary rings and food detail
   static const Color macroProtein = Colors.redAccent;
-  static const Color macroCarbs   = Colors.teal;
-  static const Color macroFat     = Colors.orange;
+  static const Color macroCarbs = Colors.teal;
+  static const Color macroFat = Colors.orange;
 
   // ── Dashboard widget tint colors ──────────────────────────────────────────
   // Day mode tints
-  static const Color widgetWeightDay    = Color(0xFFB5860D); // warm amber/gold
-  static const Color widgetActivityDay  = Color(0xFF3A7D54); // soft forest green
-  static const Color widgetEnergyDay    = Color(0xFF3D7A8A); // blue-green
+  static const Color widgetWeightDay = Color(0xFFB5860D); // warm amber/gold
+  static const Color widgetActivityDay = Color(0xFF3A7D54); // soft forest green
+  static const Color widgetEnergyDay = Color(0xFF3D7A8A); // blue-green
   static const Color widgetNutritionDay = Color(0xFFB5622D); // warm orange
-  static const Color widgetProteinDay   = Color(0xFFB5404D); // muted coral/red
-  static const Color widgetStepsDay     = Color(0xFF5A7A3A); // light sage green
-  static const Color widgetTDEEDay      = Color(0xFF2E6E47); // deep forest green
+  static const Color widgetProteinDay = Color(0xFFB5404D); // muted coral/red
+  static const Color widgetStepsDay = Color(0xFF5A7A3A); // light sage green
+  static const Color widgetTDEEDay = Color(0xFF2E6E47); // deep forest green
   static const Color widgetFatChangeDay = Color(0xFF3A8C5A); // soft emerald
-  static const Color widgetConsistDay   = Color(0xFF3A6EA5); // soft blue
+  static const Color widgetConsistDay = Color(0xFF3A6EA5); // soft blue
 
   // Night mode tints
-  static const Color widgetWeightNight    = Color(0xFF8B6200); // dark amber
-  static const Color widgetActivityNight  = Color(0xFF2E6044); // dark sage
-  static const Color widgetEnergyNight    = Color(0xFF2C5A7A); // deep blue (#4C7FA8 darker)
-  static const Color widgetNutritionNight = Color(0xFF7A3C1A); // dark warm brown
-  static const Color widgetProteinNight   = Color(0xFF8B2E38); // muted coral
-  static const Color widgetStepsNight     = Color(0xFF445E28); // dark olive
-  static const Color widgetTDEENight      = Color(0xFF1E5C40); // blue-green dark
-  static const Color widgetFatChangeNight = Color(0xFF1E6644); // muted dark green
-  static const Color widgetConsistNight   = Color(0xFF1E3D70); // deep cobalt
+  static const Color widgetWeightNight = Color(0xFF8B6200); // dark amber
+  static const Color widgetActivityNight = Color(0xFF2E6044); // dark sage
+  static const Color widgetEnergyNight = Color(
+    0xFF2C5A7A,
+  ); // deep blue (#4C7FA8 darker)
+  static const Color widgetNutritionNight = Color(
+    0xFF7A3C1A,
+  ); // dark warm brown
+  static const Color widgetProteinNight = Color(0xFF8B2E38); // muted coral
+  static const Color widgetStepsNight = Color(0xFF445E28); // dark olive
+  static const Color widgetTDEENight = Color(0xFF1E5C40); // blue-green dark
+  static const Color widgetFatChangeNight = Color(
+    0xFF1E6644,
+  ); // muted dark green
+  static const Color widgetConsistNight = Color(0xFF1E3D70); // deep cobalt
 }
 
 class MetaDashColors extends ThemeExtension<MetaDashColors> {

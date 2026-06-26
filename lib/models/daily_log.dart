@@ -24,6 +24,7 @@ class DailyLog {
   /// Source device/app name from HealthKit (e.g. 'Apple Watch', 'Garmin').
   /// Used by the wearable calibration engine.
   final String? wearableSource;
+
   /// Average METs for the workout session (when exposed by Apple Health).
   /// Used by the hybrid MET/wearable energy model.
   final double? averageMets;

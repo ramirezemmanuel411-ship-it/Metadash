@@ -132,8 +132,11 @@ class _SignInScreenState extends State<SignInScreen> {
             color: Palette.forestGreen,
             borderRadius: BorderRadius.circular(18),
           ),
-          child: const Icon(Icons.monitor_heart_outlined,
-              color: Colors.white, size: 34),
+          child: const Icon(
+            Icons.monitor_heart_outlined,
+            color: Colors.white,
+            size: 34,
+          ),
         ),
         const SizedBox(height: 18),
         const Text(
@@ -185,8 +188,10 @@ class _SignInScreenState extends State<SignInScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: _loading ? null : _forgotPassword,
-                child: const Text('Forgot password?',
-                    style: TextStyle(color: Palette.forestGreen)),
+                child: const Text(
+                  'Forgot password?',
+                  style: TextStyle(color: Palette.forestGreen),
+                ),
               ),
             ),
           if (_error != null) ...[
@@ -215,10 +220,14 @@ class _SignInScreenState extends State<SignInScreen> {
             const SizedBox(height: 12),
             _socialButton(
               label: 'Continue with Apple',
-              leading: const Icon(Icons.apple,
-                  color: Palette.dayTextPrimary, size: 22),
-              onPressed:
-                  _loading ? null : () => _run(() => _auth.signInWithApple()),
+              leading: const Icon(
+                Icons.apple,
+                color: Palette.dayTextPrimary,
+                size: 22,
+              ),
+              onPressed: _loading
+                  ? null
+                  : () => _run(() => _auth.signInWithApple()),
             ),
           ],
         ],
@@ -239,8 +248,7 @@ class _SignInScreenState extends State<SignInScreen> {
       obscureText: obscure,
       keyboardType: keyboardType,
       enabled: !_loading,
-      textInputAction:
-          obscure ? TextInputAction.done : TextInputAction.next,
+      textInputAction: obscure ? TextInputAction.done : TextInputAction.next,
       onSubmitted: onSubmitted,
       style: const TextStyle(color: Palette.dayTextPrimary),
       decoration: InputDecoration(
@@ -283,9 +291,13 @@ class _SignInScreenState extends State<SignInScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : Text(label,
+            : Text(
+                label,
                 style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w600)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -311,9 +323,10 @@ class _SignInScreenState extends State<SignInScreen> {
           children: [
             leading,
             const SizedBox(width: 10),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
@@ -366,13 +379,15 @@ class _SignInScreenState extends State<SignInScreen> {
           onPressed: _loading
               ? null
               : () => setState(() {
-                    _mode = _isSignUp ? _Mode.signIn : _Mode.signUp;
-                    _error = null;
-                  }),
+                  _mode = _isSignUp ? _Mode.signIn : _Mode.signUp;
+                  _error = null;
+                }),
           child: Text(
             _isSignUp ? 'Sign in' : 'Sign up',
             style: const TextStyle(
-                color: Palette.forestGreen, fontWeight: FontWeight.w600),
+              color: Palette.forestGreen,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],

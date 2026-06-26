@@ -35,7 +35,7 @@ class CanonicalFoodRanker {
     } else if (foodName.startsWith(query)) {
       score += 100.0; // Name starts with query
     } else if (foodName.contains(query)) {
-      score += 60.0;  // Query appears anywhere in name
+      score += 60.0; // Query appears anywhere in name
     }
 
     // SECONDARY: brand contains query (e.g. user typed "kirkland chicken")

@@ -246,9 +246,7 @@ class FoodDisplayFormatter {
 
   static String _formatMacroValue(double value) {
     if (value <= 0) return '0';
-    return value >= 10
-        ? value.toStringAsFixed(0)
-        : value.toStringAsFixed(1);
+    return value >= 10 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
   }
 
   /// Select best serving representation (ONE only)

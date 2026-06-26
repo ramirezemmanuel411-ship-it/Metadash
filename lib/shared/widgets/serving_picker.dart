@@ -39,11 +39,11 @@ class _ServingUnit {
   final double? gramsPerUnit;
   final int? servingIdx;
   const _ServingUnit.weight(this.label, this.gramsPerUnit)
-      : isWeight = true,
-        servingIdx = null;
+    : isWeight = true,
+      servingIdx = null;
   const _ServingUnit.named(this.label, this.servingIdx)
-      : isWeight = false,
-        gramsPerUnit = null;
+    : isWeight = false,
+      gramsPerUnit = null;
 }
 
 class _ServingPickerState extends State<ServingPicker> {
@@ -74,7 +74,10 @@ class _ServingPickerState extends State<ServingPicker> {
       var lbl = widget.servings[i].label
           .replaceAll(RegExp(r'\s*\(\d+\.?\d*\s*g\)\s*$'), '')
           .trim();
-      final isHundredG = RegExp(r'^100\s*g$', caseSensitive: false).hasMatch(lbl);
+      final isHundredG = RegExp(
+        r'^100\s*g$',
+        caseSensitive: false,
+      ).hasMatch(lbl);
       // The default (FDA-label) serving expressed only as a weight/volume reads
       // as a generic "serving" — its weight is still available via the g / oz units.
       if (i == 0 && _isBareMeasure(lbl)) lbl = 'serving';
@@ -82,7 +85,9 @@ class _ServingPickerState extends State<ServingPicker> {
       seen.add(lbl);
       _units.add(_ServingUnit.named(lbl, i));
     }
-    final defG = widget.servings.isNotEmpty ? (widget.servings[0].grams ?? 0) : 0;
+    final defG = widget.servings.isNotEmpty
+        ? (widget.servings[0].grams ?? 0)
+        : 0;
     if (defG > 0) {
       // The 2–3 units most relevant to this food go first (left of the divider);
       // every other unit is still available, to the right of the divider.
@@ -113,17 +118,21 @@ class _ServingPickerState extends State<ServingPicker> {
   }
 
   bool _isBareMeasure(String s) => RegExp(
-        r'^\d+\.?\d*\s*(g|kg|mg|oz|ml|l|fl\.?\s?oz|lb|lbs)$',
-        caseSensitive: false,
-      ).hasMatch(s.trim());
+    r'^\d+\.?\d*\s*(g|kg|mg|oz|ml|l|fl\.?\s?oz|lb|lbs)$',
+    caseSensitive: false,
+  ).hasMatch(s.trim());
 
   double _amt() => double.tryParse(_amount.trim()) ?? 1.0;
 
   String _fmt(double v) {
     if (v == v.truncateToDouble()) return v.truncate().toString();
     final isWeight =
-        _units.isNotEmpty && _unitIdx < _units.length && _units[_unitIdx].isWeight;
-    return v.toStringAsFixed(isWeight ? 1 : 2).replaceAll(RegExp(r'\.?0+$'), '');
+        _units.isNotEmpty &&
+        _unitIdx < _units.length &&
+        _units[_unitIdx].isWeight;
+    return v
+        .toStringAsFixed(isWeight ? 1 : 2)
+        .replaceAll(RegExp(r'\.?0+$'), '');
   }
 
   String _fmtGrams(double g) {
@@ -148,8 +157,9 @@ class _ServingPickerState extends State<ServingPicker> {
   void _selectUnit(int idx) {
     if (idx == _unitIdx) return;
     final grams = _toGrams(_amt(), _unitIdx);
-    final newAmt =
-        grams != null ? _fromGrams(grams, _units[idx]).clamp(0.001, 99999.0) : 1.0;
+    final newAmt = grams != null
+        ? _fromGrams(grams, _units[idx]).clamp(0.001, 99999.0)
+        : 1.0;
     setState(() {
       _unitIdx = idx;
       _amount = _fmt(newAmt);
@@ -220,8 +230,9 @@ class _ServingPickerState extends State<ServingPicker> {
     if (u.label == 'serving') return 'serving';
     final g = widget.servings[u.servingIdx!].grams;
     if (g != null && g > 0) {
-      final gs =
-          g == g.truncateToDouble() ? g.truncate().toString() : g.toStringAsFixed(1);
+      final gs = g == g.truncateToDouble()
+          ? g.truncate().toString()
+          : g.toStringAsFixed(1);
       return '${u.label} ($gs g)';
     }
     return u.label;
@@ -279,13 +290,19 @@ class _ServingPickerState extends State<ServingPicker> {
               decoration: BoxDecoration(
                 color: colors.surfaceVariant,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withValues(alpha: 0.35), width: 1.5),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.35),
+                  width: 1.5,
+                ),
               ),
               child: Row(
                 children: [
                   Text(
                     _fmt(_amt()),
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -297,7 +314,11 @@ class _ServingPickerState extends State<ServingPicker> {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: accent),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: accent,
+                  ),
                 ],
               ),
             ),
@@ -326,8 +347,13 @@ class _ServingPickerState extends State<ServingPicker> {
             final prev = _preview();
             final selUnit = _unitIdx < _units.length ? _units[_unitIdx] : null;
 
-            Widget keyBtn(String label, VoidCallback? onTap,
-                {Widget? child, bool isDone = false, bool isGray = false}) {
+            Widget keyBtn(
+              String label,
+              VoidCallback? onTap, {
+              Widget? child,
+              bool isDone = false,
+              bool isGray = false,
+            }) {
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(4),
@@ -342,16 +368,20 @@ class _ServingPickerState extends State<ServingPicker> {
                       child: Container(
                         height: 52,
                         alignment: Alignment.center,
-                        child: child ??
-                            Text(label,
-                                style: TextStyle(
-                                    fontSize: isDone ? 16 : 22,
-                                    fontWeight: isDone
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isDone
-                                        ? colors.onPrimary
-                                        : colors.textPrimary)),
+                        child:
+                            child ??
+                            Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: isDone ? 16 : 22,
+                                fontWeight: isDone
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isDone
+                                    ? colors.onPrimary
+                                    : colors.textPrimary,
+                              ),
+                            ),
                       ),
                     ),
                   ),
@@ -361,7 +391,11 @@ class _ServingPickerState extends State<ServingPicker> {
 
             return Padding(
               padding: EdgeInsets.fromLTRB(
-                  12, 8, 12, MediaQuery.of(sheetCtx).viewInsets.bottom + 16),
+                12,
+                8,
+                12,
+                MediaQuery.of(sheetCtx).viewInsets.bottom + 16,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -377,14 +411,20 @@ class _ServingPickerState extends State<ServingPicker> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(_fmt(_amt()),
-                          style: const TextStyle(
-                              fontSize: 30, fontWeight: FontWeight.bold)),
+                      Text(
+                        _fmt(_amt()),
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(width: 8),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(selUnit?.label ?? '',
-                            style: TextStyle(fontSize: 18, color: colors.accent)),
+                        child: Text(
+                          selUnit?.label ?? '',
+                          style: TextStyle(fontSize: 18, color: colors.accent),
+                        ),
                       ),
                       const Spacer(),
                       Text(
@@ -407,7 +447,9 @@ class _ServingPickerState extends State<ServingPicker> {
                               Container(
                                 width: 2,
                                 height: 22,
-                                margin: const EdgeInsets.symmetric(horizontal: 10),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
                                 color: colors.accent,
                               ),
                             GestureDetector(
@@ -416,7 +458,9 @@ class _ServingPickerState extends State<ServingPicker> {
                                 margin: const EdgeInsets.only(right: 8),
                                 alignment: Alignment.center,
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 7),
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
                                 decoration: BoxDecoration(
                                   color: i == _unitIdx
                                       ? colors.accent
@@ -441,33 +485,51 @@ class _ServingPickerState extends State<ServingPicker> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(children: [
-                    keyBtn('1', () => refresh(() => _keyDigit('1'))),
-                    keyBtn('2', () => refresh(() => _keyDigit('2'))),
-                    keyBtn('3', () => refresh(() => _keyDigit('3'))),
-                    keyBtn('', () => refresh(_keyBackspace),
+                  Row(
+                    children: [
+                      keyBtn('1', () => refresh(() => _keyDigit('1'))),
+                      keyBtn('2', () => refresh(() => _keyDigit('2'))),
+                      keyBtn('3', () => refresh(() => _keyDigit('3'))),
+                      keyBtn(
+                        '',
+                        () => refresh(_keyBackspace),
                         isGray: true,
-                        child: Icon(Icons.backspace_outlined,
-                            size: 20, color: colors.textSecondary)),
-                  ]),
-                  Row(children: [
-                    keyBtn('4', () => refresh(() => _keyDigit('4'))),
-                    keyBtn('5', () => refresh(() => _keyDigit('5'))),
-                    keyBtn('6', () => refresh(() => _keyDigit('6'))),
-                    keyBtn('', null, isGray: true),
-                  ]),
-                  Row(children: [
-                    keyBtn('7', () => refresh(() => _keyDigit('7'))),
-                    keyBtn('8', () => refresh(() => _keyDigit('8'))),
-                    keyBtn('9', () => refresh(() => _keyDigit('9'))),
-                    keyBtn('', null, isGray: true),
-                  ]),
-                  Row(children: [
-                    keyBtn('.', () => refresh(_keyDot)),
-                    keyBtn('0', () => refresh(() => _keyDigit('0'))),
-                    keyBtn('', null, isGray: true),
-                    keyBtn('Done', () => Navigator.pop(sheetCtx), isDone: true),
-                  ]),
+                        child: Icon(
+                          Icons.backspace_outlined,
+                          size: 20,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      keyBtn('4', () => refresh(() => _keyDigit('4'))),
+                      keyBtn('5', () => refresh(() => _keyDigit('5'))),
+                      keyBtn('6', () => refresh(() => _keyDigit('6'))),
+                      keyBtn('', null, isGray: true),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      keyBtn('7', () => refresh(() => _keyDigit('7'))),
+                      keyBtn('8', () => refresh(() => _keyDigit('8'))),
+                      keyBtn('9', () => refresh(() => _keyDigit('9'))),
+                      keyBtn('', null, isGray: true),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      keyBtn('.', () => refresh(_keyDot)),
+                      keyBtn('0', () => refresh(() => _keyDigit('0'))),
+                      keyBtn('', null, isGray: true),
+                      keyBtn(
+                        'Done',
+                        () => Navigator.pop(sheetCtx),
+                        isDone: true,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             );

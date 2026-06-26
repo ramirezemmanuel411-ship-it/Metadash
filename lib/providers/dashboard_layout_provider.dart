@@ -127,7 +127,6 @@ class DashboardLayoutProvider extends ChangeNotifier {
     ),
     // ── Nutrition ─────────────────────────────────────────────────────────────
     DashWidgetInfo(
-
       id: 'macros',
       name: 'Macros Breakdown',
       icon: Icons.pie_chart_outline,
@@ -230,8 +229,7 @@ class DashboardLayoutProvider extends ChangeNotifier {
       id: 'workout_performance',
       name: 'Workout Performance',
       icon: Icons.fitness_center_outlined,
-      description:
-          'Volume, intensity, and output from your last session.',
+      description: 'Volume, intensity, and output from your last session.',
       category: DashWidgetCategory.activity,
     ),
     DashWidgetInfo(
@@ -293,9 +291,7 @@ class DashboardLayoutProvider extends ChangeNotifier {
     _widgetSizes[id] = size;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final map = {
-        for (final e in _widgetSizes.entries) e.key: e.value.name,
-      };
+      final map = {for (final e in _widgetSizes.entries) e.key: e.value.name};
       await prefs.setString(_sizesKey, jsonEncode(map));
     } catch (_) {}
     notifyListeners();
@@ -318,11 +314,13 @@ class DashboardLayoutProvider extends ChangeNotifier {
         final map = jsonDecode(sizesJson) as Map<String, dynamic>;
         final migrated = <String, DashWidgetSize>{};
         for (final e in map.entries) {
-          final key =
-              _migratedIds.containsKey(e.key) ? _migratedIds[e.key] : e.key;
+          final key = _migratedIds.containsKey(e.key)
+              ? _migratedIds[e.key]
+              : e.key;
           if (key == null) continue;
-          migrated[key] =
-              e.value == 'compact' ? DashWidgetSize.compact : DashWidgetSize.full;
+          migrated[key] = e.value == 'compact'
+              ? DashWidgetSize.compact
+              : DashWidgetSize.full;
         }
         _widgetSizes = migrated;
       }
