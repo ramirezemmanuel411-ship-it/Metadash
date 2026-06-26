@@ -466,11 +466,14 @@ Rules:
   preparation — restaurant entrees are large and richer than home cooking. A
   steakhouse bone-in ribeye is ~16-20 oz cooked in butter (~1,200-1,800 kcal);
   do NOT shrink it to a small generic serving.
-- Account for the cooking fats, butter, oils and sauces a dish is normally
-  served with — they add significant calories.
+- Account for cooking fats, butter, oils and sauces by folding them INTO that
+  dish's own calories and fat. NEVER list the cooking butter/oil/sauce as its
+  own item — that double-counts it.
 - Set "brand" to the restaurant/brand name whenever one is mentioned.
 - "grams" is the weight of this item's serving in grams (your best estimate).
-- Separate distinct items (e.g., "chicken and rice" = 2 entries).
+- One dish is ONE item. Only split into multiple items for genuinely distinct
+  foods the user names (e.g. "steak and a baked potato" = 2), never for a
+  single dish's own preparation.
 - confidence: "high" if item is well-known, "low" if vague.
 - Never output markdown. JSON only.
 ''';
