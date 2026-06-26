@@ -73,7 +73,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _serviceInitialized = true;
     } catch (e) {
       setState(() {
-        _error = 'Failed to initialize AI service: $e';
+        _error =
+            'The AI service is unavailable right now. Please try again later.';
       });
     }
   }
@@ -96,9 +97,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Camera error: $e')));
+        _notice("Couldn't access the camera. Please try again.", isError: true);
       }
     }
   }
@@ -152,9 +151,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _cameraController = null;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to capture photo: $e')));
+        _notice("Couldn't capture the photo. Please try again.", isError: true);
       }
     }
   }
@@ -173,9 +170,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
+        _notice("Couldn't load that image. Please try again.", isError: true);
       }
     }
   }
@@ -222,7 +217,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = _friendlyError(e);
         _isLoading = false;
       });
     }
@@ -237,13 +232,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   void _onSendMessage() async {
     _initializeService();
-
-    if (_error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Cannot send message: $_error')));
-      return;
-    }
 
     // If there's an image, analyze with image + text
     if (_capturedImage != null) {
@@ -315,7 +303,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = _friendlyError(e);
         _isLoading = false;
       });
     }
@@ -388,16 +376,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
         await widget.userState.db.addFoodEntry(diaryEntry);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            entries.length == 1
-                ? '✓ "${entries.first.name}" added to Diary'
-                : '✓ ${entries.length} items added to Diary',
-          ),
-          backgroundColor: context.colors.accent,
-          duration: const Duration(seconds: 2),
-        ),
+      _notice(
+        entries.length == 1
+            ? '"${entries.first.name}" added to your diary'
+            : '${entries.length} items added to your diary',
       );
       setState(() {
         _routerResult = null;
@@ -406,9 +388,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add: $e')));
+      _notice(
+        "Couldn't add that to your diary. Please try again.",
+        isError: true,
+      );
     }
   }
 
@@ -552,13 +535,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     await widget.userState.db.addFoodEntry(entry);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('✓ Added to Diary'),
-        backgroundColor: context.colors.accent,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    _notice('Added to your diary');
   }
 
   void _onAddToDiary() async {
@@ -566,9 +543,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     final user = widget.userState.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No user logged in')));
+      _notice('Please sign in to add foods.', isError: true);
       return;
     }
 
@@ -593,13 +568,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('✓ Added to Diary'),
-          backgroundColor: context.colors.accent,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      _notice('Added to your diary');
 
       // Clear for next entry
       setState(() {
@@ -608,9 +577,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _capturedImage = null;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add to diary: $e')));
+      _notice("Couldn't add to your diary. Please try again.", isError: true);
     }
   }
 
@@ -1725,26 +1692,95 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  /// Map a raw exception to a friendly, on-brand message — users never see
+  /// "Exception: ..." text.
+  String _friendlyError(Object error) {
+    final s = error.toString().toLowerCase();
+    if (s.contains('socket') ||
+        s.contains('network') ||
+        s.contains('timeout') ||
+        s.contains('connection')) {
+      return 'Connection trouble — check your internet and try again.';
+    }
+    if (s.contains('unauthorized') ||
+        s.contains('api key') ||
+        s.contains('401')) {
+      return 'The AI service is unavailable right now. Please try again later.';
+    }
+    return "Couldn't analyze that — try again or rephrase.";
+  }
+
+  /// Show a single, on-brand floating notice (a premium replacement for the
+  /// default SnackBar).
+  void _notice(String message, {bool isError = false}) {
+    if (!mounted) return;
+    final colors = context.colors;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                isError
+                    ? Icons.error_outline_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: isError ? const Color(0xFFE5675E) : colors.accent,
+                size: 19,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: colors.surface,
+          behavior: SnackBarBehavior.floating,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
   Widget _buildErrorCard(String error) {
-    return Card(
-      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                error,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Color(0xFFE5675E),
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              error,
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 13,
+                height: 1.3,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

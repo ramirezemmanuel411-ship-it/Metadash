@@ -1,8 +1,7 @@
-// ignore_for_file: avoid_print
-
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:metadash/core/services/ai_service.dart';
 import 'package:metadash/data/models/ai_router_result.dart';
 
@@ -35,30 +34,23 @@ class AiRouter {
 
     final lower = text.toLowerCase();
 
-    // Restaurant / ordering signals
+    // Ordering-intent phrases only. A bare restaurant NAME on its own (e.g.
+    // "ribeye from Texas Roadhouse") is a food log, not a request for ordering
+    // help — names alone must not trigger this mode.
     final restaurantSignals = [
       'restaurant',
-      'menu',
-      'ordering',
-      'order at',
-      'eating out',
-      'fast food',
-      'eat out',
       'what can i order',
-      'chipotle',
-      'chick-fil-a',
-      'mcdonald',
-      'burger king',
-      'subway',
-      'taco bell',
-      'starbucks',
-      'texas roadhouse',
-      'olive garden',
-      'panera',
+      'what should i order',
+      'what to order',
+      'order at',
+      'ordering at',
+      'menu at',
+      'on the menu',
+      'eating out',
+      'eat out',
+      'fast food',
       "i'm at",
       'i am at',
-      'dine',
-      'dining',
     ];
     if (restaurantSignals.any((s) => lower.contains(s))) {
       return AiRouteMode.restaurantOrderHelper;
@@ -104,16 +96,36 @@ class AiRouter {
     final mode =
         forceMode ?? detectIntent(text: userText, diaryContext: diaryContext);
 
-    switch (mode) {
-      case AiRouteMode.restaurantOrderHelper:
-        return _runRestaurantMode(userText, diaryContext);
-      case AiRouteMode.mealStrategyHelper:
-        return _runStrategyMode(userText, diaryContext);
-      case AiRouteMode.visionFoodEstimate:
-        // Text-only vision fallback — treat as food logger
+    Future<AiRouterResult> runMode() {
+      switch (mode) {
+        case AiRouteMode.restaurantOrderHelper:
+          return _runRestaurantMode(userText, diaryContext);
+        case AiRouteMode.mealStrategyHelper:
+          return _runStrategyMode(userText, diaryContext);
+        case AiRouteMode.visionFoodEstimate:
+        case AiRouteMode.structuredFoodLogger:
+          // Text-only — treat as plain food logging.
+          return _runLoggerMode(userText);
+      }
+    }
+
+    try {
+      return await runMode();
+    } catch (_) {
+      // The model occasionally returns malformed/truncated JSON — retry once.
+      try {
+        return await runMode();
+      } catch (e) {
+        // Still failing: fall back to plain food logging so the user gets a
+        // result instead of an error — unless we were already logging, in
+        // which case there's nothing better to fall back to.
+        if (mode == AiRouteMode.structuredFoodLogger ||
+            mode == AiRouteMode.visionFoodEstimate) {
+          rethrow;
+        }
+        AppLogger.w('AI router fell back to food logger from $mode: $e');
         return _runLoggerMode(userText);
-      case AiRouteMode.structuredFoodLogger:
-        return _runLoggerMode(userText);
+      }
     }
   }
 
