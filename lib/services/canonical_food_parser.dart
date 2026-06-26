@@ -38,8 +38,16 @@ class CanonicalFoodParser {
     // 2. Detect variant from food name
     final variant = _detectVariant(raw);
 
-    // 3. Generate canonical key for grouping: {brand + variant}
-    final canonicalKey = variant != null ? '$brand|$variant' : brand;
+    // 3. Generate canonical key for grouping. Include the food name so distinct
+    //    products from the same brand stay separate — keying on brand (+ variant)
+    //    alone collapsed every item of a brand (e.g. all "Kirkland Signature"
+    //    foods) into one result on a brand search.
+    final foodKey = _normalizeKey(raw.foodName ?? raw.foodNameRaw ?? '');
+    final canonicalKey = [
+      if (foodKey.isNotEmpty) foodKey,
+      brand,
+      ?variant,
+    ].join('|');
 
     // 4. Generate display name: {Brand} or {Brand} ({Variant})
     final displayName = CanonicalFoodDisplay.generateDisplayName(
@@ -134,6 +142,13 @@ class CanonicalFoodParser {
 
     return null;
   }
+
+  /// Normalize a string into a grouping-key token (lowercase, alphanumeric).
+  static String _normalizeKey(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 
   /// Generate normalized nutrition display (shown once)
   /// Prefer per-serving calories. If only per-100g/ml, show "X kcal · 100 ml"
