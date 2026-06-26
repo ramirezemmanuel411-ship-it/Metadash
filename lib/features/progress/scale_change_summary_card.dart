@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
 import '../../shared/palette.dart';
 import 'scale_change_service.dart';
 
@@ -118,7 +120,6 @@ class _ScaleChangeSummaryCardState<T> extends State<ScaleChangeSummaryCard<T>> {
           const SizedBox(width: 12),
           Expanded(
             child: Align(
-              alignment: Alignment.center,
               child: Text(
                 deltaText,
                 textAlign: TextAlign.center,

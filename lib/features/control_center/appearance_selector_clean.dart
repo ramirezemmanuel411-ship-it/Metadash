@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../shared/user_settings.dart';
+
 import '../../shared/palette.dart';
+import '../../shared/user_settings.dart';
 
 class AppearanceSelectorClean extends StatelessWidget {
   const AppearanceSelectorClean({super.key});

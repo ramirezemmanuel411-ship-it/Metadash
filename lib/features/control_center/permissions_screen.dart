@@ -26,12 +26,12 @@ class PermissionsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _SectionCard(
+          const _SectionCard(
             children: [
               _StatusRow(title: 'Steps', subtitle: 'Allowed'),
-              const _SectionDivider(),
+              _SectionDivider(),
               _StatusRow(title: 'Workouts', subtitle: 'Allowed'),
-              const _SectionDivider(),
+              _SectionDivider(),
               _StatusRow(title: 'Nutrition', subtitle: 'Allowed'),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'dart:io';
-import 'package:metadash/core/logging/app_logger.dart';
+
 import 'package:health/health.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 
 /// Service for syncing health data from HealthKit (iOS) and Google Fit / Health Connect (Android)
 class HealthService {
@@ -644,7 +645,7 @@ class HealthService {
     // Fetch steps - prefer HealthKit daily total
     int totalSteps = 0;
     int runningSteps = 0;
-    List<_WorkoutInterval> runningIntervals = [];
+    final List<_WorkoutInterval> runningIntervals = [];
     try {
       var gotTotal = false;
       try {

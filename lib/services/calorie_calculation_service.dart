@@ -1,13 +1,13 @@
-import '../models/user_profile.dart';
-import '../models/daily_log.dart';
-import '../models/metabolic_settings.dart';
-import '../models/data_inputs_settings.dart';
-import 'adaptive_tdee_service.dart';
-import '../engine/workout_telemetry.dart';
-import '../engine/workout_energy_engine.dart';
 import '../engine/step_deduplicator.dart';
-import '../engine/workout_bucket.dart';
 import '../engine/wearable_calibration.dart';
+import '../engine/workout_bucket.dart';
+import '../engine/workout_energy_engine.dart';
+import '../engine/workout_telemetry.dart';
+import '../models/daily_log.dart';
+import '../models/data_inputs_settings.dart';
+import '../models/metabolic_settings.dart';
+import '../models/user_profile.dart';
+import 'adaptive_tdee_service.dart';
 
 class CalorieCalculationService {
   /// Calculate step calories per step based on body weight
@@ -308,10 +308,8 @@ class CalorieCalculationService {
       carbsGrams: log.carbs,
       fatGrams: log.fat,
       workoutAccuracyMultiplier: 1.0, // Engine already applied multiplier.
-      workoutAccuracyLabel: null,
       workoutType: log.workoutType,
       includeStrengthInExpenditure: includeStrength,
-      useTrackedWorkoutCalories: true,
     );
 
     final dailyDeficit = calculateDailyDeficitSurplus(

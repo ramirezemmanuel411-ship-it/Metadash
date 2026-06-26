@@ -355,8 +355,8 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Widget _orDivider() {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         Expanded(child: Divider(color: Palette.daySecondary)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12),

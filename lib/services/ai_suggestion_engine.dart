@@ -251,7 +251,7 @@ class AiSuggestionEngine {
     final restaurantTitle = _titleCaseRestaurant(input.restaurantName);
 
     final templates = [
-      _MealTemplate(
+      const _MealTemplate(
         title: 'High Protein',
         description: 'Lean protein with veggies',
         items: ['7 oz chicken breast', '2 cups mixed veggies'],
@@ -260,7 +260,7 @@ class AiSuggestionEngine {
         carbsG: 18,
         fatG: 8,
       ),
-      _MealTemplate(
+      const _MealTemplate(
         title: 'Balanced',
         description: 'Protein + carbs + fats',
         items: ['5 oz salmon', '1 cup rice', 'side salad'],

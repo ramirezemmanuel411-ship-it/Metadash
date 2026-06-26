@@ -1,18 +1,21 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'dart:async';
 import 'dart:math' as math;
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../models/diary_entry_food.dart';
-import '../../models/user_profile.dart';
-import '../../models/daily_log.dart';
-import '../../models/metabolic_settings.dart';
-import '../../models/data_inputs_settings.dart';
-import '../../services/calorie_calculation_service.dart';
-import '../food_search/food_search_screen.dart';
-import '../food_search/food_detail_screen.dart';
+
 import '../../data/models/food_model.dart';
+import '../../models/daily_log.dart';
+import '../../models/data_inputs_settings.dart';
+import '../../models/diary_entry_food.dart';
+import '../../models/metabolic_settings.dart';
+import '../../models/user_profile.dart';
+import '../../providers/user_state.dart';
+import '../../services/calorie_calculation_service.dart';
+import '../../shared/palette.dart';
+import '../food_search/food_detail_screen.dart';
+import '../food_search/food_search_screen.dart';
 
 class DiaryScreen extends StatefulWidget {
   final DateTime selectedDay;
@@ -62,14 +65,14 @@ class _DiaryScreenState extends State<DiaryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFoodEntries();
+    unawaited(_loadFoodEntries());
   }
 
   @override
   void didUpdateWidget(DiaryScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedDay != widget.selectedDay) {
-      _loadFoodEntries();
+      unawaited(_loadFoodEntries());
     }
   }
 
@@ -95,8 +98,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
       widget.selectedDay.month,
       widget.selectedDay.day,
       hour,
-      0,
-      0,
     );
   }
 
@@ -104,7 +105,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FoodSearchScreen(
-          returnOnSelect: false,
           autofocusSearch: true,
           userState: widget.userState,
           targetTimestamp: targetHour == null
@@ -114,14 +114,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
       ),
     );
     // Reload entries when returning from search
-    _loadFoodEntries();
+    unawaited(_loadFoodEntries());
   }
 
   void _openBarcodeScanner() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FoodSearchScreen(
-          returnOnSelect: false,
           userState: widget.userState,
           initialTab: FoodSearchTab.barcode,
         ),
@@ -143,7 +142,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     );
 
     await widget.userState!.db.addFoodEntry(newEntry);
-    _loadFoodEntries();
+    unawaited(_loadFoodEntries());
   }
 
   Future<void> _editEntry(DiaryEntryFood entry) async {
@@ -157,7 +156,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
       carbs: entry.carbsG.toDouble(),
       fat: entry.fatG.toDouble(),
       source: entry.source,
-      servingWeightGrams: null,
     );
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -192,7 +190,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
           );
           await widget.userState!.db.deleteFoodEntry(entry.id);
           await widget.userState!.db.addFoodEntry(moved);
-          _loadFoodEntries();
+          unawaited(_loadFoodEntries());
         },
         onCopy: (newTimestamp) async {
           await _addEntryFromTemplate(entry, timestamp: newTimestamp);
@@ -547,7 +545,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
                                     color: context.colors.accent.withValues(
                                       alpha: 0.22,
                                     ),
-                                    width: 1,
                                   ),
                                 ),
                                 child: Row(
@@ -630,7 +627,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                     onAdd: _openAddFoodSearch,
                     onDelete: (entry) async {
                       await widget.userState!.db.deleteFoodEntry(entry.id);
-                      _loadFoodEntries();
+                      unawaited(_loadFoodEntries());
                     },
                     onEdit: _editEntry,
                     onLongPress: (entry) => _showEntryMoveMenu(context, entry),
@@ -681,7 +678,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
             ),
         ],
       ),
-      floatingActionButton: null,
     );
   }
 }
@@ -1001,7 +997,7 @@ class _ResultsModalState extends State<_ResultsModal>
         ),
         // Raised card
         Align(
-          alignment: Alignment(0, -0.75),
+          alignment: const Alignment(0, -0.75),
           child: FadeTransition(
             opacity: _fadeAnimation,
             child: ScaleTransition(
@@ -1473,7 +1469,6 @@ class _FoodEntryCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Left accent dot
               Container(
@@ -1670,7 +1665,7 @@ class _EntryMoveSheetState extends State<_EntryMoveSheet> {
   DateTime _buildTimestamp() {
     final base = widget.currentDay.add(Duration(days: _dateIndex));
     final date = DateUtils.dateOnly(base);
-    return DateTime(date.year, date.month, date.day, _mealHours[_mealIndex], 0);
+    return DateTime(date.year, date.month, date.day, _mealHours[_mealIndex]);
   }
 
   Widget _col({

@@ -43,7 +43,7 @@ class AiRouter {
       'eating out',
       'fast food',
       'eat out',
-      "what can i order",
+      'what can i order',
       'chipotle',
       'chick-fil-a',
       'mcdonald',
@@ -55,7 +55,7 @@ class AiRouter {
       'olive garden',
       'panera',
       "i'm at",
-      "i am at",
+      'i am at',
       'dine',
       'dining',
     ];
@@ -134,7 +134,7 @@ class AiRouter {
     final imageBytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(imageBytes);
 
-    String prompt =
+    final String prompt =
         '''You are a nutrition expert analyzing a food photo for a metabolic tracking app.
 
 Identify every food item visible in the image. Estimate reasonable portion sizes.

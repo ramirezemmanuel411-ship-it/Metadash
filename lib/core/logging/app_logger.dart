@@ -10,7 +10,7 @@ class AppLogger {
 
   static final Logger _logger = Logger(
     level: kReleaseMode ? Level.off : Level.debug,
-    printer: SimplePrinter(printTime: false, colors: false),
+    printer: SimplePrinter(colors: false),
   );
 
   /// Verbose/debug diagnostics.

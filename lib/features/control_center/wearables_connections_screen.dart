@@ -1,15 +1,16 @@
 import 'dart:io';
-import 'package:metadash/core/logging/app_logger.dart';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../models/data_inputs_settings.dart';
-import '../../services/health_service.dart';
+
 import '../../engine/wearable_calibration.dart';
+import '../../models/data_inputs_settings.dart';
+import '../../providers/user_state.dart';
+import '../../services/health_service.dart';
+import '../../shared/palette.dart';
 
 class WearablesConnectionsScreen extends StatefulWidget {
   const WearablesConnectionsScreen({super.key});
@@ -160,7 +161,6 @@ class _WearablesConnectionsScreenState
           content: const Text(
             'You can enable this anytime in the Health app settings.',
           ),
-          duration: const Duration(seconds: 4),
           action: SnackBarAction(
             label: 'Open Health',
             onPressed: _openHealthAppOrStore,
@@ -193,7 +193,6 @@ class _WearablesConnectionsScreenState
           content: const Text(
             'You can enable this anytime in Health Connect settings.',
           ),
-          duration: const Duration(seconds: 4),
           action: SnackBarAction(
             label: 'Open Health Connect',
             onPressed: _openHealthAppOrStore,
@@ -263,7 +262,7 @@ class _WearablesConnectionsScreenState
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 // ── Health platform connection ─────────────────────────
-                _SectionLabel('HEALTH PLATFORM'),
+                const _SectionLabel('HEALTH PLATFORM'),
                 const SizedBox(height: 8),
                 _SectionCard(
                   children: [
@@ -291,7 +290,7 @@ class _WearablesConnectionsScreenState
                 const SizedBox(height: 24),
 
                 // ── Device picker ────────────────────────────────────
-                _SectionLabel('YOUR WEARABLE DEVICE'),
+                const _SectionLabel('YOUR WEARABLE DEVICE'),
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),

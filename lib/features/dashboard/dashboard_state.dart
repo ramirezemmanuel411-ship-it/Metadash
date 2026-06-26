@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-import '../../shared/date_utils.dart';
-import '../../providers/user_state.dart';
+
 import '../../models/data_inputs_settings.dart';
+import '../../providers/user_state.dart';
 import '../../services/calorie_calculation_service.dart';
+import '../../shared/date_utils.dart';
 
 class DashboardDayData {
   final int caloriesConsumed;
@@ -214,7 +215,7 @@ class DashboardState extends ChangeNotifier {
 
   DashboardDayData _defaultDataFor(DateTime date) {
     // Return zero values if not in cache
-    return DashboardDayData(
+    return const DashboardDayData(
       caloriesConsumed: 0,
       caloriesGoal: 2000,
       proteinConsumed: 0,

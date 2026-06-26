@@ -440,15 +440,15 @@ class _RadialMenu extends StatelessWidget {
     final isTop = fabCenter.dy < screenSize.height / 4;
     final isBottom = fabCenter.dy > screenSize.height * 3 / 4;
 
-    final edgeInset = (_itemSize / 2) + 8.0;
+    const edgeInset = (_itemSize / 2) + 8.0;
     final leftSpace = fabCenter.dx - edgeInset;
     final rightSpace = screenSize.width - fabCenter.dx - edgeInset;
     final topSpace = fabCenter.dy - edgeInset;
     final bottomSpace = screenSize.height - fabCenter.dy - edgeInset;
 
     final isCorner = (isTop || isBottom) && (isLeft || isRight);
-    final desiredCornerRadius = 200.0;
-    final desiredEdgeRadius = _radius;
+    const desiredCornerRadius = 200.0;
+    const desiredEdgeRadius = _radius;
 
     double effectiveRadius;
     if (isCorner) {

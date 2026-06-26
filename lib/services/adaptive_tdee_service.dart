@@ -1,5 +1,6 @@
-import '../models/metabolic_settings.dart';
 import 'dart:math' as math;
+
+import '../models/metabolic_settings.dart';
 
 /// Service for calculating adaptive TDEE adjustments based on daily fat delta discrepancies
 class AdaptiveTDEEService {

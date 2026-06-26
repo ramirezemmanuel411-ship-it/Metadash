@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:metadash/core/logging/app_logger.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../models/user_food_item.dart';
+
 import '../../models/diary_entry_food.dart';
+import '../../models/user_food_item.dart';
+import '../../providers/user_state.dart';
 import '../../services/cloud_food_service.dart';
+import '../../shared/palette.dart';
 import 'models.dart';
 
 class FoodManualEntry extends StatefulWidget {

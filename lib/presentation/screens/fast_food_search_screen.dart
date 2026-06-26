@@ -1,19 +1,21 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../data/models/food_model.dart';
 import '../../data/models/food_search_result_raw.dart';
 import '../../domain/search_state.dart' as domain;
-import '../bloc/food_search_bloc.dart';
 import '../../presentation/formatters/food_display_formatter.dart';
+import '../../providers/food_plate_provider.dart';
+import '../../providers/user_state.dart';
 import '../../services/food_quality_engine.dart';
 import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../providers/food_plate_provider.dart';
+import '../bloc/food_search_bloc.dart';
 
 /// Food search screen used inside the Add Food tabs.
 /// Invokes a callback on selection instead of popping navigation.

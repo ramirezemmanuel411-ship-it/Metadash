@@ -2,9 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../palette.dart';
-import '../../providers/food_plate_provider.dart';
+
 import '../../features/food_search/food_plate_screen.dart';
+import '../../providers/food_plate_provider.dart';
+import '../palette.dart';
 
 /// Floating pill displayed above the dot navigation indicators when the
 /// Food Plate has at least one staged item. Tapping opens [FoodPlateScreen].
@@ -91,7 +92,7 @@ class _PillContent extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(color: colors.cta, width: 1),
+                      border: Border.all(color: colors.cta),
                     ),
                     child: Center(
                       child: Text(

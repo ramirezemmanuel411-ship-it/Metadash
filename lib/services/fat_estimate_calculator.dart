@@ -50,22 +50,22 @@ class FatEstimateCalculator {
     required ActivityDelta activityDelta,
     required int reentryDays,
   }) {
-    int deltaScore = _calculateDeltaScore(
+    final int deltaScore = _calculateDeltaScore(
       intakeDelta: intakeDelta,
       activityDelta: activityDelta,
     );
 
-    List<double> rateRange = _getRateRange(deltaScore);
-    double rateLow = rateRange[0];
-    double rateHigh = rateRange[1];
+    final List<double> rateRange = _getRateRange(deltaScore);
+    final double rateLow = rateRange[0];
+    final double rateHigh = rateRange[1];
 
     // Calculate fat range based on days
-    double clampedDays = reentryDays.toDouble().clamp(1, double.infinity);
+    final double clampedDays = reentryDays.toDouble().clamp(1, double.infinity);
     double fatLow = rateLow * clampedDays;
     double fatHigh = rateHigh * clampedDays;
 
     // Bound by observed scale delta
-    double deltaW = returnWeight - preReentryWeight;
+    final double deltaW = returnWeight - preReentryWeight;
 
     if (deltaW >= 0) {
       fatHigh = fatHigh.clamp(double.negativeInfinity, deltaW);
@@ -96,17 +96,17 @@ class FatEstimateCalculator {
     required DateTime? lastRefineWeightDate,
   }) {
     // Calculate raw estimate using current data
-    List<double> rateRange = _getRateRange(
+    final List<double> rateRange = _getRateRange(
       _calculateDeltaScore(
         intakeDelta: intakeDelta,
         activityDelta: activityDelta,
       ),
     );
 
-    double rateLow = rateRange[0];
-    double rateHigh = rateRange[1];
+    final double rateLow = rateRange[0];
+    final double rateHigh = rateRange[1];
 
-    double clampedDays = reentryStartToCurrentDays.toDouble().clamp(
+    final double clampedDays = reentryStartToCurrentDays.toDouble().clamp(
       1,
       double.infinity,
     );
@@ -114,7 +114,7 @@ class FatEstimateCalculator {
     double rawFatHigh = rateHigh * clampedDays;
 
     // Bound by observed scale delta
-    double deltaW = currentWeight - preReentryWeight;
+    final double deltaW = currentWeight - preReentryWeight;
     if (deltaW >= 0) {
       rawFatHigh = rawFatHigh.clamp(double.negativeInfinity, deltaW);
       rawFatLow = rawFatLow.clamp(double.negativeInfinity, deltaW);
@@ -129,13 +129,13 @@ class FatEstimateCalculator {
 
     // Anti-punish guardrail: prevent sharp upward jumps
     if (lastRefineWeightDate != null) {
-      DateTime now = DateTime.now();
-      int daysSinceLastRefine = now
+      final DateTime now = DateTime.now();
+      final int daysSinceLastRefine = now
           .difference(lastRefineWeightDate)
           .inDays
           .clamp(1, double.infinity as int);
-      double maxIncreaseLow = 0.3 * daysSinceLastRefine;
-      double maxIncreaseHigh = 0.3 * daysSinceLastRefine;
+      final double maxIncreaseLow = 0.3 * daysSinceLastRefine;
+      final double maxIncreaseHigh = 0.3 * daysSinceLastRefine;
 
       newLow = newLow.clamp(
         previousEstimateLow - maxIncreaseLow,
@@ -167,8 +167,8 @@ class FatEstimateCalculator {
     }
 
     // Round to 0.1 lb
-    double roundedLow = (low * 10).round() / 10;
-    double roundedHigh = (high * 10).round() / 10;
+    final double roundedLow = (low * 10).round() / 10;
+    final double roundedHigh = (high * 10).round() / 10;
 
     // Check if both are near zero
     if (roundedLow.abs() < 0.05 && roundedHigh.abs() < 0.05) {

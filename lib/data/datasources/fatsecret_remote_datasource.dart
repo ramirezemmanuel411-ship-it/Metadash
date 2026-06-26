@@ -13,8 +13,10 @@
 library;
 
 import 'dart:convert';
-import 'package:metadash/core/logging/app_logger.dart';
+
 import 'package:http/http.dart' as http;
+import 'package:metadash/core/logging/app_logger.dart';
+
 import '../../data/models/food_model.dart';
 
 class FatSecretRemoteDatasource {
@@ -226,7 +228,6 @@ class FatSecretRemoteDatasource {
             rawJson: foodJson,
             isBranded: isBranded,
             isGeneric: isGenericEntry,
-            isFavorite: false,
           );
 
           foods.add(food);

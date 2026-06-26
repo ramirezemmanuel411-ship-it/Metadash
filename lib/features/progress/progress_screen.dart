@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
+
 import '../../models/daily_log.dart';
+import '../../providers/user_state.dart';
 import '../../services/calorie_calculation_service.dart';
+import '../../shared/palette.dart';
 import 'scale_change_summary_card.dart';
 
 void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
@@ -184,7 +186,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       normalizedDate,
     );
     if (log != null) {
-      final updatedLog = log.copyWith(weight: null);
+      final updatedLog = log.copyWith();
       await userState.db.updateDailyLog(updatedLog);
       await _loadWeightData();
     }
@@ -286,11 +288,12 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
     final userState = Provider.of<UserState>(context, listen: false);
     final user = userState.currentUser;
     if (user == null) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _allData = [];
           _isLoading = false;
         });
+      }
       return;
     }
     try {
@@ -355,11 +358,12 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
         });
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _allData = [];
           _isLoading = false;
         });
+      }
     }
   }
 
@@ -383,7 +387,7 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
         cutoff = DateTime(now.year - 1, now.month, now.day);
         break;
       case 'YTD':
-        cutoff = DateTime(now.year, 1, 1);
+        cutoff = DateTime(now.year);
         break;
       default:
         return data;
@@ -432,14 +436,14 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     if (_isLoading) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.hourglass_empty_rounded,
         message: 'MetaDash is building your metabolic profile.',
       );
     }
     final filteredData = _filterData(_allData, _filterType);
     if (filteredData.isEmpty) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.trending_down_rounded,
         message:
             'Track food and activity for 3 days to begin estimating fat change.',
@@ -460,7 +464,6 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
         children: [
           // ── Header with icon ──────────────────────────────────────────────
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 40,
@@ -642,11 +645,12 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
     final userState = Provider.of<UserState>(context, listen: false);
     final user = userState.currentUser;
     if (user == null) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _allData = [];
           _isLoading = false;
         });
+      }
       return;
     }
     try {
@@ -674,17 +678,19 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
         );
       }
       dataPoints.sort((a, b) => a.date.compareTo(b.date));
-      if (mounted)
+      if (mounted) {
         setState(() {
           _allData = dataPoints;
           _isLoading = false;
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _allData = [];
           _isLoading = false;
         });
+      }
     }
   }
 
@@ -708,7 +714,7 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
         cutoff = DateTime(now.year - 1, now.month, now.day);
         break;
       case 'YTD':
-        cutoff = DateTime(now.year, 1, 1);
+        cutoff = DateTime(now.year);
         break;
       default:
         return data;
@@ -739,14 +745,14 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     if (_isLoading) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.hourglass_empty_rounded,
         message: 'MetaDash is building your metabolic profile.',
       );
     }
     final filteredData = _filterData(_allData, _filterType);
     if (filteredData.isEmpty) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.bolt_rounded,
         message: 'MetaDash is building your metabolic profile.',
       );
@@ -786,7 +792,6 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
         children: [
           // ── Header with icon ──────────────────────────────────────────────
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 40,
@@ -905,7 +910,6 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
                     color: colors.accent.withValues(alpha: 0.8),
                     selectedIndex: _selectedIndex,
                     onIndexChanged: (i) => setState(() => _selectedIndex = i),
-                    showDecimals: false,
                     yAxisInterval: 200.0,
                     rightPadding: 8.0,
                     abbreviateLabels: true,
@@ -964,7 +968,7 @@ class _WeightSectionState extends State<_WeightSection> {
         cutoff = DateTime(now.year - 1, now.month, now.day);
         break;
       case 'YTD':
-        cutoff = DateTime(now.year, 1, 1);
+        cutoff = DateTime(now.year);
         break;
       default:
         return entries;
@@ -1038,7 +1042,6 @@ class _WeightSectionState extends State<_WeightSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 40,
@@ -1561,7 +1564,7 @@ class _FilterPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          border: Border.all(color: colors.divider, width: 1),
+          border: Border.all(color: colors.divider),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(

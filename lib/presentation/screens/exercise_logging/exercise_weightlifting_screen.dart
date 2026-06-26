@@ -2,13 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../../data/repositories/exercise_repository.dart';
 import '../../../models/exercise_model.dart';
 import '../../../models/hr_zones.dart';
-import '../../../data/repositories/exercise_repository.dart';
 import '../../../providers/user_state.dart';
 import '../../../services/database_service.dart';
-import '../../widgets/duration_selector.dart';
 import '../../../shared/palette.dart';
+import '../../widgets/duration_selector.dart';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -174,7 +175,7 @@ class _ExerciseWeightLiftingScreenState
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               children: [
                 // Step 1 ── Activity
-                _StepLabel(number: '1', title: 'Activity'),
+                const _StepLabel(number: '1', title: 'Activity'),
                 const SizedBox(height: 10),
                 _ActivityPickerCard(
                   activity: _activity,
@@ -183,7 +184,7 @@ class _ExerciseWeightLiftingScreenState
                 const SizedBox(height: 28),
 
                 // Step 2 ── Intensity
-                _StepLabel(number: '2', title: 'Intensity'),
+                const _StepLabel(number: '2', title: 'Intensity'),
                 const SizedBox(height: 10),
                 _HeartRateStep(
                   controller: _hrCtrl,
@@ -209,7 +210,7 @@ class _ExerciseWeightLiftingScreenState
                 const SizedBox(height: 28),
 
                 // Step 3 ── Duration
-                _StepLabel(number: '3', title: 'Duration'),
+                const _StepLabel(number: '3', title: 'Duration'),
                 const SizedBox(height: 10),
                 DurationSelector(
                   selectedDuration: _duration,

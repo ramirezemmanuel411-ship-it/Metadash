@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+
 import '../../shared/palette.dart';
-import 'metabolic_engine_screen.dart';
-import 'goal_strategy_screen.dart';
-import 'data_inputs_screen.dart';
-import 'dashboard_layout_screen.dart';
-import 'interface_workflow_screen.dart';
 import 'account_screen.dart';
+import 'appearance_selector_clean.dart';
+import 'dashboard_layout_screen.dart';
+import 'data_inputs_screen.dart';
+import 'goal_strategy_screen.dart';
+import 'interface_workflow_screen.dart';
+import 'metabolic_engine_screen.dart';
 import 'notifications_screen.dart';
 import 'privacy_data_screen.dart';
 import 'subscription_screen.dart';
-import 'appearance_selector_clean.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});
@@ -25,7 +26,7 @@ class ControlCenterScreen extends StatelessWidget {
           children: [
             const AppearanceSelectorClean(),
             const SizedBox(height: 28),
-            _SectionLabel(label: 'SYSTEM'),
+            const _SectionLabel(label: 'SYSTEM'),
             const SizedBox(height: 10),
             _ControlCard(
               children: [
@@ -89,7 +90,7 @@ class ControlCenterScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 28),
-            _SectionLabel(label: 'PERSONAL'),
+            const _SectionLabel(label: 'PERSONAL'),
             const SizedBox(height: 10),
             _ControlCard(
               children: [

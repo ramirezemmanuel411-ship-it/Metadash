@@ -1,8 +1,9 @@
+import 'package:logger/logger.dart' as logger;
+
 import '../data/models/food_model.dart';
 import '../data/models/food_search_result_raw.dart';
 import 'canonical_food_parser.dart';
 import 'canonical_food_ranker.dart';
-import 'package:logger/logger.dart' as logger;
 
 final log = logger.Logger();
 

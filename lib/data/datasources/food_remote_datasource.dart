@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:metadash/core/logging/app_logger.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+
+import '../../services/raw_search_debug_store.dart';
 import '../models/food_model.dart';
 import '../models/food_search_result_raw.dart';
-import '../../services/raw_search_debug_store.dart';
 
 /// Remote datasource for API calls with cancellation support
 /// Implements smart retry, timeout, and request cancellation
@@ -34,8 +35,6 @@ class FoodRemoteDatasource {
     // Add interceptors for logging (optional, can be removed in production)
     _dio.interceptors.add(
       LogInterceptor(
-        requestBody: false,
-        responseBody: false,
         logPrint: (obj) {
           // Only log errors in production
           if (obj.toString().contains('ERROR')) {
@@ -286,12 +285,10 @@ class FoodRemoteDatasource {
         sourceId: product['code']?.toString(),
         barcode: product['code']?.toString(),
         verified: _isOffVerified(product),
-        providerScore: null,
         foodNameRaw: name,
         foodName: product['product_name_en']?.toString() ?? name,
         brandName: brand?.toString(),
         brandOwner: product['brand_owner']?.toString(),
-        restaurantName: null,
         category: _firstCommaPart(product['categories']?.toString()),
         subcategory: _secondCommaPart(product['categories']?.toString()),
         languageCode: product['lang']?.toString() ?? product['lc']?.toString(),
@@ -303,16 +300,13 @@ class FoodRemoteDatasource {
         servingVolumeMl: (servingUnit ?? '').toLowerCase().contains('ml')
             ? (servingQty > 0 ? servingQty : 100)
             : null,
-        servingOptions: const [],
         calories: calories,
         proteinG: protein,
         carbsG: carbs,
         fatG: fat,
         nutritionBasis: nutritionBasis,
         rawJson: product,
-        lastUpdated: null,
         dataType: 'branded',
-        popularity: null,
         isGeneric: (brand?.toString().toLowerCase() ?? '') == 'generic',
         isBranded:
             (brand?.toString().isNotEmpty ?? false) &&
@@ -380,7 +374,6 @@ class FoodRemoteDatasource {
               quantity: _safeToDouble(portion['amount'] ?? 0),
               unit: portionUnit,
               weightGrams: _safeToDouble(portion['gramWeight'] ?? 0),
-              volumeMl: null,
               rawJson: portion,
             );
           })
@@ -391,16 +384,11 @@ class FoodRemoteDatasource {
         source: 'usda',
         sourceId: food['fdcId']?.toString(),
         barcode: food['gtinUpc']?.toString(),
-        verified: null,
-        providerScore: null,
         foodNameRaw: rawDescription?.toString(),
         foodName: productName,
         brandName: brandName,
         brandOwner: food['brandOwner']?.toString(),
-        restaurantName: null,
         category: food['foodCategory']?.toString(),
-        subcategory: null,
-        languageCode: null,
         servingQty: servingSize > 0 ? servingSize : 100,
         servingUnit: servingUnit ?? 'g',
         servingWeightGrams: (servingUnit ?? '').toLowerCase().contains('g')
@@ -416,9 +404,7 @@ class FoodRemoteDatasource {
         fatG: fat,
         nutritionBasis: 'per_100g',
         rawJson: food,
-        lastUpdated: null,
         dataType: dataType,
-        popularity: null,
         isGeneric:
             (dataType ?? '').toLowerCase().contains('survey') ||
             (brandName ?? '').isEmpty,
@@ -454,7 +440,7 @@ class FoodRemoteDatasource {
 
         // Parse brand and name (extract first part before comma if present)
         String? brandName;
-        String? displayName = foodNameRaw;
+        final String? displayName = foodNameRaw;
 
         if (brandRaw != null && brandRaw.isNotEmpty) {
           brandName = _firstCommaPart(brandRaw);
@@ -498,12 +484,9 @@ class FoodRemoteDatasource {
             sourceId: code,
             barcode: code,
             verified: verified,
-            providerScore: null,
             foodNameRaw: foodNameRaw,
             foodName: displayName,
             brandName: brandName,
-            brandOwner: null,
-            restaurantName: null,
             category: _firstCommaPart(product['categories']?.toString()),
             subcategory: _secondCommaPart(product['categories']?.toString()),
             languageCode: product['lang']?.toString(),
@@ -522,9 +505,7 @@ class FoodRemoteDatasource {
             fatG: fatG > 0 ? fatG : null,
             nutritionBasis: 'per_100g',
             rawJson: product,
-            lastUpdated: null,
             dataType: 'branded',
-            popularity: null,
             isGeneric: isGeneric,
             isBranded: isBranded,
           ),
@@ -622,16 +603,10 @@ class FoodRemoteDatasource {
             source: 'usda',
             sourceId: fdcId,
             barcode: gtinUpc,
-            verified: null,
-            providerScore: null,
             foodNameRaw: rawDescription,
             foodName: displayName,
             brandName: brandName,
-            brandOwner: null,
-            restaurantName: null,
             category: food['foodCategory']?.toString(),
-            subcategory: null,
-            languageCode: null,
             servingQty: servingQty,
             servingUnit: servingUnit,
             servingWeightGrams: servingUnit.toLowerCase() == 'g'
@@ -647,9 +622,7 @@ class FoodRemoteDatasource {
             fatG: fatG != null && fatG > 0 ? fatG : null,
             nutritionBasis: 'per_100g',
             rawJson: food,
-            lastUpdated: null,
             dataType: dataType,
-            popularity: null,
             isGeneric: isGeneric,
             isBranded: isBranded,
           ),

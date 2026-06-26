@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../shared/date_utils.dart';
 import '../../shared/palette.dart';
@@ -47,7 +48,7 @@ class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
     super.didUpdateWidget(oldWidget);
     if (!AppDateUtils.isSameDay(oldWidget.selectedDate, widget.selectedDate)) {
       final index = _dateToIndex(widget.selectedDate);
-      _animateToIndex(index);
+      unawaited(_animateToIndex(index));
     }
   }
 
@@ -127,7 +128,7 @@ class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
     if (picked == null) return;
     final index = _dateToIndex(picked);
     _updateSelectedIndex(index, notify: true);
-    _animateToIndex(index);
+    unawaited(_animateToIndex(index));
   }
 
   @override
@@ -173,7 +174,7 @@ class _HorizontalDateWheelPickerState extends State<HorizontalDateWheelPicker> {
                           _openDatePicker();
                         } else {
                           _updateSelectedIndex(index, notify: true);
-                          _animateToIndex(index);
+                          unawaited(_animateToIndex(index));
                         }
                       },
                       child: Opacity(

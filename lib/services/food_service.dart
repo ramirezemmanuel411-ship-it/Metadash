@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'package:metadash/core/logging/app_logger.dart';
-import 'package:http/http.dart' as http;
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'package:metadash/core/logging/app_logger.dart';
 
 /// Food data model
 class Food {

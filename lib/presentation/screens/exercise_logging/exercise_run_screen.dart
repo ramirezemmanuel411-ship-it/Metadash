@@ -2,12 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../../data/repositories/exercise_repository.dart';
 import '../../../models/exercise_model.dart';
 import '../../../models/hr_zones.dart';
-import '../../../data/repositories/exercise_repository.dart';
 import '../../../providers/user_state.dart';
-import '../../widgets/duration_selector.dart';
 import '../../../shared/palette.dart';
+import '../../widgets/duration_selector.dart';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -166,7 +167,7 @@ class _ExerciseRunScreenState extends State<ExerciseRunScreen> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               children: [
-                _StepLabel(
+                const _StepLabel(
                   number: '1',
                   title: 'Activity',
                   accent: _cardioAccent,
@@ -177,7 +178,7 @@ class _ExerciseRunScreenState extends State<ExerciseRunScreen> {
                   onTap: _openActivitySheet,
                 ),
                 const SizedBox(height: 28),
-                _StepLabel(
+                const _StepLabel(
                   number: '2',
                   title: 'Intensity',
                   accent: _cardioAccent,
@@ -207,7 +208,7 @@ class _ExerciseRunScreenState extends State<ExerciseRunScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                _StepLabel(
+                const _StepLabel(
                   number: '3',
                   title: 'Duration',
                   accent: _cardioAccent,

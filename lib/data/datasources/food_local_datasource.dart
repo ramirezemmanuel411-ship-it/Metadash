@@ -1,6 +1,8 @@
 import 'dart:async';
-import 'package:sqflite/sqflite.dart';
+
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
 import '../models/food_model.dart';
 import '../models/search_cache_entry.dart';
 

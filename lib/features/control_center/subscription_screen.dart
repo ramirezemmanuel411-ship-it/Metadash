@@ -30,12 +30,12 @@ class SubscriptionScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _PlanCard(
+          const _PlanCard(
             name: 'Starter',
             price: 'Free',
             tagline: 'Everything you need to start your race.',
             isCurrent: true,
-            features: const [
+            features: [
               'Dashboard with core widgets',
               'Food diary & macro tracking',
               'Weight & body metrics',
@@ -44,12 +44,12 @@ class SubscriptionScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          _PlanCard(
+          const _PlanCard(
             name: 'Pro Crew',
             price: '\$7.99 / mo',
             tagline: 'Your full race engineer suite.',
             isCurrent: false,
-            features: const [
+            features: [
               'Everything in Starter',
               'All dashboard widgets',
               'Adaptive metabolic engine',

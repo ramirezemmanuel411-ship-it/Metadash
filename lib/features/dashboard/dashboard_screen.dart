@@ -2,14 +2,15 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
+
+import '../../providers/dashboard_layout_provider.dart';
 import '../../providers/user_state.dart';
 import '../../services/calorie_calculation_service.dart';
 import '../../shared/date_utils.dart';
+import '../../shared/palette.dart';
+import 'calorie_progress_ring.dart';
 import 'dashboard_state.dart';
 import 'horizontal_date_wheel_picker.dart';
-import 'calorie_progress_ring.dart';
-import '../../providers/dashboard_layout_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   final DateTime selectedDay;
@@ -520,18 +521,18 @@ class _DashboardBody extends StatelessWidget {
             );
           }
         case 'fiber':
-          return _CardSection(
+          return const _CardSection(
             title: 'Fiber & Micronutrients',
-            child: const _EmptyMetricCard(
+            child: _EmptyMetricCard(
               hint: 'No data yet',
               icon: Icons.grass_outlined,
               color: Color(0xFF2E8B57),
             ),
           );
         case 'measurements':
-          return _CardSection(
+          return const _CardSection(
             title: 'Body Measurements',
-            child: const _EmptyMetricCard(
+            child: _EmptyMetricCard(
               hint: 'No measurements yet',
               icon: Icons.straighten_outlined,
               color: Color(0xFF8B5CF6),
@@ -541,10 +542,10 @@ class _DashboardBody extends StatelessWidget {
           {
             final hrv = data.hrv ?? 0;
             if (hrv <= 0) {
-              return _CardSection(
+              return const _CardSection(
                 title: 'Recovery Index',
-                tintColor: const Color(0xFF0EA5E9),
-                child: const _EmptyMetricCard(
+                tintColor: Color(0xFF0EA5E9),
+                child: _EmptyMetricCard(
                   hint: 'Connect Apple Health (HRV)',
                   icon: Icons.battery_charging_full_outlined,
                   color: Color(0xFF0EA5E9),
@@ -571,10 +572,10 @@ class _DashboardBody extends StatelessWidget {
           {
             final hrv = data.hrv ?? 0;
             if (hrv <= 0) {
-              return _CardSection(
+              return const _CardSection(
                 title: 'Stress',
-                tintColor: const Color(0xFF8B5CF6),
-                child: const _EmptyMetricCard(
+                tintColor: Color(0xFF8B5CF6),
+                child: _EmptyMetricCard(
                   hint: 'Connect Apple Health (HRV)',
                   icon: Icons.self_improvement_outlined,
                   color: Color(0xFF8B5CF6),
@@ -597,9 +598,9 @@ class _DashboardBody extends StatelessWidget {
             );
           }
         case 'mindfulness':
-          return _CardSection(
+          return const _CardSection(
             title: 'Mindfulness',
-            child: const _EmptyMetricCard(
+            child: _EmptyMetricCard(
               hint: 'No sessions logged',
               icon: Icons.spa_outlined,
               color: Color(0xFF0EA5E9),
@@ -842,7 +843,7 @@ class _DashboardBody extends StatelessWidget {
       _CardSection(
         title: 'Quick Actions',
         tintColor: context.colors.accent,
-        child: _QuickActionsRow(),
+        child: const _QuickActionsRow(),
       ),
     );
 
@@ -1067,7 +1068,6 @@ class _CalorieBalanceCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _ConceptIconTile(color: accentColor),
                       const SizedBox(width: 10),
@@ -1752,7 +1752,7 @@ class _CardSection extends StatelessWidget {
               : [surface, surface],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.07),
@@ -2045,7 +2045,7 @@ class _ComboChartPainter extends CustomPainter {
     if (deficitValues.isEmpty) return;
 
     final chartHeight = size.height * 0.85;
-    final chartTop = 0.0;
+    const chartTop = 0.0;
     final chartBottom = chartHeight;
     final chartRight = size.width;
     const barWidth = 10.0;
@@ -2081,7 +2081,7 @@ class _ComboChartPainter extends CustomPainter {
 
     // Draw Y-axis
     canvas.drawLine(
-      Offset(0, chartTop),
+      const Offset(0, chartTop),
       Offset(0, chartBottom),
       Paint()
         ..color = axisColor
@@ -2143,8 +2143,6 @@ class _ComboChartPainter extends CustomPainter {
       canvas,
       Offset(0, lineY),
       Offset(chartRight, lineY),
-      dashWidth: 4,
-      dashSpace: 2,
       color: avgLineColor,
       strokeWidth: 2,
     );
@@ -2821,12 +2819,7 @@ class _TDEECard extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _ConceptIconTile(
-              color: tint,
-              icon: Icons.local_fire_department_rounded,
-              size: 48,
-              iconSize: 24,
-            ),
+            const _ConceptIconTile(color: tint, size: 48, iconSize: 24),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

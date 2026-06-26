@@ -1,22 +1,24 @@
 import 'dart:io';
-import 'package:metadash/core/logging/app_logger.dart';
-import 'package:flutter/material.dart';
+
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:metadash/core/logging/app_logger.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
+
+import '../../data/models/food_model.dart';
+import '../../data/repositories/ai_suggestion_repository.dart';
 import '../../models/ai_food_estimate.dart';
+import '../../models/ai_router_result.dart';
 import '../../models/ai_suggestion.dart';
 import '../../models/diary_entry_food.dart';
-import '../../data/models/food_model.dart';
-import '../../services/ai_service.dart';
+import '../../providers/food_plate_provider.dart';
+import '../../providers/user_state.dart';
 import '../../services/ai_router.dart';
+import '../../services/ai_service.dart';
 import '../../services/ai_suggestion_engine.dart';
 import '../../services/food_text_normalizer.dart';
-import '../../data/repositories/ai_suggestion_repository.dart';
-import '../../models/ai_router_result.dart';
-import '../../providers/user_state.dart';
-import '../../providers/food_plate_provider.dart';
+import '../../shared/palette.dart';
 import '../food_search/food_plate_screen.dart';
 
 /// Unified AI screen for food estimation via text, camera, or gallery
@@ -147,7 +149,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _showCamera = false;
       });
 
-      _cameraController?.dispose();
+      await _cameraController?.dispose();
       _cameraController = null;
     } catch (e) {
       if (mounted) {
@@ -382,7 +384,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
           source: entry.source,
           serving: entry.serving,
           confidence: _confidenceToDouble(entry.confidence),
-          assumptions: null,
           rawInput: _controller.text.trim(),
         );
         await widget.userState.db.addFoodEntry(diaryEntry);
@@ -812,7 +813,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         decoration: BoxDecoration(
                           color: context.colors.surfaceVariant,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: context.divider, width: 1),
+                          border: Border.all(color: context.divider),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,

@@ -40,7 +40,7 @@ class _InterfaceWorkflowScreenState extends State<InterfaceWorkflowScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _IWSectionLabel(label: 'DISPLAY'),
+          const _IWSectionLabel(label: 'DISPLAY'),
           const SizedBox(height: 8),
           _IWCard(
             children: [
@@ -78,7 +78,7 @@ class _InterfaceWorkflowScreenState extends State<InterfaceWorkflowScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _IWSectionLabel(label: 'QUICK LOG BEHAVIOR'),
+          const _IWSectionLabel(label: 'QUICK LOG BEHAVIOR'),
           const SizedBox(height: 8),
           _IWCard(
             children: [
@@ -100,7 +100,7 @@ class _InterfaceWorkflowScreenState extends State<InterfaceWorkflowScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _IWSectionLabel(label: 'DAILY SUMMARY'),
+          const _IWSectionLabel(label: 'DAILY SUMMARY'),
           const SizedBox(height: 8),
           _IWCard(
             children: [

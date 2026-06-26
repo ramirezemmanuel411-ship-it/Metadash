@@ -2,9 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
+
 import '../../providers/food_plate_provider.dart';
+import '../../providers/user_state.dart';
+import '../../shared/palette.dart';
 
 /// Full-screen review and commit screen for staged Food Plate items.
 class FoodPlateScreen extends StatefulWidget {
@@ -456,7 +457,6 @@ class _PlateItemTileState extends State<_PlateItemTile> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Source dot
             Container(
@@ -760,7 +760,6 @@ class _ServingNumpadState extends State<_ServingNumpad> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     for (int i = 0; i < widget.units.length; i++) ...[
                       if (i == widget.dividerIndex)

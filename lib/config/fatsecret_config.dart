@@ -4,7 +4,7 @@ library;
 
 class FatSecretConfig {
   static String get clientId {
-    final id = const String.fromEnvironment('FATSECRET_CLIENT_ID');
+    const id = String.fromEnvironment('FATSECRET_CLIENT_ID');
     if (id.isEmpty) {
       throw Exception(
         'FATSECRET_CLIENT_ID not configured. '
@@ -15,7 +15,7 @@ class FatSecretConfig {
   }
 
   static String get clientSecret {
-    final secret = const String.fromEnvironment('FATSECRET_CLIENT_SECRET');
+    const secret = String.fromEnvironment('FATSECRET_CLIENT_SECRET');
     if (secret.isEmpty) {
       throw Exception(
         'FATSECRET_CLIENT_SECRET not configured. '

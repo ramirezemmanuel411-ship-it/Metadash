@@ -177,7 +177,7 @@ class FoodDisplayNormalizer {
     if (text.isEmpty) return text;
 
     // Remove common corporate suffixes
-    var cleaned = text
+    final cleaned = text
         .replaceAll(
           RegExp(
             r',?\s*(Inc|LLC|Ltd|Corp|Corporation|USA|US)\.?\s*$',

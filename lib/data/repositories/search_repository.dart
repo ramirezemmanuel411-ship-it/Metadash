@@ -1,17 +1,19 @@
 import 'dart:async';
-import 'package:metadash/core/logging/app_logger.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../datasources/food_local_datasource.dart';
-import '../datasources/food_remote_datasource.dart';
-import '../datasources/fatsecret_remote_datasource.dart';
-import '../models/food_model.dart';
-import '../models/search_cache_entry.dart';
-import '../models/food_search_result_raw.dart';
-import '../../services/raw_search_debug_store.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+
 import '../../services/canonical_food_service.dart'; // Canonical food parsing
 import '../../services/food_dedup_service.dart'; // Deduplication service
 import '../../services/food_quality_engine.dart'; // Quality pipeline & ranking
+import '../../services/raw_search_debug_store.dart';
+import '../datasources/fatsecret_remote_datasource.dart';
+import '../datasources/food_local_datasource.dart';
+import '../datasources/food_remote_datasource.dart';
+import '../models/food_model.dart';
+import '../models/food_search_result_raw.dart';
+import '../models/search_cache_entry.dart';
 
 /// Repository coordinating local-first search strategy
 /// Returns results in stages: local → cached → remote (USDA/OFF) → FatSecret
@@ -73,7 +75,7 @@ class SearchRepository {
 
     try {
       // ===== STAGE 1: Fetch Fresh from APIs (FatSecret primary) =====
-      List<FoodModel> remoteResults = [];
+      final List<FoodModel> remoteResults = [];
 
       AppLogger.d(
         '🔍 FatSecret datasource available: ${_fatSecretDatasource != null}',
@@ -108,7 +110,6 @@ class SearchRepository {
           _activeCancelToken = _remoteDatasource.createCancelToken();
           final fallbackResults = await _remoteDatasource.searchBoth(
             query,
-            pageSize: 25,
             cancelToken: _activeCancelToken,
           );
           _debugLogRawResults('USDA/OFF_FALLBACK', query);
@@ -189,7 +190,7 @@ class SearchRepository {
         );
 
         // Prefetch details for top 10 results
-        _prefetchTopResults(qualityRanked.take(10).toList());
+        unawaited(_prefetchTopResults(qualityRanked.take(10).toList()));
       } else {
         // No remote results, fallback to cache/local for anything available
         List<FoodModel> localResults = [];
@@ -205,7 +206,6 @@ class SearchRepository {
 
         final localSearchResults = await _localDatasource.searchFoodsLocal(
           query,
-          limit: 50,
         );
         if (localSearchResults.isNotEmpty) {
           localResults = _mergeResults(localResults, localSearchResults);

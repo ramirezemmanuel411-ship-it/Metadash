@@ -1,6 +1,6 @@
 import '../../models/exercise_model.dart';
-import '../../services/database_service.dart';
 import '../../providers/user_state.dart';
+import '../../services/database_service.dart';
 
 /// Repository for exercise persistence and retrieval
 class ExerciseRepository {

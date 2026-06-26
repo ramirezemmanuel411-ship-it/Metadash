@@ -2,8 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../models/exercise_model.dart';
+
 import '../../../data/repositories/exercise_repository.dart';
+import '../../../models/exercise_model.dart';
 import '../../../providers/user_state.dart';
 import '../../../shared/palette.dart';
 
@@ -83,7 +84,6 @@ class _ExerciseManualScreenState extends State<ExerciseManualScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 32),
                   // Circular flame indicator

@@ -1,7 +1,9 @@
 import 'dart:async';
-import 'package:metadash/core/logging/app_logger.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+
 import '../../data/repositories/search_repository.dart';
 import '../../domain/search_state.dart' as domain;
 
@@ -79,13 +81,13 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, domain.FoodSearchState> {
     Emitter<domain.FoodSearchState> emit,
   ) async {
     try {
-      final recent = await _repository.getRecentSearches(limit: 10);
+      final recent = await _repository.getRecentSearches();
       final favorites = await _repository.getFavorites(limit: 10);
 
       emit(domain.SearchInitial(recentSearches: recent, favorites: favorites));
 
       // Clean up old data in background
-      _repository.cleanupOldData();
+      unawaited(_repository.cleanupOldData());
     } catch (e) {
       AppLogger.d('Error loading initial data: $e');
       emit(const domain.SearchInitial());

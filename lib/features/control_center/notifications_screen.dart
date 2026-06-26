@@ -41,7 +41,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _NotifSectionLabel(label: 'DAILY CHECK-IN'),
+          const _NotifSectionLabel(label: 'DAILY CHECK-IN'),
           const SizedBox(height: 8),
           _NotifCard(
             children: [
@@ -64,7 +64,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _NotifSectionLabel(label: 'MEAL LOGGING'),
+          const _NotifSectionLabel(label: 'MEAL LOGGING'),
           const SizedBox(height: 8),
           _NotifCard(
             children: [
@@ -98,7 +98,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _NotifSectionLabel(label: 'PROGRESS & GOALS'),
+          const _NotifSectionLabel(label: 'PROGRESS & GOALS'),
           const SizedBox(height: 8),
           _NotifCard(
             children: [
@@ -130,7 +130,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _NotifSectionLabel(label: 'WEEKLY SUMMARY'),
+          const _NotifSectionLabel(label: 'WEEKLY SUMMARY'),
           const SizedBox(height: 8),
           _NotifCard(
             children: [

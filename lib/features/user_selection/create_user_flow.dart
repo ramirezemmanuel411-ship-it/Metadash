@@ -1,11 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import '../../providers/user_state.dart';
+
 import '../../models/data_inputs_settings.dart';
-import '../../shared/palette.dart';
+import '../../providers/user_state.dart';
 import '../../services/health_service.dart';
+import '../../shared/palette.dart';
 
 class CreateUserFlow extends StatefulWidget {
   final UserState userState;
@@ -1137,7 +1138,6 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
           ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: 64,
@@ -1326,7 +1326,6 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                     children: [
                       Slider(
                         value: _weeklyRate,
-                        min: 0,
                         max: 5,
                         divisions: 10, // 0.5 increments
                         label: '${_weeklyRate.toStringAsFixed(1)} lbs/week',
@@ -1351,14 +1350,14 @@ class _CreateUserFlowState extends State<CreateUserFlow> {
                               color: context.colors.cta.withValues(alpha: 0.3),
                             ),
                           ),
-                          child: Row(
+                          child: const Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.warning_amber,
                                 color: Palette.nightAccentBlue,
                                 size: 20,
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   'We do not recommend rates above 2 lbs/week as this is very aggressive and may lead to health complications.',

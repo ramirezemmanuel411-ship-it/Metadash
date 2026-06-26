@@ -2,11 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../providers/food_plate_provider.dart';
-import '../../models/diary_entry_food.dart';
+
 import '../../data/models/food_model.dart';
+import '../../models/diary_entry_food.dart';
+import '../../providers/food_plate_provider.dart';
+import '../../providers/user_state.dart';
+import '../../shared/palette.dart';
 import '../../shared/widgets/serving_picker.dart';
 
 class FoodDetailScreen extends StatefulWidget {
@@ -474,12 +475,9 @@ class _NutritionCardState extends State<_NutritionCard> {
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 0),
             child: Row(
               children: [
-                Text(
+                const Text(
                   'Macros',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 GestureDetector(
@@ -997,9 +995,9 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
     final caffeine = _n(1057, 'caffeine');
     final alcohol = _n(1018, 'alcohol');
 
-    final teal = Palette.macroProtein; // protein — matches diary ring
-    final amber = Palette.macroCarbs; // carbs   — matches diary ring
-    final red = Palette.macroFat; // fat     — matches diary ring
+    const teal = Palette.macroProtein; // protein — matches diary ring
+    const amber = Palette.macroCarbs; // carbs   — matches diary ring
+    const red = Palette.macroFat; // fat     — matches diary ring
 
     // ── Tab content ───────────────────────────────────────────────────────────
     final tabContent = <int, Widget>{
@@ -1178,18 +1176,12 @@ class _NutritionFactsContentState extends State<_NutritionFactsContent> {
       3: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _NRow(
-            label: 'Water',
-            value: _v(water, unit: 'g'),
-          ),
+          _NRow(label: 'Water', value: _v(water)),
           _NRow(
             label: 'Caffeine',
             value: _v(caffeine, unit: 'mg'),
           ),
-          _NRow(
-            label: 'Alcohol',
-            value: _v(alcohol, unit: 'g'),
-          ),
+          _NRow(label: 'Alcohol', value: _v(alcohol)),
         ],
       ),
     };

@@ -3,8 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
+
 import '../../providers/dashboard_layout_provider.dart';
+import '../../shared/palette.dart';
 
 class DashboardLayoutScreen extends StatefulWidget {
   const DashboardLayoutScreen({super.key});
@@ -687,13 +688,13 @@ class _MacrosPreview extends StatelessWidget {
         color: context.colors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: const Column(
         children: [
-          _MiniBar(label: 'P', value: 0.72, color: const Color(0xFF4C7FA8)),
-          const SizedBox(height: 6),
-          _MiniBar(label: 'C', value: 0.55, color: const Color(0xFF2E8B57)),
-          const SizedBox(height: 6),
-          _MiniBar(label: 'F', value: 0.40, color: const Color(0xFFEF8C2E)),
+          _MiniBar(label: 'P', value: 0.72, color: Color(0xFF4C7FA8)),
+          SizedBox(height: 6),
+          _MiniBar(label: 'C', value: 0.55, color: Color(0xFF2E8B57)),
+          SizedBox(height: 6),
+          _MiniBar(label: 'F', value: 0.40, color: Color(0xFFEF8C2E)),
         ],
       ),
     );
@@ -1034,27 +1035,27 @@ class _TodaySummaryPreview extends StatelessWidget {
         color: context.colors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: const Row(
         children: [
           _MiniStat(
             label: 'Calories',
             value: '1,240',
             icon: Icons.bolt,
-            color: const Color(0xFF4C7FA8),
+            color: Color(0xFF4C7FA8),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _MiniStat(
             label: 'Steps',
             value: '6,240',
             icon: Icons.directions_walk,
-            color: const Color(0xFFEF8C2E),
+            color: Color(0xFFEF8C2E),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _MiniStat(
             label: 'Sleep',
             value: '7h 24m',
             icon: Icons.bedtime,
-            color: const Color(0xFF0EA5E9),
+            color: Color(0xFF0EA5E9),
           ),
         ],
       ),
@@ -1625,11 +1626,11 @@ class _MeasurementsPreview extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _MeasureStat(label: 'Waist', value: '32"'),
+          const _MeasureStat(label: 'Waist', value: '32"'),
           Container(width: 1, height: 32, color: context.colors.divider),
-          _MeasureStat(label: 'Hips', value: '38"'),
+          const _MeasureStat(label: 'Hips', value: '38"'),
           Container(width: 1, height: 32, color: context.colors.divider),
-          _MeasureStat(label: 'Chest', value: '40"'),
+          const _MeasureStat(label: 'Chest', value: '40"'),
         ],
       ),
     );
@@ -1996,7 +1997,7 @@ class _LibraryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categories = DashWidgetCategory.values;
+    const categories = DashWidgetCategory.values;
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       itemCount: categories.length,
@@ -2080,12 +2081,13 @@ class _LibraryCategoryCard extends StatelessWidget {
       ),
       child: Column(
         children: List.generate(widgets.length * 2 - 1, (i) {
-          if (i.isOdd)
+          if (i.isOdd) {
             return Divider(
               height: 1,
               indent: 68,
               color: context.colors.divider.withValues(alpha: 0.6),
             );
+          }
           final w = widgets[i ~/ 2];
           return _LibraryWidgetRow(
             info: w,

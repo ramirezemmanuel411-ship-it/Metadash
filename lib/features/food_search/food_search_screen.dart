@@ -1,21 +1,23 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../shared/palette.dart';
-import '../../services/food_service.dart';
+
+import '../../data/models/food_model.dart';
 import '../../data/repositories/search_repository.dart';
+import '../../models/diary_entry_food.dart';
+import '../../models/user_food_item.dart';
 import '../../presentation/bloc/food_search_bloc.dart';
 import '../../presentation/screens/fast_food_search_screen.dart';
-import '../../providers/user_state.dart';
-import '../../models/user_food_item.dart';
-import '../../models/diary_entry_food.dart';
-import '../../services/cloud_food_service.dart';
-import '../food/barcode_scanner_screen.dart';
-import 'models.dart';
-import 'food_manual_entry.dart';
-import 'food_detail_screen.dart';
-import '../../data/models/food_model.dart';
-import '../../shared/widgets/food_plate_pill.dart';
 import '../../providers/food_plate_provider.dart';
+import '../../providers/user_state.dart';
+import '../../services/cloud_food_service.dart';
+import '../../services/food_service.dart';
+import '../../shared/palette.dart';
+import '../../shared/widgets/food_plate_pill.dart';
+import '../food/barcode_scanner_screen.dart';
+import 'food_detail_screen.dart';
+import 'food_manual_entry.dart';
+import 'models.dart';
 
 enum FoodSearchTab { saved, barcode, search, manual }
 
@@ -105,7 +107,6 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       MaterialPageRoute(
         builder: (_) => FoodDetailScreen(
           food: food,
-          mealName: null,
           userState: widget.userState,
           targetTimestamp: widget.targetTimestamp,
         ),
@@ -182,7 +183,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
           ),
           // Food Plate floating pill — hidden on barcode tab
           if (_selected != FoodSearchTab.barcode)
-            Positioned(
+            const Positioned(
               bottom: 16,
               left: 0,
               right: 0,
@@ -367,7 +368,7 @@ class _SavedLibraryTabState extends State<_SavedLibraryTab> {
     }
 
     if (query.isNotEmpty) {
-      _searchGlobal(query);
+      unawaited(_searchGlobal(query));
     } else {
       setState(() => _globalFoods = []);
     }
@@ -951,9 +952,12 @@ class _ScannerStubState extends State<_ScannerStub> {
       if (food != null) {
         // Route through the same detail → Food Plate flow as a tapped search
         // result, so the user can tweak the serving before logging.
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => FoodDetailScreen(food: _foodModelFromLegacy(food)),
+        unawaited(
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  FoodDetailScreen(food: _foodModelFromLegacy(food)),
+            ),
           ),
         );
       } else {

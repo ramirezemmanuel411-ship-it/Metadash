@@ -87,7 +87,6 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: context.colors.divider.withValues(alpha: 0.05),
-                width: 1,
               ),
             ),
             child: Column(

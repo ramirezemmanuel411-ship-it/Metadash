@@ -1,11 +1,13 @@
+import 'dart:io';
+
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'dart:io';
-import '../models/user_profile.dart';
+
 import '../models/daily_log.dart';
-import '../models/reentry_mode_state.dart';
 import '../models/data_inputs_settings.dart';
+import '../models/reentry_mode_state.dart';
 import '../models/user_food_item.dart';
+import '../models/user_profile.dart';
 import 'health_service.dart';
 
 class DatabaseService {
@@ -1009,7 +1011,7 @@ class DatabaseService {
     final reentryState = await getReentryModeState(userId);
 
     String whereClause = 'userId = ?';
-    List<dynamic> whereArgs = [userId];
+    final List<dynamic> whereArgs = [userId];
 
     if (startDate != null) {
       whereClause += ' AND date >= ?';

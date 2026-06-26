@@ -1,6 +1,7 @@
 import 'dart:math' as math;
-import 'workout_bucket.dart';
+
 import 'wearable_calibration.dart';
+import 'workout_bucket.dart';
 import 'workout_telemetry.dart';
 
 /// Result of a single [WorkoutEnergyEngine.compute] call.
@@ -85,7 +86,6 @@ class WorkoutEnergyEngine {
       return WorkoutEnergyResult(
         calories: math.max(0, adjusted),
         calibratedWearableCalories: calibrated,
-        locomotionFormulaCalories: null,
         wearableWeight: 1.0,
         metWeight: 0.0,
         bucket: WorkoutBucket.locomotion,

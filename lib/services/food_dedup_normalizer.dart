@@ -212,10 +212,10 @@ class FoodDedupNormalizer {
     if (brand.isEmpty) return '';
 
     // Step 1: Clean comma-separated brand lists (take first meaningful part)
-    String cleaned = _cleanCommaSeparatedBrand(brand);
+    final String cleaned = _cleanCommaSeparatedBrand(brand);
 
     // Step 2: Apply basic normalization
-    String normalized = normalizeForMatching(cleaned);
+    final String normalized = normalizeForMatching(cleaned);
 
     // Step 3: Check brand aliases
     for (final entry in _brandSynonyms.entries) {

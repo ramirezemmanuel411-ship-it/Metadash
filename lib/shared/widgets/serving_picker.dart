@@ -440,7 +440,6 @@ class _ServingPickerState extends State<ServingPicker> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           for (int i = 0; i < _units.length; i++) ...[
                             if (i == _dividerIndex)

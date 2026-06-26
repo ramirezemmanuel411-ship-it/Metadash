@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'package:metadash/core/logging/app_logger.dart';
 import 'dart:io';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:metadash/core/logging/app_logger.dart';
+
 import '../models/ai_food_estimate.dart';
 
 /// AI service for exercise parsing and food estimation

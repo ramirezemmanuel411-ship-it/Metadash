@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
+
 import '../../models/user_profile.dart';
+import '../../providers/user_state.dart';
 import '../../services/auth_service.dart';
+import '../../shared/palette.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -12,6 +13,7 @@ class AccountScreen extends StatelessWidget {
   static const _danger = Color(0xFFB3261E);
 
   Future<void> _signOut(BuildContext context) async {
+    final userState = context.read<UserState>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -33,7 +35,6 @@ class AccountScreen extends StatelessWidget {
     );
     if (confirmed != true) return;
 
-    final userState = context.read<UserState>();
     await AuthService().signOut();
     userState.logout();
     // The auth-state stream in AuthGate now routes back to the sign-in screen.
@@ -420,7 +421,7 @@ class AccountScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _AccSectionLabel(label: 'PROFILE'),
+          const _AccSectionLabel(label: 'PROFILE'),
           const SizedBox(height: 8),
           _AccCard(
             child: Column(
@@ -487,8 +488,9 @@ class AccountScreen extends StatelessWidget {
                           hint: 'Weight in lbs',
                           save: (v) {
                             final val = double.tryParse(v);
-                            if (val == null || val <= 0)
+                            if (val == null || val <= 0) {
                               return 'Enter a valid weight';
+                            }
                             userState.updateCurrentUser(
                               user.copyWith(weight: val),
                             );
@@ -515,8 +517,9 @@ class AccountScreen extends StatelessWidget {
                           hint: 'Steps per day',
                           save: (v) {
                             final val = int.tryParse(v);
-                            if (val == null || val <= 0)
+                            if (val == null || val <= 0) {
                               return 'Enter a valid number';
+                            }
                             userState.updateCurrentUser(
                               user.copyWith(dailyStepsGoal: val),
                             );
@@ -528,7 +531,7 @@ class AccountScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _AccSectionLabel(label: 'CREDENTIALS'),
+          const _AccSectionLabel(label: 'CREDENTIALS'),
           const SizedBox(height: 8),
           _AccCard(
             child: Column(
@@ -567,18 +570,18 @@ class AccountScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _AccSectionLabel(label: 'LINKED SERVICES'),
+          const _AccSectionLabel(label: 'LINKED SERVICES'),
           const SizedBox(height: 8),
           _AccCard(
             child: Column(
               children: [
-                _AccServiceRow(
+                const _AccServiceRow(
                   icon: Icons.favorite_border,
                   title: 'Apple Health',
                   connected: true,
                 ),
                 _AccDivider(),
-                _AccServiceRow(
+                const _AccServiceRow(
                   icon: Icons.fitness_center_outlined,
                   title: 'Google Fit',
                   connected: false,
@@ -591,17 +594,14 @@ class AccountScreen extends StatelessWidget {
             child: InkWell(
               onTap: () => _signOut(context),
               borderRadius: BorderRadius.circular(14),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.logout, size: 18, color: Colors.red),
-                    const SizedBox(width: 8),
-                    const Text(
+                    Icon(Icons.logout, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(
                       'Sign Out',
                       style: TextStyle(
                         fontSize: 15,

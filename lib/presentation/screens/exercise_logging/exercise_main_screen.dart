@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/palette.dart';
-import '../../../providers/user_state.dart';
+
 import '../../../data/repositories/exercise_repository.dart';
-import './exercise_run_screen.dart';
-import './exercise_weightlifting_screen.dart';
+import '../../../providers/user_state.dart';
+import '../../../shared/palette.dart';
 import './exercise_describe_screen.dart';
 import './exercise_manual_screen.dart';
+import './exercise_run_screen.dart';
+import './exercise_weightlifting_screen.dart';
 
 /// Main screen for selecting exercise type to log
 class ExerciseMainScreen extends StatefulWidget {

@@ -1,18 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-import 'shared/palette.dart';
-import 'shared/widgets/floating_action_hub.dart';
+
+import 'features/control_center/control_center_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/diary/diary_screen.dart';
 import 'features/food/ai_chat_screen.dart';
 import 'features/food_search/food_search_screen.dart';
-import 'features/control_center/control_center_screen.dart';
 import 'features/progress/progress_screen.dart';
+import 'models/data_inputs_settings.dart';
 import 'presentation/screens/exercise_logging/exercise_main_screen.dart';
 import 'providers/user_state.dart';
-import 'models/data_inputs_settings.dart';
-import 'services/health_service.dart';
 import 'services/calorie_calculation_service.dart';
+import 'services/health_service.dart';
+import 'shared/palette.dart';
+import 'shared/widgets/floating_action_hub.dart';
 
 class AppShell extends StatefulWidget {
   final UserState userState;
@@ -23,7 +25,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
-  final _pageController = PageController(initialPage: 0);
+  final _pageController = PageController();
   int _index = 0;
   DateTime _selectedDay = DateTime.now();
 
@@ -53,7 +55,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _carbsGoal = user.macroTargets?['carbs'] ?? 250;
       _fatGoal = user.macroTargets?['fat'] ?? 73;
     }
-    _loadDailyData();
+    unawaited(_loadDailyData());
     widget.userState.addListener(_handleUserStateChange);
 
     // Start automatic sync on app open (async, non-blocking)
@@ -82,7 +84,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void _handleUserStateChange() {
     if (!mounted) return;
     if (widget.userState.currentUser == null) return;
-    _loadDailyData();
+    unawaited(_loadDailyData());
   }
 
   /// Automatically sync health data from HealthKit/Google Fit
@@ -116,7 +118,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
         // Reload UI with new data
         if (mounted) {
-          _loadDailyData();
+          unawaited(_loadDailyData());
         }
       } catch (e) {
         // If sync fails, still let app continue
@@ -198,7 +200,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     setState(() {
       _selectedDay = _selectedDay.add(Duration(days: delta));
     });
-    _loadDailyData();
+    unawaited(_loadDailyData());
   }
 
   void _onTapNav(int i) {

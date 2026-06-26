@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
+
 import '../../models/data_inputs_settings.dart';
+import '../../providers/user_state.dart';
+import '../../shared/palette.dart';
 
 class StepsSettingsScreen extends StatefulWidget {
   const StepsSettingsScreen({super.key});

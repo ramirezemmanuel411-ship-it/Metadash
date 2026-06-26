@@ -34,39 +34,39 @@ class _PrivacyDataScreenState extends State<PrivacyDataScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _PrvSectionLabel(label: 'HEALTH PERMISSIONS'),
+          const _PrvSectionLabel(label: 'HEALTH PERMISSIONS'),
           const SizedBox(height: 8),
           _PrvCard(
             children: [
-              _PrvPermissionRow(
+              const _PrvPermissionRow(
                 icon: Icons.directions_walk_outlined,
                 title: 'Steps',
                 status: 'Allowed',
                 allowed: true,
               ),
               _PrvDivider(),
-              _PrvPermissionRow(
+              const _PrvPermissionRow(
                 icon: Icons.fitness_center_outlined,
                 title: 'Workouts',
                 status: 'Allowed',
                 allowed: true,
               ),
               _PrvDivider(),
-              _PrvPermissionRow(
+              const _PrvPermissionRow(
                 icon: Icons.restaurant_outlined,
                 title: 'Nutrition',
                 status: 'Allowed',
                 allowed: true,
               ),
               _PrvDivider(),
-              _PrvPermissionRow(
+              const _PrvPermissionRow(
                 icon: Icons.bedtime_outlined,
                 title: 'Sleep',
                 status: 'Allowed',
                 allowed: true,
               ),
               _PrvDivider(),
-              _PrvPermissionRow(
+              const _PrvPermissionRow(
                 icon: Icons.favorite_outline,
                 title: 'Heart Rate',
                 status: 'Not granted',
@@ -83,7 +83,7 @@ class _PrivacyDataScreenState extends State<PrivacyDataScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          _PrvSectionLabel(label: 'ANALYTICS & DIAGNOSTICS'),
+          const _PrvSectionLabel(label: 'ANALYTICS & DIAGNOSTICS'),
           const SizedBox(height: 8),
           _PrvCard(
             children: [
@@ -106,7 +106,7 @@ class _PrivacyDataScreenState extends State<PrivacyDataScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _PrvSectionLabel(label: 'YOUR DATA'),
+          const _PrvSectionLabel(label: 'YOUR DATA'),
           const SizedBox(height: 8),
           _PrvCard(
             children: [
@@ -128,7 +128,7 @@ class _PrivacyDataScreenState extends State<PrivacyDataScreen> {
             ],
           ),
           const SizedBox(height: 28),
-          _PrvSectionLabel(label: 'DANGER ZONE'),
+          const _PrvSectionLabel(label: 'DANGER ZONE'),
           const SizedBox(height: 8),
           _PrvCard(
             children: [

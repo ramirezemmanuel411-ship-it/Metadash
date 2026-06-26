@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-import '../../../shared/palette.dart';
 import 'package:provider/provider.dart';
-import '../../../models/exercise_model.dart';
+
 import '../../../data/repositories/exercise_repository.dart';
+import '../../../models/exercise_model.dart';
 import '../../../providers/user_state.dart';
 import '../../../services/ai_service.dart';
+import '../../../shared/palette.dart';
 
 /// Screen for describing an exercise in text (AI-ready)
 class ExerciseDescribeScreen extends StatefulWidget {
@@ -191,7 +192,7 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
                     decoration: BoxDecoration(
                       color: context.colors.cta.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: context.colors.cta, width: 1),
+                      border: Border.all(color: context.colors.cta),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,9 +205,9 @@ class _ExerciseDescribeScreenState extends State<ExerciseDescribeScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        const Text(
                           'HIIT for 20 mins, 5/10 intensity',
-                          style: const TextStyle(fontSize: 14),
+                          style: TextStyle(fontSize: 14),
                         ),
                       ],
                     ),

@@ -79,7 +79,6 @@ class _MacroBar extends StatelessWidget {
     final exceeded = consumed > target;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
