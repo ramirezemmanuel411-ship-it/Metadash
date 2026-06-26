@@ -16,6 +16,7 @@ import '../../data/repositories/ai_suggestion_repository.dart';
 import '../../models/ai_router_result.dart';
 import '../../providers/user_state.dart';
 import '../../providers/food_plate_provider.dart';
+import '../food_search/food_plate_screen.dart';
 
 /// Unified AI screen for food estimation via text, camera, or gallery
 class AiChatScreen extends StatefulWidget {
@@ -637,14 +638,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ),
         );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('✓ Added to Food Plate'),
-        backgroundColor: context.colors.accent,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
+    // No toast — the floating Food Tray button (with its count badge) is the
+    // feedback that the item landed on the plate.
     setState(() {
       _controller.clear();
       _currentEstimate = null;
@@ -680,17 +675,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
         ),
       );
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          entries.length == 1
-              ? '✓ Added to Food Plate'
-              : '✓ Added ${entries.length} items to Food Plate',
-        ),
-        backgroundColor: context.colors.accent,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // No toast — the floating Food Tray button (with its count badge) is the
+    // feedback that the items landed on the plate.
     setState(() {
       _controller.clear();
       _routerResult = null;
@@ -780,6 +766,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                 ),
               ),
+
+              // Food Tray shortcut — open the plate without leaving the AI
+              // screen. Sits just above the input bar (and the keyboard).
+              const _FoodTrayButton(),
 
               // Input area with photo above text field
               Container(
@@ -1996,6 +1986,83 @@ class _MacroChip extends StatelessWidget {
           ),
         ]),
       ),
+    );
+  }
+}
+
+/// Compact Food Tray shortcut shown on the AI screen so a freshly added item
+/// can be reviewed on the plate without leaving the chat. Only visible while
+/// the plate holds at least one item; rides just above the input bar.
+class _FoodTrayButton extends StatelessWidget {
+  const _FoodTrayButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<FoodPlateProvider>(
+      builder: (context, plate, _) {
+        if (plate.isEmpty) return const SizedBox.shrink();
+        final colors = context.colors;
+        final count = plate.itemCount;
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 6, 16, 10),
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const FoodPlateScreen()),
+              ),
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: colors.cta,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(Icons.dinner_dining_outlined,
+                        color: colors.onPrimary, size: 24),
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        constraints:
+                            const BoxConstraints(minWidth: 17, minHeight: 17),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: colors.cta, width: 1.5),
+                        ),
+                        child: Center(
+                          child: Text(
+                            count > 9 ? '9+' : '$count',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: colors.cta,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
