@@ -1,14 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/models/diary_entry_food.dart';
+import 'package:metadash/providers/food_plate_provider.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
+import 'package:metadash/shared/widgets/serving_picker.dart';
 import 'package:provider/provider.dart';
-
-import '../../data/models/food_model.dart';
-import '../../models/diary_entry_food.dart';
-import '../../providers/food_plate_provider.dart';
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
-import '../../shared/widgets/serving_picker.dart';
 
 class FoodDetailScreen extends StatefulWidget {
   final FoodModel food;

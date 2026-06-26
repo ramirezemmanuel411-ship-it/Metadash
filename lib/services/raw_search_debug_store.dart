@@ -1,4 +1,4 @@
-import '../data/models/food_search_result_raw.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
 
 class RawSearchDebugStore {
   static String? _latestQuery;

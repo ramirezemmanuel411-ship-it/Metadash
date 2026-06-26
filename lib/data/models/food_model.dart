@@ -1,10 +1,9 @@
 import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
-
-import '../../services/food_dedup_normalizer.dart';
-import '../../services/food_text_normalizer.dart';
-import 'food_search_result_raw.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
+import 'package:metadash/services/food_dedup_normalizer.dart';
+import 'package:metadash/services/food_text_normalizer.dart';
 
 /// Enhanced Food model with caching metadata and serialization
 class FoodModel extends Equatable {

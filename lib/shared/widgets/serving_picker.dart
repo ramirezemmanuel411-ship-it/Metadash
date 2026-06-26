@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../palette.dart';
+import 'package:metadash/shared/palette.dart';
 
 /// A reusable serving-size picker: a tappable quantity + unit field that opens
 /// a custom keypad with inline unit chips. Units are gram-mapped, so switching

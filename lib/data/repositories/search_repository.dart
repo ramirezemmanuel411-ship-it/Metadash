@@ -3,17 +3,16 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-
-import '../../services/canonical_food_service.dart'; // Canonical food parsing
-import '../../services/food_dedup_service.dart'; // Deduplication service
-import '../../services/food_quality_engine.dart'; // Quality pipeline & ranking
-import '../../services/raw_search_debug_store.dart';
-import '../datasources/fatsecret_remote_datasource.dart';
-import '../datasources/food_local_datasource.dart';
-import '../datasources/food_remote_datasource.dart';
-import '../models/food_model.dart';
-import '../models/food_search_result_raw.dart';
-import '../models/search_cache_entry.dart';
+import 'package:metadash/data/datasources/fatsecret_remote_datasource.dart';
+import 'package:metadash/data/datasources/food_local_datasource.dart';
+import 'package:metadash/data/datasources/food_remote_datasource.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
+import 'package:metadash/data/models/search_cache_entry.dart';
+import 'package:metadash/services/canonical_food_service.dart'; // Canonical food parsing
+import 'package:metadash/services/food_dedup_service.dart'; // Deduplication service
+import 'package:metadash/services/food_quality_engine.dart'; // Quality pipeline & ranking
+import 'package:metadash/services/raw_search_debug_store.dart';
 
 /// Repository coordinating local-first search strategy
 /// Returns results in stages: local → cached → remote (USDA/OFF) → FatSecret

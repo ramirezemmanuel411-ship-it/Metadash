@@ -2,8 +2,8 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../shared/date_utils.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/shared/date_utils.dart';
+import 'package:metadash/shared/palette.dart';
 
 class HorizontalDateWheelPicker extends StatefulWidget {
   final DateTime selectedDate;

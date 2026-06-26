@@ -1,4 +1,4 @@
-import 'canonical_food_parser.dart';
+import 'package:metadash/services/canonical_food_parser.dart';
 
 /// Minimal but effective ranking for canonical food results
 class CanonicalFoodRanker {

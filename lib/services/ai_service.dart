@@ -5,7 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:metadash/core/logging/app_logger.dart';
 
-import '../models/ai_food_estimate.dart';
+import 'package:metadash/models/ai_food_estimate.dart';
 
 /// AI service for exercise parsing and food estimation
 /// Uses Groq (free tier) with OpenAI fallback

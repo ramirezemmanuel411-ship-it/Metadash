@@ -4,18 +4,17 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-
-import '../../data/models/food_model.dart';
-import '../../models/daily_log.dart';
-import '../../models/data_inputs_settings.dart';
-import '../../models/diary_entry_food.dart';
-import '../../models/metabolic_settings.dart';
-import '../../models/user_profile.dart';
-import '../../providers/user_state.dart';
-import '../../services/calorie_calculation_service.dart';
-import '../../shared/palette.dart';
-import '../food_search/food_detail_screen.dart';
-import '../food_search/food_search_screen.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/features/food_search/food_detail_screen.dart';
+import 'package:metadash/features/food_search/food_search_screen.dart';
+import 'package:metadash/models/daily_log.dart';
+import 'package:metadash/models/data_inputs_settings.dart';
+import 'package:metadash/models/diary_entry_food.dart';
+import 'package:metadash/models/metabolic_settings.dart';
+import 'package:metadash/models/user_profile.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/calorie_calculation_service.dart';
+import 'package:metadash/shared/palette.dart';
 
 class DiaryScreen extends StatefulWidget {
   final DateTime selectedDay;

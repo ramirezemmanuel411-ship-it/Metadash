@@ -1,4 +1,4 @@
-import '../data/models/food_model.dart';
+import 'package:metadash/data/models/food_model.dart';
 
 // ── Verification Ladder ───────────────────────────────────────────────────────
 

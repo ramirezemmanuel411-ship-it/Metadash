@@ -6,16 +6,15 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/features/auth/auth_gate.dart';
+import 'package:metadash/firebase_options.dart';
+import 'package:metadash/providers/dashboard_layout_provider.dart';
+import 'package:metadash/providers/food_plate_provider.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
+import 'package:metadash/shared/user_settings.dart';
+import 'package:metadash/splash_screen.dart';
 import 'package:provider/provider.dart';
-
-import 'features/auth/auth_gate.dart';
-import 'firebase_options.dart';
-import 'providers/dashboard_layout_provider.dart';
-import 'providers/food_plate_provider.dart';
-import 'providers/user_state.dart';
-import 'shared/palette.dart';
-import 'shared/user_settings.dart';
-import 'splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

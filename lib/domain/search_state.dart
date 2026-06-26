@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import '../data/models/food_model.dart';
+import 'package:metadash/data/models/food_model.dart';
 
 /// Search state for UI
 abstract class FoodSearchState extends Equatable {

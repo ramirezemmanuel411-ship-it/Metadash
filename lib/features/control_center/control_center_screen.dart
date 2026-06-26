@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-
-import '../../shared/palette.dart';
-import 'account_screen.dart';
-import 'appearance_selector_clean.dart';
-import 'dashboard_layout_screen.dart';
-import 'data_inputs_screen.dart';
-import 'goal_strategy_screen.dart';
-import 'interface_workflow_screen.dart';
-import 'metabolic_engine_screen.dart';
-import 'notifications_screen.dart';
-import 'privacy_data_screen.dart';
-import 'subscription_screen.dart';
+import 'package:metadash/features/control_center/account_screen.dart';
+import 'package:metadash/features/control_center/appearance_selector_clean.dart';
+import 'package:metadash/features/control_center/dashboard_layout_screen.dart';
+import 'package:metadash/features/control_center/data_inputs_screen.dart';
+import 'package:metadash/features/control_center/goal_strategy_screen.dart';
+import 'package:metadash/features/control_center/interface_workflow_screen.dart';
+import 'package:metadash/features/control_center/metabolic_engine_screen.dart';
+import 'package:metadash/features/control_center/notifications_screen.dart';
+import 'package:metadash/features/control_center/privacy_data_screen.dart';
+import 'package:metadash/features/control_center/subscription_screen.dart';
+import 'package:metadash/shared/palette.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});

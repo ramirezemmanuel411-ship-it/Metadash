@@ -1,5 +1,5 @@
-import '../datasources/fatsecret_remote_datasource.dart';
-import '../models/food_model.dart';
+import 'package:metadash/data/datasources/fatsecret_remote_datasource.dart';
+import 'package:metadash/data/models/food_model.dart';
 
 class AiSuggestionRepository {
   final FatSecretRemoteDatasource _fatSecret;

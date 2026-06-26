@@ -1,4 +1,4 @@
-import '../data/models/food_model.dart';
+import 'package:metadash/data/models/food_model.dart';
 
 /// Normalized display information for a food item
 class DisplayNormalization {

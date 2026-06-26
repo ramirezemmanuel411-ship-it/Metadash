@@ -1,12 +1,11 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:metadash/data/repositories/exercise_repository.dart';
+import 'package:metadash/models/exercise_model.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../../data/repositories/exercise_repository.dart';
-import '../../../models/exercise_model.dart';
-import '../../../providers/user_state.dart';
-import '../../../shared/palette.dart';
 
 /// Screen for manually entering calories burned
 class ExerciseManualScreen extends StatefulWidget {

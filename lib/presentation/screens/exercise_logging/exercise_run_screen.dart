@@ -1,14 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:metadash/data/repositories/exercise_repository.dart';
+import 'package:metadash/models/exercise_model.dart';
+import 'package:metadash/models/hr_zones.dart';
+import 'package:metadash/presentation/widgets/duration_selector.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../../data/repositories/exercise_repository.dart';
-import '../../../models/exercise_model.dart';
-import '../../../models/hr_zones.dart';
-import '../../../providers/user_state.dart';
-import '../../../shared/palette.dart';
-import '../../widgets/duration_selector.dart';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import 'wearable_calibration.dart';
-import 'workout_bucket.dart';
-import 'workout_telemetry.dart';
+import 'package:metadash/engine/wearable_calibration.dart';
+import 'package:metadash/engine/workout_bucket.dart';
+import 'package:metadash/engine/workout_telemetry.dart';
 
 /// Result of a single [WorkoutEnergyEngine.compute] call.
 class WorkoutEnergyResult {

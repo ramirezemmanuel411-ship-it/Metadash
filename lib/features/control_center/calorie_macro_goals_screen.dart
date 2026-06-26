@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
 
 class CalorieMacroGoalsScreen extends StatefulWidget {
   const CalorieMacroGoalsScreen({super.key});

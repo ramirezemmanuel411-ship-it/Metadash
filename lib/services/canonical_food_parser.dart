@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-import '../data/models/food_search_result_raw.dart';
-import '../models/canonical_food.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
+import 'package:metadash/models/canonical_food.dart';
 
 /// Parses raw food database strings into canonical display format
 ///

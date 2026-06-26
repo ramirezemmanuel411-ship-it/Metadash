@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../models/reentry_mode_state.dart';
-import '../../services/fat_estimate_calculator.dart';
-import '../../services/reentry_mode_service.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/models/reentry_mode_state.dart';
+import 'package:metadash/services/fat_estimate_calculator.dart';
+import 'package:metadash/services/reentry_mode_service.dart';
+import 'package:metadash/shared/palette.dart';
 
 class ReentryReturnFlowScreen extends StatefulWidget {
   final int userId;

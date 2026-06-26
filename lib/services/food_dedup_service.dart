@@ -1,6 +1,6 @@
 import 'dart:convert';
-import '../data/models/food_model.dart';
-import 'food_display_normalizer.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/services/food_display_normalizer.dart';
 
 /// Deterministic deduplication key for food items
 String createDedupeKey(FoodModel food) {

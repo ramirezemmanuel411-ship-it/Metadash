@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/shared/palette.dart';
 
 class PrivacyDataScreen extends StatefulWidget {
   const PrivacyDataScreen({super.key});

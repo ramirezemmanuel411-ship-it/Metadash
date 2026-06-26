@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../models/diary_entry_food.dart';
+import 'package:metadash/models/diary_entry_food.dart';
 
 /// A single staging item on the Food Plate.
 /// Wraps [DiaryEntryFood] so we can reuse its rich fields.

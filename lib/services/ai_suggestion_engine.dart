@@ -1,6 +1,6 @@
 import 'package:metadash/core/logging/app_logger.dart';
-import '../data/models/food_model.dart';
-import '../models/ai_suggestion.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/models/ai_suggestion.dart';
 
 class AiSuggestionEngine {
   static const double _high = 0.25;

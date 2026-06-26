@@ -1,12 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/models/data_inputs_settings.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/health_service.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../models/data_inputs_settings.dart';
-import '../../providers/user_state.dart';
-import '../../services/health_service.dart';
-import '../../shared/palette.dart';
 
 class CreateUserFlow extends StatefulWidget {
   final UserState userState;

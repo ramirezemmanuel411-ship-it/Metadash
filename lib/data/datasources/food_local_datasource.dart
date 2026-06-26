@@ -1,10 +1,9 @@
 import 'dart:async';
 
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/models/search_cache_entry.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-
-import '../models/food_model.dart';
-import '../models/search_cache_entry.dart';
 
 /// Local datasource for fast food search with caching
 /// Implements SQLite with indexes for optimal performance

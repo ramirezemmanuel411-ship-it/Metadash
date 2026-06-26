@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../palette.dart';
 
 // Night mode tokens used by this widget.
 const Color _nightAccentBlue = Color(0xFF4C7FA8);

@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:metadash/core/logging/app_logger.dart';
 
-import '../../models/data_inputs_settings.dart';
-import '../../providers/user_state.dart';
-import '../../services/calorie_calculation_service.dart';
-import '../../shared/date_utils.dart';
+import 'package:metadash/models/data_inputs_settings.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/calorie_calculation_service.dart';
+import 'package:metadash/shared/date_utils.dart';
 
 class DashboardDayData {
   final int caloriesConsumed;

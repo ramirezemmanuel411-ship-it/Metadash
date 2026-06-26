@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../services/food_service.dart';
-import '../../services/food_text_normalizer.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/services/food_service.dart';
+import 'package:metadash/services/food_text_normalizer.dart';
+import 'package:metadash/shared/palette.dart';
 
 class FoodDetailPage extends StatefulWidget {
   final Food food;

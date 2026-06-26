@@ -1,14 +1,13 @@
 import 'dart:io';
 
+import 'package:metadash/models/daily_log.dart';
+import 'package:metadash/models/data_inputs_settings.dart';
+import 'package:metadash/models/reentry_mode_state.dart';
+import 'package:metadash/models/user_food_item.dart';
+import 'package:metadash/models/user_profile.dart';
+import 'package:metadash/services/health_service.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
-import '../models/daily_log.dart';
-import '../models/data_inputs_settings.dart';
-import '../models/reentry_mode_state.dart';
-import '../models/user_food_item.dart';
-import '../models/user_profile.dart';
-import 'health_service.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
 
 class MetabolicEngineScreen extends StatefulWidget {
   const MetabolicEngineScreen({super.key});

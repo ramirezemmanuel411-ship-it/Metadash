@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-import '../models/user_food_item.dart';
+import 'package:metadash/models/user_food_item.dart';
 
 class CloudFoodService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

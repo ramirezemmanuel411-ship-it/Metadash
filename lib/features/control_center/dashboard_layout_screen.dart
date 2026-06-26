@@ -2,10 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:metadash/providers/dashboard_layout_provider.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../providers/dashboard_layout_provider.dart';
-import '../../shared/palette.dart';
 
 class DashboardLayoutScreen extends StatefulWidget {
   const DashboardLayoutScreen({super.key});

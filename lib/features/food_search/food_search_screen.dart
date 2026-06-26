@@ -1,23 +1,23 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../../data/models/food_model.dart';
-import '../../data/repositories/search_repository.dart';
-import '../../models/diary_entry_food.dart';
-import '../../models/user_food_item.dart';
-import '../../presentation/bloc/food_search_bloc.dart';
-import '../../presentation/screens/fast_food_search_screen.dart';
-import '../../providers/food_plate_provider.dart';
-import '../../providers/user_state.dart';
-import '../../services/cloud_food_service.dart';
-import '../../services/food_service.dart';
-import '../../shared/palette.dart';
-import '../../shared/widgets/food_plate_pill.dart';
-import '../food/barcode_scanner_screen.dart';
-import 'food_detail_screen.dart';
-import 'food_manual_entry.dart';
-import 'models.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/repositories/search_repository.dart';
+import 'package:metadash/features/food/barcode_scanner_screen.dart';
+import 'package:metadash/features/food_search/food_detail_screen.dart';
+import 'package:metadash/features/food_search/food_manual_entry.dart';
+import 'package:metadash/features/food_search/models.dart';
+import 'package:metadash/models/diary_entry_food.dart';
+import 'package:metadash/models/user_food_item.dart';
+import 'package:metadash/presentation/bloc/food_search_bloc.dart';
+import 'package:metadash/presentation/screens/fast_food_search_screen.dart';
+import 'package:metadash/providers/food_plate_provider.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/cloud_food_service.dart';
+import 'package:metadash/services/food_service.dart';
+import 'package:metadash/shared/palette.dart';
+import 'package:metadash/shared/widgets/food_plate_pill.dart';
 
 enum FoodSearchTab { saved, barcode, search, manual }
 

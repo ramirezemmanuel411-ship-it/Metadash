@@ -1,4 +1,4 @@
-import 'workout_bucket.dart';
+import 'package:metadash/engine/workout_bucket.dart';
 
 /// Separates locomotion workout steps from total daily steps to prevent
 /// double-counting in the NEAT (Non-Exercise Activity Thermogenesis) formula.

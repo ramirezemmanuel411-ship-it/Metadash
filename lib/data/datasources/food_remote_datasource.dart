@@ -1,10 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-
-import '../../services/raw_search_debug_store.dart';
-import '../models/food_model.dart';
-import '../models/food_search_result_raw.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
+import 'package:metadash/services/raw_search_debug_store.dart';
 
 /// Remote datasource for API calls with cancellation support
 /// Implements smart retry, timeout, and request cancellation

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/features/control_center/food_sources_screen.dart';
+import 'package:metadash/features/control_center/macro_calc_screen.dart';
+import 'package:metadash/features/control_center/reset_data_inputs_screen.dart';
+import 'package:metadash/features/control_center/wearables_connections_screen.dart';
+import 'package:metadash/models/data_inputs_settings.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../models/data_inputs_settings.dart';
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
-import 'food_sources_screen.dart';
-import 'macro_calc_screen.dart';
-import 'reset_data_inputs_screen.dart';
-import 'wearables_connections_screen.dart';
 
 class DataInputsScreen extends StatefulWidget {
   const DataInputsScreen({super.key});

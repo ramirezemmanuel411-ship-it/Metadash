@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-import '../../data/models/food_model.dart';
+import 'package:metadash/data/models/food_model.dart';
 
 /// Presentation layer for food search results
 ///

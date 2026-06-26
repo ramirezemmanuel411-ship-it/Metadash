@@ -4,22 +4,21 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/repositories/ai_suggestion_repository.dart';
+import 'package:metadash/features/food_search/food_plate_screen.dart';
+import 'package:metadash/models/ai_food_estimate.dart';
+import 'package:metadash/models/ai_router_result.dart';
+import 'package:metadash/models/ai_suggestion.dart';
+import 'package:metadash/models/diary_entry_food.dart';
+import 'package:metadash/providers/food_plate_provider.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/ai_router.dart';
+import 'package:metadash/services/ai_service.dart';
+import 'package:metadash/services/ai_suggestion_engine.dart';
+import 'package:metadash/services/food_text_normalizer.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../data/models/food_model.dart';
-import '../../data/repositories/ai_suggestion_repository.dart';
-import '../../models/ai_food_estimate.dart';
-import '../../models/ai_router_result.dart';
-import '../../models/ai_suggestion.dart';
-import '../../models/diary_entry_food.dart';
-import '../../providers/food_plate_provider.dart';
-import '../../providers/user_state.dart';
-import '../../services/ai_router.dart';
-import '../../services/ai_service.dart';
-import '../../services/ai_suggestion_engine.dart';
-import '../../services/food_text_normalizer.dart';
-import '../../shared/palette.dart';
-import '../food_search/food_plate_screen.dart';
 
 /// Unified AI screen for food estimation via text, camera, or gallery
 class AiChatScreen extends StatefulWidget {

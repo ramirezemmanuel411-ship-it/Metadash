@@ -4,8 +4,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:metadash/core/logging/app_logger.dart';
 
-import '../../data/repositories/search_repository.dart';
-import '../../domain/search_state.dart' as domain;
+import 'package:metadash/data/repositories/search_repository.dart';
+import 'package:metadash/domain/search_state.dart' as domain;
 
 // ==================== EVENTS ====================
 

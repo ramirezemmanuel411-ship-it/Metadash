@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/shared/palette.dart';
 
 class VacationModeScreen extends StatefulWidget {
   const VacationModeScreen({super.key});

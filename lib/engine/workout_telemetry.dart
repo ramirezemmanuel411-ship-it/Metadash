@@ -1,5 +1,5 @@
-import 'wearable_calibration.dart';
-import 'workout_bucket.dart';
+import 'package:metadash/engine/wearable_calibration.dart';
+import 'package:metadash/engine/workout_bucket.dart';
 
 /// All telemetry signals for one workout session fed into the energy engine.
 ///

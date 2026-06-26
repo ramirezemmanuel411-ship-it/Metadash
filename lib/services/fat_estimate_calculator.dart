@@ -1,4 +1,4 @@
-import '../models/reentry_mode_state.dart';
+import 'package:metadash/models/reentry_mode_state.dart';
 
 /// Fat estimate calculation logic for Reentry Mode
 class FatEstimateCalculator {

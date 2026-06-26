@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
-import 'create_user_flow.dart';
+import 'package:metadash/features/user_selection/create_user_flow.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
 
 class UserSelectionScreen extends StatelessWidget {
   final UserState userState;

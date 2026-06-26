@@ -6,16 +6,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../../data/models/food_model.dart';
-import '../../data/models/food_search_result_raw.dart';
-import '../../domain/search_state.dart' as domain;
-import '../../presentation/formatters/food_display_formatter.dart';
-import '../../providers/food_plate_provider.dart';
-import '../../providers/user_state.dart';
-import '../../services/food_quality_engine.dart';
-import '../../shared/palette.dart';
-import '../bloc/food_search_bloc.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
+import 'package:metadash/domain/search_state.dart' as domain;
+import 'package:metadash/presentation/bloc/food_search_bloc.dart';
+import 'package:metadash/presentation/formatters/food_display_formatter.dart';
+import 'package:metadash/providers/food_plate_provider.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/food_quality_engine.dart';
+import 'package:metadash/shared/palette.dart';
 
 /// Food search screen used inside the Add Food tabs.
 /// Invokes a callback on selection instead of popping navigation.

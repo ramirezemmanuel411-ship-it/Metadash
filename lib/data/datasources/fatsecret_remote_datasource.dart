@@ -17,7 +17,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:metadash/core/logging/app_logger.dart';
 
-import '../../data/models/food_model.dart';
+import 'package:metadash/data/models/food_model.dart';
 
 class FatSecretRemoteDatasource {
   final String backendUrl; // Proxy server URL (with static IP)

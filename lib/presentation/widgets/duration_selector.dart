@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/shared/palette.dart';
 
 /// Duration picker with quick-select pills and custom input
 class DurationSelector extends StatefulWidget {

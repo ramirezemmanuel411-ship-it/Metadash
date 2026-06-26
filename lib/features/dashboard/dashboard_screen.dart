@@ -1,16 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:metadash/features/dashboard/calorie_progress_ring.dart';
+import 'package:metadash/features/dashboard/dashboard_state.dart';
+import 'package:metadash/features/dashboard/horizontal_date_wheel_picker.dart';
+import 'package:metadash/providers/dashboard_layout_provider.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/calorie_calculation_service.dart';
+import 'package:metadash/shared/date_utils.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../providers/dashboard_layout_provider.dart';
-import '../../providers/user_state.dart';
-import '../../services/calorie_calculation_service.dart';
-import '../../shared/date_utils.dart';
-import '../../shared/palette.dart';
-import 'calorie_progress_ring.dart';
-import 'dashboard_state.dart';
-import 'horizontal_date_wheel_picker.dart';
 
 class DashboardScreen extends StatefulWidget {
   final DateTime selectedDay;

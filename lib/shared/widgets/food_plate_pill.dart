@@ -1,11 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:metadash/features/food_search/food_plate_screen.dart';
+import 'package:metadash/providers/food_plate_provider.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../features/food_search/food_plate_screen.dart';
-import '../../providers/food_plate_provider.dart';
-import '../palette.dart';
 
 /// Floating pill displayed above the dot navigation indicators when the
 /// Food Plate has at least one staged item. Tapping opens [FoodPlateScreen].

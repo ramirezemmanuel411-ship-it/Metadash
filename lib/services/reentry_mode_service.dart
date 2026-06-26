@@ -1,6 +1,6 @@
-import '../models/reentry_mode_state.dart';
-import 'database_service.dart';
-import 'fat_estimate_calculator.dart';
+import 'package:metadash/models/reentry_mode_state.dart';
+import 'package:metadash/services/database_service.dart';
+import 'package:metadash/services/fat_estimate_calculator.dart';
 
 class ReentryModeService {
   final DatabaseService _databaseService;

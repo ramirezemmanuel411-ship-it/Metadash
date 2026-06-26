@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
-import 'scale_change_service.dart';
+import 'package:metadash/features/progress/scale_change_service.dart';
+import 'package:metadash/shared/palette.dart';
 
 typedef DateSelector<T> = DateTime Function(T);
 typedef ValueSelector<T> = double Function(T);

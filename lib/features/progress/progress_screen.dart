@@ -1,13 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:metadash/features/progress/scale_change_summary_card.dart';
+import 'package:metadash/models/daily_log.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/calorie_calculation_service.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../models/daily_log.dart';
-import '../../providers/user_state.dart';
-import '../../services/calorie_calculation_service.dart';
-import '../../shared/palette.dart';
-import 'scale_change_summary_card.dart';
 
 void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
   const dash = 4.0;

@@ -5,13 +5,12 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/models/daily_log.dart';
+import 'package:metadash/models/data_inputs_settings.dart';
+import 'package:metadash/models/metabolic_settings.dart';
+import 'package:metadash/models/user_profile.dart';
+import 'package:metadash/services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../models/daily_log.dart';
-import '../models/data_inputs_settings.dart';
-import '../models/metabolic_settings.dart';
-import '../models/user_profile.dart';
-import '../services/database_service.dart';
 
 class UserState extends ChangeNotifier {
   UserProfile? _currentUser;

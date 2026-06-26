@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:metadash/models/user_profile.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/services/auth_service.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../models/user_profile.dart';
-import '../../providers/user_state.dart';
-import '../../services/auth_service.dart';
-import '../../shared/palette.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});

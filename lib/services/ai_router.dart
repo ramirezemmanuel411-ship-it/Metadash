@@ -2,8 +2,8 @@
 
 import 'dart:convert';
 import 'dart:io';
-import '../models/ai_router_result.dart';
-import 'ai_service.dart';
+import 'package:metadash/models/ai_router_result.dart';
+import 'package:metadash/services/ai_service.dart';
 
 /// MetaDash AI Router
 ///

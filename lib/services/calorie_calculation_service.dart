@@ -1,13 +1,13 @@
-import '../engine/step_deduplicator.dart';
-import '../engine/wearable_calibration.dart';
-import '../engine/workout_bucket.dart';
-import '../engine/workout_energy_engine.dart';
-import '../engine/workout_telemetry.dart';
-import '../models/daily_log.dart';
-import '../models/data_inputs_settings.dart';
-import '../models/metabolic_settings.dart';
-import '../models/user_profile.dart';
-import 'adaptive_tdee_service.dart';
+import 'package:metadash/engine/step_deduplicator.dart';
+import 'package:metadash/engine/wearable_calibration.dart';
+import 'package:metadash/engine/workout_bucket.dart';
+import 'package:metadash/engine/workout_energy_engine.dart';
+import 'package:metadash/engine/workout_telemetry.dart';
+import 'package:metadash/models/daily_log.dart';
+import 'package:metadash/models/data_inputs_settings.dart';
+import 'package:metadash/models/metabolic_settings.dart';
+import 'package:metadash/models/user_profile.dart';
+import 'package:metadash/services/adaptive_tdee_service.dart';
 
 class CalorieCalculationService {
   /// Calculate step calories per step based on body weight

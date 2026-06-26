@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'shared/palette.dart';
-import 'shared/user_settings.dart';
+import 'package:metadash/shared/palette.dart';
+import 'package:metadash/shared/user_settings.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

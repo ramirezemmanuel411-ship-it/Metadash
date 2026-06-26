@@ -1,11 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:metadash/providers/food_plate_provider.dart';
+import 'package:metadash/providers/user_state.dart';
+import 'package:metadash/shared/palette.dart';
 import 'package:provider/provider.dart';
-
-import '../../providers/food_plate_provider.dart';
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
 
 /// Full-screen review and commit screen for staged Food Plate items.
 class FoodPlateScreen extends StatefulWidget {
