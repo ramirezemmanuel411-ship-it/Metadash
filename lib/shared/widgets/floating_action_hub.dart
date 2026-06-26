@@ -563,8 +563,10 @@ class _RadialMenu extends StatelessWidget {
                   ),
                   child: AnimatedBuilder(
                     animation: rotationAnimation,
+                    // Rotate the "+" 45° as the menu opens so it reads as an
+                    // "×" (close) while open, and back to "+" when dismissed.
                     builder: (context2, child2) => Transform.rotate(
-                      angle: rotationAnimation.value * (math.pi / 4) * 2,
+                      angle: rotationAnimation.value * (math.pi / 4),
                       child: Icon(
                         Icons.add,
                         color: context.colors.onPrimary,
