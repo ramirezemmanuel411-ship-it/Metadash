@@ -1,20 +1,20 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:metadash/core/logging/app_logger.dart';
-
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/calorie_calculation_service.dart';
+import 'package:metadash/core/services/health_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/core/shared/widgets/floating_action_hub.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
 import 'package:metadash/features/control_center/control_center_screen.dart';
 import 'package:metadash/features/dashboard/dashboard_screen.dart';
 import 'package:metadash/features/diary/diary_screen.dart';
+import 'package:metadash/features/exercise_logging/exercise_main_screen.dart';
 import 'package:metadash/features/food/ai_chat_screen.dart';
 import 'package:metadash/features/food_search/food_search_screen.dart';
 import 'package:metadash/features/progress/progress_screen.dart';
-import 'package:metadash/models/data_inputs_settings.dart';
-import 'package:metadash/presentation/screens/exercise_logging/exercise_main_screen.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/services/calorie_calculation_service.dart';
-import 'package:metadash/services/health_service.dart';
-import 'package:metadash/shared/palette.dart';
-import 'package:metadash/shared/widgets/floating_action_hub.dart';
 
 class AppShell extends StatefulWidget {
   final UserState userState;

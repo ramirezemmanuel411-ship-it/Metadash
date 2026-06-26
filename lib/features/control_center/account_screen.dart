@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:metadash/models/user_profile.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/services/auth_service.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/auth_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/user_profile.dart';
 import 'package:provider/provider.dart';
 
 class AccountScreen extends StatelessWidget {

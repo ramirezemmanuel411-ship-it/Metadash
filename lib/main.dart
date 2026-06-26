@@ -6,13 +6,13 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/core/providers/dashboard_layout_provider.dart';
+import 'package:metadash/core/providers/food_plate_provider.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/core/shared/user_settings.dart';
 import 'package:metadash/features/auth/auth_gate.dart';
 import 'package:metadash/firebase_options.dart';
-import 'package:metadash/providers/dashboard_layout_provider.dart';
-import 'package:metadash/providers/food_plate_provider.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/shared/palette.dart';
-import 'package:metadash/shared/user_settings.dart';
 import 'package:metadash/splash_screen.dart';
 import 'package:provider/provider.dart';
 

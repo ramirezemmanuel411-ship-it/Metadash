@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:metadash/models/data_inputs_settings.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
 import 'package:provider/provider.dart';
 
 class WorkoutSettingsScreen extends StatefulWidget {

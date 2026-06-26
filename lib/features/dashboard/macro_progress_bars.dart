@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 class MacroProgressBars extends StatelessWidget {
   final int proteinConsumed;

@@ -1,8 +1,8 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:metadash/services/food_service.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/services/food_service.dart';
+import 'package:metadash/core/shared/palette.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 

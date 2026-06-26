@@ -1,11 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:metadash/app_shell.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/auth_service.dart';
+import 'package:metadash/core/shared/palette.dart';
 import 'package:metadash/features/auth/sign_in_screen.dart';
 import 'package:metadash/features/user_selection/create_user_flow.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/services/auth_service.dart';
-import 'package:metadash/shared/palette.dart';
 
 /// Top-level gate that decides what the signed-in (or signed-out) user sees.
 ///

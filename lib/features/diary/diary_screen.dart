@@ -4,17 +4,17 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/calorie_calculation_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/daily_log.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
+import 'package:metadash/data/models/diary_entry_food.dart';
 import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/models/metabolic_settings.dart';
+import 'package:metadash/data/models/user_profile.dart';
 import 'package:metadash/features/food_search/food_detail_screen.dart';
 import 'package:metadash/features/food_search/food_search_screen.dart';
-import 'package:metadash/models/daily_log.dart';
-import 'package:metadash/models/data_inputs_settings.dart';
-import 'package:metadash/models/diary_entry_food.dart';
-import 'package:metadash/models/metabolic_settings.dart';
-import 'package:metadash/models/user_profile.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/services/calorie_calculation_service.dart';
-import 'package:metadash/shared/palette.dart';
 
 class DiaryScreen extends StatefulWidget {
   final DateTime selectedDay;

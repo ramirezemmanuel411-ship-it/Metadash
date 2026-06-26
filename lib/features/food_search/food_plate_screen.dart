@@ -1,9 +1,9 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:metadash/providers/food_plate_provider.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/providers/food_plate_provider.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
 import 'package:provider/provider.dart';
 
 /// Full-screen review and commit screen for staged Food Plate items.

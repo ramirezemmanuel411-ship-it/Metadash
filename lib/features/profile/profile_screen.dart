@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserState userState;

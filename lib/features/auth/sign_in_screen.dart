@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:metadash/services/auth_service.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/services/auth_service.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 /// Entry screen for unauthenticated users. Handles email/password (sign in +
 /// sign up), Google, and Apple (when enabled). On success, the auth-state

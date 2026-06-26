@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:metadash/shared/palette.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 export 'appearance_selector_clean.dart';
 

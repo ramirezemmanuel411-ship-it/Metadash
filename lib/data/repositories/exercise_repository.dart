@@ -1,6 +1,6 @@
-import 'package:metadash/models/exercise_model.dart';
-import 'package:metadash/providers/user_state.dart';
-import 'package:metadash/services/database_service.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/database_service.dart';
+import 'package:metadash/data/models/exercise_model.dart';
 
 /// Repository for exercise persistence and retrieval
 class ExerciseRepository {

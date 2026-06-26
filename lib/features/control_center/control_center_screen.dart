@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/core/shared/palette.dart';
 import 'package:metadash/features/control_center/account_screen.dart';
 import 'package:metadash/features/control_center/appearance_selector_clean.dart';
 import 'package:metadash/features/control_center/dashboard_layout_screen.dart';
@@ -9,7 +10,6 @@ import 'package:metadash/features/control_center/metabolic_engine_screen.dart';
 import 'package:metadash/features/control_center/notifications_screen.dart';
 import 'package:metadash/features/control_center/privacy_data_screen.dart';
 import 'package:metadash/features/control_center/subscription_screen.dart';
-import 'package:metadash/shared/palette.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});

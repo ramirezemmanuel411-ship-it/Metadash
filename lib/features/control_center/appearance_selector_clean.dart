@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:metadash/shared/palette.dart';
-import 'package:metadash/shared/user_settings.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/core/shared/user_settings.dart';
 
 class AppearanceSelectorClean extends StatelessWidget {
   const AppearanceSelectorClean({super.key});
