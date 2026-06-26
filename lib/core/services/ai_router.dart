@@ -448,7 +448,7 @@ Return ONLY valid JSON:
   "items": [
     {
       "name": "<food name>",
-      "brand": null,
+      "brand": "<restaurant or brand name if one is mentioned, else null>",
       "serving": "<e.g. 1 cup, 6 oz, 2 pieces>",
       "calories": <int>,
       "protein": <int>,
@@ -461,7 +461,14 @@ Return ONLY valid JSON:
 }
 
 Rules:
-- Be realistic with portions. Default to standard serving if not specified.
+- Use REALISTIC portions. When a restaurant or brand is named (e.g. "ribeye
+  from Texas Roadhouse"), use that establishment's ACTUAL menu portion and
+  preparation — restaurant entrees are large and richer than home cooking. A
+  steakhouse bone-in ribeye is ~16-20 oz cooked in butter (~1,200-1,800 kcal);
+  do NOT shrink it to a small generic serving.
+- Account for the cooking fats, butter, oils and sauces a dish is normally
+  served with — they add significant calories.
+- Set "brand" to the restaurant/brand name whenever one is mentioned.
 - "grams" is the weight of this item's serving in grams (your best estimate).
 - Separate distinct items (e.g., "chicken and rice" = 2 entries).
 - confidence: "high" if item is well-known, "low" if vague.
