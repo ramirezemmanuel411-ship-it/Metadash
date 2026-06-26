@@ -303,11 +303,12 @@ class _PlateItemTileState extends State<_PlateItemTile> {
   String _unitStr = 'serving';
 
   // serving + the two most common weights first (left of the keypad divider),
-  // then every other unit available (right of the divider).
+  // then every other real measurement (right of the divider). Count-based words
+  // like "piece"/"slice"/"item" aren't measurements — they're just servings, so
+  // they're folded into the "serving" pill rather than listed separately.
   static const _commonUnits = [
     'serving', 'g', 'oz',
     'lb', 'ml', 'fl oz', 'cup', 'tbsp', 'tsp',
-    'piece', 'slice', 'item',
   ];
   static const _unitDividerIndex = 3;
 
@@ -324,12 +325,20 @@ class _PlateItemTileState extends State<_PlateItemTile> {
     final parsed = _parse(raw);
     if (double.tryParse(parsed.num) != null) {
       _qty = parsed.num;
-      _unitStr = parsed.unit.isNotEmpty ? parsed.unit : 'serving';
+      _unitStr = _normalizeUnit(parsed.unit);
     } else {
-      final lower = raw.trim().toLowerCase();
-      _unitStr = _commonUnits.contains(lower) ? lower : 'serving';
+      _unitStr = _normalizeUnit(raw);
       _qty = '1';
     }
+  }
+
+  /// Map a parsed serving unit onto one of [_commonUnits]. Count-based words
+  /// ("piece", "slice", "item", …) and anything that isn't a real measurement
+  /// collapse to "serving".
+  static String _normalizeUnit(String u) {
+    final lower = u.trim().toLowerCase();
+    if (lower.isEmpty) return 'serving';
+    return _commonUnits.contains(lower) ? lower : 'serving';
   }
 
   @override
