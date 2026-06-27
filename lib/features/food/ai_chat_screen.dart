@@ -54,9 +54,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
   AiRouter? _aiRouter;
   FoodGroundingService? _grounding;
 
-  // Per-entry database variants + the per-serving base used to rescale a
-  // portion (parallel to the current router result's entries).
-  List<List<AiStructuredFoodEntry>> _entryVariants = const [];
+  // Per-entry one-serving base used to rescale a portion (parallel to the
+  // current router result's entries).
   List<AiStructuredFoodEntry> _entryBase = const [];
 
   // Camera state
@@ -94,19 +93,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<AiRouterResult> _ground(AiRouterResult result) async {
     final grounding = _grounding;
     if (grounding == null || result.entries.isEmpty) {
-      _entryVariants = const [];
       _entryBase = const [];
       return result;
     }
     try {
-      final items = await grounding.groundEntries(result.entries);
-      final entries = items.map((g) => g.entry).toList();
-      _entryVariants = items.map((g) => g.variants).toList();
+      final entries = await grounding.groundEntries(result.entries);
       _entryBase = List.of(entries);
       return _withEntries(result, entries);
     } catch (e) {
       AppLogger.w('Food grounding failed, keeping AI estimate: $e');
-      _entryVariants = const [];
       _entryBase = const [];
       return result;
     }
@@ -146,12 +141,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final entries = List.of(result.entries);
     entries[index] = entry;
     setState(() => _routerResult = _withEntries(result, entries));
-  }
-
-  /// Swap an item for one of its database serving-size variants.
-  void _pickVariant(int index, AiStructuredFoodEntry variant) {
-    if (index < _entryBase.length) _entryBase[index] = variant;
-    _updateEntry(index, variant);
   }
 
   /// Open the gram-mapped keypad to set an item's exact portion; the verified
@@ -1266,11 +1255,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
               for (int i = 0; i < result.entries.length; i++)
                 _RouterEntryRow(
                   entry: result.entries[i],
-                  variants: i < _entryVariants.length
-                      ? _entryVariants[i]
-                      : const [],
                   onEditPortion: () => _editPortion(i),
-                  onPickVariant: (v) => _pickVariant(i, v),
                 ),
             ],
           );
@@ -2030,15 +2015,8 @@ class _ConfidenceBadge extends StatelessWidget {
 
 class _RouterEntryRow extends StatelessWidget {
   final AiStructuredFoodEntry entry;
-  final List<AiStructuredFoodEntry> variants;
   final VoidCallback? onEditPortion;
-  final void Function(AiStructuredFoodEntry)? onPickVariant;
-  const _RouterEntryRow({
-    required this.entry,
-    this.variants = const [],
-    this.onEditPortion,
-    this.onPickVariant,
-  });
+  const _RouterEntryRow({required this.entry, this.onEditPortion});
 
   @override
   Widget build(BuildContext context) {
@@ -2185,89 +2163,7 @@ class _RouterEntryRow extends StatelessWidget {
               }(),
             ],
           ),
-          if (variants.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Related items',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-                color: context.colors.textMuted,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final v in variants)
-                  _VariantChip(variant: v, onTap: () => onPickVariant?.call(v)),
-              ],
-            ),
-          ],
         ],
-      ),
-    );
-  }
-}
-
-class _VariantChip extends StatelessWidget {
-  final AiStructuredFoodEntry variant;
-  final VoidCallback onTap;
-  const _VariantChip({required this.variant, required this.onTap});
-
-  /// A bare "1 serving"/"2 servings" tells the user nothing when several
-  /// variants share it — fall back to the variant's own name (e.g. the cut or
-  /// menu size) so each chip is distinguishable at a glance.
-  String get _label {
-    final serving = variant.serving.trim();
-    final generic = RegExp(
-      r'^\d*\.?\d*\s*servings?$',
-      caseSensitive: false,
-    ).hasMatch(serving);
-    return generic && variant.name.trim().isNotEmpty ? variant.name : serving;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: context.colors.surfaceVariant,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: context.colors.divider),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 150),
-              child: Text(
-                _label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: context.colors.textSecondary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '${variant.calories} kcal',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: context.colors.textPrimary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
