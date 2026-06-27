@@ -31,31 +31,45 @@ class FoodGroundingService {
   }
 
   Future<GroundedItem> _groundOne(AiStructuredFoodEntry e) async {
-    final query = [
-      e.brand,
-      e.name,
-    ].where((s) => s != null && s.trim().isNotEmpty).join(' ').trim();
-    if (query.isEmpty) return GroundedItem(e, const []);
+    final name = e.name.trim();
+    if (name.isEmpty) return GroundedItem(e, const []);
+    final brand = e.brand?.trim();
 
-    final candidates = await _search(query);
-    if (candidates.isEmpty) return GroundedItem(e, const []);
+    // 1. Prefer the *specific* restaurant/brand — its official menu numbers.
+    if (brand != null && brand.isNotEmpty) {
+      final branded = await _search('$brand $name');
+      final best = _firstBrandMatch(branded, brand.toLowerCase());
+      if (best != null) return _grounded(e, best, branded, generic: false);
+    }
 
-    final best = _pickBest(candidates, e);
-    if (best == null) return GroundedItem(e, const []);
+    // 2. Restaurant unknown (a taqueria, a hole-in-the-wall): fall back to the
+    //    generic dish so the number is still real data, not a free-form guess.
+    final generic = await _search(name);
+    if (generic.isNotEmpty && _nameOverlaps(name, generic.first.displayTitle)) {
+      return _grounded(e, generic.first, const [], generic: true);
+    }
 
+    // 3. Nothing confident — keep the AI estimate.
+    return GroundedItem(e, const []);
+  }
+
+  GroundedItem _grounded(
+    AiStructuredFoodEntry e,
+    FoodModel best,
+    List<FoodModel> brandCandidates, {
+    required bool generic,
+  }) {
     AppLogger.i(
-      '[Grounding] "${e.name}" -> ${best.displayTitle} (${best.source})',
+      '[Grounding] "${e.name}" -> ${best.displayTitle} '
+      '(${generic ? 'generic' : 'branded'}, ${best.source})',
     );
-
-    // The best match is scaled to the AI-estimated portion when both have a
-    // gram weight; alternative sizes are shown at their own serving.
-    final grounded = _toEntry(best, e, scaleToPortion: true);
-    final variants = candidates
-        .where((c) => c.id != best.id && _relevant(c, best, e))
-        .take(4)
-        .map((c) => _toEntry(c, e, scaleToPortion: false))
-        .toList();
-
+    final grounded = _toEntry(best, e, scaleToPortion: true, generic: generic);
+    // Quick-pick chips only make sense for a known menu, and only for
+    // genuinely different items — not the same dish at another size, which the
+    // editable portion already covers.
+    final variants = generic
+        ? const <AiStructuredFoodEntry>[]
+        : _distinctVariants(best, brandCandidates, e);
     return GroundedItem(grounded, variants);
   }
 
@@ -71,45 +85,51 @@ class FoodGroundingService {
     }
   }
 
-  /// Best confident match, or null — a wrong match is worse than the estimate.
-  FoodModel? _pickBest(List<FoodModel> candidates, AiStructuredFoodEntry e) {
-    final brand = e.brand?.toLowerCase().trim();
-    if (brand != null && brand.isNotEmpty) {
-      // Brand named (e.g. a restaurant): require the brand to match.
-      for (final c in candidates) {
-        if (_brandMatches(c, brand)) return c;
-      }
-      return null;
+  /// First candidate whose brand matches, or null — a wrong match is worse
+  /// than the estimate.
+  FoodModel? _firstBrandMatch(List<FoodModel> candidates, String brand) {
+    for (final c in candidates) {
+      if (_brandMatches(c, brand)) return c;
     }
-    // No brand: top result only if its name overlaps the query.
-    final top = candidates.first;
-    return _nameOverlaps(e.name, top.displayTitle) ? top : null;
+    return null;
   }
 
-  /// A variant is only an "other size" if it is the *same dish* as [best] —
-  /// a 12 oz vs 16 oz ribeye, not the pork chop that happens to share the
-  /// restaurant. Branded items must also match the brand.
-  bool _relevant(FoodModel c, FoodModel best, AiStructuredFoodEntry e) {
-    final brand = e.brand?.toLowerCase().trim();
-    if (brand != null && brand.isNotEmpty && !_brandMatches(c, brand)) {
-      return false;
+  /// Same-brand items that are *related but genuinely different* from [best]:
+  /// they share its core food word (so a ribeye's chips stay ribeye, not the
+  /// pork chop) yet aren't merely another size of the exact same dish — those
+  /// are redundant with the editable portion. Deduped by name, capped at four.
+  List<AiStructuredFoodEntry> _distinctVariants(
+    FoodModel best,
+    List<FoodModel> candidates,
+    AiStructuredFoodEntry e,
+  ) {
+    final brand = e.brand?.toLowerCase().trim() ?? '';
+    final bestCore = _coreTokens(best.displayTitle);
+    if (bestCore.isEmpty) return const [];
+    final seen = <String>{};
+    final out = <AiStructuredFoodEntry>[];
+    for (final c in candidates) {
+      if (c.id == best.id) continue;
+      if (brand.isNotEmpty && !_brandMatches(c, brand)) continue;
+      final core = _coreTokens(c.displayTitle);
+      final related = core.intersection(bestCore).isNotEmpty;
+      final sameDish =
+          core.length == bestCore.length && core.containsAll(bestCore);
+      if (!related || sameDish) continue;
+      if (!seen.add(_cleanTitle(c.displayTitle).toLowerCase())) continue;
+      out.add(_toEntry(c, e, scaleToPortion: false));
+      if (out.length == 4) break;
     }
-    return _sameDish(best, c);
+    return out;
   }
 
-  /// Two foods are the same dish when their core food words overlap. Generic
-  /// descriptors (bone-in, grilled, sizes, the restaurant name) are stripped
-  /// first so "Bone-in Ribeye" and "Ft. Worth Ribeye" match on "ribeye" while
-  /// "Bone-in Pork Chop" does not.
-  bool _sameDish(FoodModel best, FoodModel candidate) {
-    final a = _coreTokens(best.displayTitle);
-    final b = _coreTokens(candidate.displayTitle);
-    if (a.isEmpty || b.isEmpty) return false;
-    return a.intersection(b).isNotEmpty;
-  }
-
-  Set<String> _coreTokens(String title) =>
-      _tokens(title).where((t) => !_dishModifiers.contains(t)).toSet();
+  /// Core food words of a title: drop generic descriptors and pure sizes
+  /// (e.g. "16oz") so "Ribeye", "Ft. Worth Ribeye" and "Ribeye 12 oz" all
+  /// reduce to {ribeye}, while "Ribeye & Ribs" keeps {ribeye, ribs}.
+  Set<String> _coreTokens(String title) => _tokens(title)
+      .where((t) => !_dishModifiers.contains(t))
+      .where((t) => !t.contains(RegExp(r'[0-9]')))
+      .toSet();
 
   static const _dishModifiers = {
     'bone',
@@ -156,6 +176,7 @@ class FoodGroundingService {
     FoodModel f,
     AiStructuredFoodEntry base, {
     required bool scaleToPortion,
+    bool generic = false,
   }) {
     final aiGrams = base.grams;
     final dbGrams = f.servingWeightGrams;
@@ -169,15 +190,20 @@ class FoodGroundingService {
         : 1.0;
     return base.copyWith(
       name: _cleanTitle(f.displayTitle),
-      brand: f.displayBrand.isNotEmpty ? f.displayBrand : base.brand,
+      // A generic match borrows another entry's nutrition, not its brand —
+      // keep the place the user actually named (or none) rather than claiming
+      // the lookalike's restaurant.
+      brand: generic
+          ? base.brand
+          : (f.displayBrand.isNotEmpty ? f.displayBrand : base.brand),
       serving: _servingLabel(f, mult),
       calories: (f.calories * mult).round(),
       protein: (f.protein * mult).round(),
       carbs: (f.carbs * mult).round(),
       fat: (f.fat * mult).round(),
       grams: dbGrams != null ? (dbGrams * mult).round() : base.grams,
-      source: _sourceLabel(f.source),
-      confidence: 'high',
+      source: generic ? 'Generic' : _sourceLabel(f.source),
+      confidence: generic ? 'medium' : 'high',
     );
   }
 

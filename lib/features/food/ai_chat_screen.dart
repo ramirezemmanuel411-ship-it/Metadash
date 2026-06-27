@@ -2148,21 +2148,30 @@ class _RouterEntryRow extends StatelessWidget {
               _MacroChip(label: 'F', value: entry.fat, color: Palette.macroFat),
               const Spacer(),
               () {
-                final verified = !entry.source.toLowerCase().contains('ai');
+                final source = entry.source.toLowerCase();
+                final isAi = source.contains('ai');
+                final isGeneric = source == 'generic';
+                final verified = !isAi && !isGeneric;
                 final color = verified
                     ? context.colors.accent
                     : context.colors.textMuted;
+                final icon = verified
+                    ? Icons.verified_rounded
+                    : isGeneric
+                    ? Icons.info_outline_rounded
+                    : Icons.auto_awesome;
+                final label = verified
+                    ? entry.source
+                    : isGeneric
+                    ? 'Generic estimate'
+                    : 'AI estimate';
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      verified ? Icons.verified_rounded : Icons.auto_awesome,
-                      size: 11,
-                      color: color,
-                    ),
+                    Icon(icon, size: 11, color: color),
                     const SizedBox(width: 3),
                     Text(
-                      verified ? entry.source : 'AI estimate',
+                      label,
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: verified
@@ -2179,7 +2188,7 @@ class _RouterEntryRow extends StatelessWidget {
           if (variants.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              'Other sizes',
+              'Related items',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
