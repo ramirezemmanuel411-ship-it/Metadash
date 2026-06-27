@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
-import 'calorie_macro_goals_screen.dart';
-import 'reentry_mode_screen.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/features/control_center/calorie_macro_goals_screen.dart';
+import 'package:metadash/features/control_center/reentry_mode_screen.dart';
 
 class GoalStrategyScreen extends StatefulWidget {
   const GoalStrategyScreen({super.key});

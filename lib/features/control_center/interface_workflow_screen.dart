@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 class InterfaceWorkflowScreen extends StatefulWidget {
   const InterfaceWorkflowScreen({super.key});
@@ -40,95 +40,102 @@ class _InterfaceWorkflowScreenState extends State<InterfaceWorkflowScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _IWSectionLabel(label: 'DISPLAY'),
+          const _IWSectionLabel(label: 'DISPLAY'),
           const SizedBox(height: 8),
-          _IWCard(children: [
-            _IWRowTap(
-              icon: Icons.tab_outlined,
-              title: 'Default Landing Tab',
-              subtitle: 'Which screen opens on app launch',
-              trailing: Text(
-                _defaultTab,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: context.colors.textMuted,
-                  fontWeight: FontWeight.w500,
+          _IWCard(
+            children: [
+              _IWRowTap(
+                icon: Icons.tab_outlined,
+                title: 'Default Landing Tab',
+                subtitle: 'Which screen opens on app launch',
+                trailing: Text(
+                  _defaultTab,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: context.colors.textMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
+                onTap: () => _showTabPicker(context),
               ),
-              onTap: () => _showTabPicker(context),
-            ),
-            _IWDivider(),
-            _IWRowSwitch(
-              icon: Icons.view_compact_outlined,
-              title: 'Compact Mode',
-              subtitle: 'Tighter spacing — more data visible at a glance',
-              value: _compactMode,
-              onChanged: (v) => setState(() => _compactMode = v),
-            ),
-            _IWDivider(),
-            _IWRowSwitch(
-              icon: Icons.vibration,
-              title: 'Haptic Feedback',
-              subtitle: 'Subtle vibrations for interactions and confirmations',
-              value: _hapticFeedback,
-              onChanged: (v) => setState(() => _hapticFeedback = v),
-            ),
-          ]),
+              _IWDivider(),
+              _IWRowSwitch(
+                icon: Icons.view_compact_outlined,
+                title: 'Compact Mode',
+                subtitle: 'Tighter spacing — more data visible at a glance',
+                value: _compactMode,
+                onChanged: (v) => setState(() => _compactMode = v),
+              ),
+              _IWDivider(),
+              _IWRowSwitch(
+                icon: Icons.vibration,
+                title: 'Haptic Feedback',
+                subtitle:
+                    'Subtle vibrations for interactions and confirmations',
+                value: _hapticFeedback,
+                onChanged: (v) => setState(() => _hapticFeedback = v),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
-          _IWSectionLabel(label: 'QUICK LOG BEHAVIOR'),
+          const _IWSectionLabel(label: 'QUICK LOG BEHAVIOR'),
           const SizedBox(height: 8),
-          _IWCard(children: [
-            _IWRowSwitch(
-              icon: Icons.swipe_right_outlined,
-              title: 'Swipe Right to Log',
-              subtitle: 'Swipe a diary item to quickly re-log it',
-              value: _swipeToLog,
-              onChanged: (v) => setState(() => _swipeToLog = v),
-            ),
-            _IWDivider(),
-            _IWRowSwitch(
-              icon: Icons.touch_app_outlined,
-              title: 'Double-Tap to Duplicate',
-              subtitle: 'Double-tap a meal entry to instantly re-add it',
-              value: _doubleTapDuplicate,
-              onChanged: (v) => setState(() => _doubleTapDuplicate = v),
-            ),
-          ]),
+          _IWCard(
+            children: [
+              _IWRowSwitch(
+                icon: Icons.swipe_right_outlined,
+                title: 'Swipe Right to Log',
+                subtitle: 'Swipe a diary item to quickly re-log it',
+                value: _swipeToLog,
+                onChanged: (v) => setState(() => _swipeToLog = v),
+              ),
+              _IWDivider(),
+              _IWRowSwitch(
+                icon: Icons.touch_app_outlined,
+                title: 'Double-Tap to Duplicate',
+                subtitle: 'Double-tap a meal entry to instantly re-add it',
+                value: _doubleTapDuplicate,
+                onChanged: (v) => setState(() => _doubleTapDuplicate = v),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
-          _IWSectionLabel(label: 'DAILY SUMMARY'),
+          const _IWSectionLabel(label: 'DAILY SUMMARY'),
           const SizedBox(height: 8),
-          _IWCard(children: [
-            _IWRowSwitch(
-              icon: Icons.notifications_outlined,
-              title: 'Logging Reminders',
-              subtitle: 'Push prompts to log meals throughout the day',
-              value: _logReminders,
-              onChanged: (v) => setState(() => _logReminders = v),
-            ),
-            _IWDivider(),
-            _IWRowTap(
-              icon: Icons.schedule_outlined,
-              title: 'Summary Refresh Time',
-              subtitle: 'When your daily digest data resets',
-              trailing: Text(
-                _summaryTime,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: context.colors.accent,
-                  fontWeight: FontWeight.w600,
+          _IWCard(
+            children: [
+              _IWRowSwitch(
+                icon: Icons.notifications_outlined,
+                title: 'Logging Reminders',
+                subtitle: 'Push prompts to log meals throughout the day',
+                value: _logReminders,
+                onChanged: (v) => setState(() => _logReminders = v),
+              ),
+              _IWDivider(),
+              _IWRowTap(
+                icon: Icons.schedule_outlined,
+                title: 'Summary Refresh Time',
+                subtitle: 'When your daily digest data resets',
+                trailing: Text(
+                  _summaryTime,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: context.colors.accent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: const TimeOfDay(hour: 9, minute: 0),
+                  );
+                  if (picked != null && mounted) {
+                    setState(() => _summaryTime = picked.format(context));
+                  }
+                },
               ),
-              onTap: () async {
-                final picked = await showTimePicker(
-                  context: context,
-                  initialTime: const TimeOfDay(hour: 9, minute: 0),
-                );
-                if (picked != null && mounted) {
-                  setState(() => _summaryTime = picked.format(context));
-                }
-              },
-            ),
-          ]),
+            ],
+          ),
           const SizedBox(height: 32),
         ],
       ),
@@ -216,7 +223,9 @@ class _IWCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.colors.divider.withValues(alpha: 0.08)),
+        border: Border.all(
+          color: context.colors.divider.withValues(alpha: 0.08),
+        ),
       ),
       child: Column(children: children),
     );
@@ -362,7 +371,11 @@ class _IWRowTap extends StatelessWidget {
             const SizedBox(width: 8),
             trailing,
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 18, color: context.colors.textMuted),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: context.colors.textMuted,
+            ),
           ],
         ),
       ),

@@ -1,14 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:metadash/core/engine/wearable_calibration.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/health_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../models/data_inputs_settings.dart';
-import '../../services/health_service.dart';
-import '../../engine/wearable_calibration.dart';
 
 class WearablesConnectionsScreen extends StatefulWidget {
   const WearablesConnectionsScreen({super.key});
@@ -25,15 +26,60 @@ class _WearablesConnectionsScreenState
 
   // Ordered list of selectable device options
   static const _devices = [
-    _DeviceOption('Apple Watch', WearableFamily.appleWatch, Icons.watch_rounded, Color(0xFF1C1C1E)),
-    _DeviceOption('Garmin', WearableFamily.garmin, Icons.gps_fixed_rounded, Color(0xFF006DC6)),
-    _DeviceOption('Fitbit / Sense', WearableFamily.fitbit, Icons.monitor_heart_rounded, Color(0xFF00B0B9)),
-    _DeviceOption('WHOOP', WearableFamily.whoop, Icons.bolt_rounded, Color(0xFF1A1A2E)),
-    _DeviceOption('Samsung Galaxy Watch', WearableFamily.samsungGalaxyWatch, Icons.watch_outlined, Color(0xFF1428A0)),
-    _DeviceOption('Polar', WearableFamily.polar, Icons.favorite_rounded, Color(0xFFD0021B)),
-    _DeviceOption('Oura Ring', WearableFamily.oura, Icons.circle_outlined, Color(0xFF2D2D2D)),
-    _DeviceOption('Pixel Watch', WearableFamily.pixelWatch, Icons.watch_rounded, Color(0xFF4285F4)),
-    _DeviceOption('Other / Unknown', WearableFamily.unknown, Icons.device_unknown_rounded, null),
+    _DeviceOption(
+      'Apple Watch',
+      WearableFamily.appleWatch,
+      Icons.watch_rounded,
+      Color(0xFF1C1C1E),
+    ),
+    _DeviceOption(
+      'Garmin',
+      WearableFamily.garmin,
+      Icons.gps_fixed_rounded,
+      Color(0xFF006DC6),
+    ),
+    _DeviceOption(
+      'Fitbit / Sense',
+      WearableFamily.fitbit,
+      Icons.monitor_heart_rounded,
+      Color(0xFF00B0B9),
+    ),
+    _DeviceOption(
+      'WHOOP',
+      WearableFamily.whoop,
+      Icons.bolt_rounded,
+      Color(0xFF1A1A2E),
+    ),
+    _DeviceOption(
+      'Samsung Galaxy Watch',
+      WearableFamily.samsungGalaxyWatch,
+      Icons.watch_outlined,
+      Color(0xFF1428A0),
+    ),
+    _DeviceOption(
+      'Polar',
+      WearableFamily.polar,
+      Icons.favorite_rounded,
+      Color(0xFFD0021B),
+    ),
+    _DeviceOption(
+      'Oura Ring',
+      WearableFamily.oura,
+      Icons.circle_outlined,
+      Color(0xFF2D2D2D),
+    ),
+    _DeviceOption(
+      'Pixel Watch',
+      WearableFamily.pixelWatch,
+      Icons.watch_rounded,
+      Color(0xFF4285F4),
+    ),
+    _DeviceOption(
+      'Other / Unknown',
+      WearableFamily.unknown,
+      Icons.device_unknown_rounded,
+      null,
+    ),
   ];
 
   @override
@@ -75,7 +121,7 @@ class _WearablesConnectionsScreenState
         }
       }
     } catch (e) {
-      debugPrint('Warning: Could not check health permissions: $e');
+      AppLogger.d('Warning: Could not check health permissions: $e');
     }
 
     await userState.db.createOrUpdateDataInputsSettings(next);
@@ -102,16 +148,22 @@ class _WearablesConnectionsScreenState
       await _saveSettings(current.copyWith(appleHealthConnected: true));
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('✓ Apple Health connected! Data will sync automatically.'),
+          content: Text(
+            '✓ Apple Health connected! Data will sync automatically.',
+          ),
           duration: Duration(seconds: 2),
         ),
       );
     } else {
       messenger.showSnackBar(
         SnackBar(
-          content: const Text('You can enable this anytime in the Health app settings.'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(label: 'Open Health', onPressed: _openHealthAppOrStore),
+          content: const Text(
+            'You can enable this anytime in the Health app settings.',
+          ),
+          action: SnackBarAction(
+            label: 'Open Health',
+            onPressed: _openHealthAppOrStore,
+          ),
         ),
       );
     }
@@ -128,16 +180,22 @@ class _WearablesConnectionsScreenState
       await _saveSettings(current.copyWith(googleFitConnected: true));
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('✓ Google Fit connected! Data will sync automatically.'),
+          content: Text(
+            '✓ Google Fit connected! Data will sync automatically.',
+          ),
           duration: Duration(seconds: 2),
         ),
       );
     } else {
       messenger.showSnackBar(
         SnackBar(
-          content: const Text('You can enable this anytime in Health Connect settings.'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(label: 'Open Health Connect', onPressed: _openHealthAppOrStore),
+          content: const Text(
+            'You can enable this anytime in Health Connect settings.',
+          ),
+          action: SnackBarAction(
+            label: 'Open Health Connect',
+            onPressed: _openHealthAppOrStore,
+          ),
         ),
       );
     }
@@ -155,12 +213,19 @@ class _WearablesConnectionsScreenState
         return;
       }
       if (Platform.isAndroid) {
-        final healthConnectUri = Uri.parse('android-app://com.google.android.apps.healthdata');
+        final healthConnectUri = Uri.parse(
+          'android-app://com.google.android.apps.healthdata',
+        );
         if (await canLaunchUrl(healthConnectUri)) {
-          await launchUrl(healthConnectUri, mode: LaunchMode.externalApplication);
+          await launchUrl(
+            healthConnectUri,
+            mode: LaunchMode.externalApplication,
+          );
           return;
         }
-        final googleFitUri = Uri.parse('android-app://com.google.android.apps.fitness');
+        final googleFitUri = Uri.parse(
+          'android-app://com.google.android.apps.fitness',
+        );
         if (await canLaunchUrl(googleFitUri)) {
           await launchUrl(googleFitUri, mode: LaunchMode.externalApplication);
           return;
@@ -177,7 +242,9 @@ class _WearablesConnectionsScreenState
   Widget build(BuildContext context) {
     final colors = context.colors;
     final settings = _settings;
-    final currentFamily = WearableCalibration.fromStorageString(settings?.wearableFamily);
+    final currentFamily = WearableCalibration.fromStorageString(
+      settings?.wearableFamily,
+    );
     final multiplier = WearableCalibration.multiplierFor(currentFamily);
 
     return Scaffold(
@@ -194,7 +261,7 @@ class _WearablesConnectionsScreenState
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 // ── Health platform connection ─────────────────────────
-                _SectionLabel('HEALTH PLATFORM'),
+                const _SectionLabel('HEALTH PLATFORM'),
                 const SizedBox(height: 8),
                 _SectionCard(
                   children: [
@@ -222,7 +289,7 @@ class _WearablesConnectionsScreenState
                 const SizedBox(height: 24),
 
                 // ── Device picker ────────────────────────────────────
-                _SectionLabel('YOUR WEARABLE DEVICE'),
+                const _SectionLabel('YOUR WEARABLE DEVICE'),
                 const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -247,7 +314,10 @@ class _WearablesConnectionsScreenState
                           isSelected: isSelected,
                           onTap: () => _saveSettings(
                             settings!.copyWith(
-                              wearableFamily: WearableCalibration.toStorageString(device.family),
+                              wearableFamily:
+                                  WearableCalibration.toStorageString(
+                                    device.family,
+                                  ),
                             ),
                           ),
                         ),
@@ -273,7 +343,11 @@ class _WearablesConnectionsScreenState
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.tune_rounded, size: 16, color: colors.accent),
+                          Icon(
+                            Icons.tune_rounded,
+                            size: 16,
+                            color: colors.accent,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Calorie Accuracy Correction',
@@ -292,21 +366,25 @@ class _WearablesConnectionsScreenState
                             child: _CalibrationStat(
                               label: 'Device',
                               value: _devices
-                                  .firstWhere((d) => d.family == currentFamily,
-                                      orElse: () => _devices.last)
+                                  .firstWhere(
+                                    (d) => d.family == currentFamily,
+                                    orElse: () => _devices.last,
+                                  )
                                   .name,
                             ),
                           ),
                           Expanded(
                             child: _CalibrationStat(
                               label: 'Multiplier',
-                              value: '${(multiplier * 100).toStringAsFixed(0)}%',
+                              value:
+                                  '${(multiplier * 100).toStringAsFixed(0)}%',
                             ),
                           ),
                           Expanded(
                             child: _CalibrationStat(
                               label: 'Overcounts by',
-                              value: '~${((1 - multiplier) * 100).toStringAsFixed(0)}%',
+                              value:
+                                  '~${((1 - multiplier) * 100).toStringAsFixed(0)}%',
                             ),
                           ),
                         ],
@@ -420,7 +498,11 @@ class _ConnectionRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: context.colors.textPrimary.withValues(alpha: 0.7)),
+          Icon(
+            icon,
+            size: 20,
+            color: context.colors.textPrimary.withValues(alpha: 0.7),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -529,7 +611,11 @@ class _DeviceRow extends StatelessWidget {
                 ),
               ),
               child: isSelected
-                  ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    )
                   : null,
             ),
           ],
@@ -575,4 +661,3 @@ class _CalibrationStat extends StatelessWidget {
     );
   }
 }
-

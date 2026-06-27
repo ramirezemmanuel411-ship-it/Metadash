@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import '../../shared/palette.dart';
+
+import 'package:flutter/material.dart';
+
+import 'package:metadash/core/shared/palette.dart';
 
 class CalorieProgressRing extends StatefulWidget {
   final int consumed;

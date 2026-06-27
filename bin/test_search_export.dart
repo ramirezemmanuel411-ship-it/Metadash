@@ -1,5 +1,5 @@
 import 'package:metadash/data/datasources/food_remote_datasource.dart';
-import 'package:metadash/services/raw_search_debug_store.dart';
+import 'package:metadash/core/services/raw_search_debug_store.dart';
 import 'dart:convert';
 import 'dart:io';
 

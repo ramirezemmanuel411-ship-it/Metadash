@@ -1,22 +1,27 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/core/providers/food_plate_provider.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/ai_router.dart';
+import 'package:metadash/core/services/ai_service.dart';
+import 'package:metadash/core/services/ai_suggestion_engine.dart';
+import 'package:metadash/core/services/food_grounding_service.dart';
+import 'package:metadash/core/services/food_text_normalizer.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/core/shared/widgets/serving_numpad.dart';
+import 'package:metadash/data/models/ai_food_estimate.dart';
+import 'package:metadash/data/models/ai_router_result.dart';
+import 'package:metadash/data/models/ai_suggestion.dart';
+import 'package:metadash/data/models/diary_entry_food.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/repositories/ai_suggestion_repository.dart';
+import 'package:metadash/data/repositories/search_repository.dart';
+import 'package:metadash/features/food_search/food_plate_screen.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../models/ai_food_estimate.dart';
-import '../../models/ai_suggestion.dart';
-import '../../models/diary_entry_food.dart';
-import '../../data/models/food_model.dart';
-import '../../services/ai_service.dart';
-import '../../services/ai_router.dart';
-import '../../services/ai_suggestion_engine.dart';
-import '../../services/food_text_normalizer.dart';
-import '../../data/repositories/ai_suggestion_repository.dart';
-import '../../models/ai_router_result.dart';
-import '../../providers/user_state.dart';
-import '../../providers/food_plate_provider.dart';
-import '../food_search/food_plate_screen.dart';
 
 /// Unified AI screen for food estimation via text, camera, or gallery
 class AiChatScreen extends StatefulWidget {
@@ -47,6 +52,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
   bool _isLoading = false;
   String? _error;
   AiRouter? _aiRouter;
+  FoodGroundingService? _grounding;
+
+  // Per-entry one-serving base used to rescale a portion (parallel to the
+  // current router result's entries).
+  List<AiStructuredFoodEntry> _entryBase = const [];
 
   // Camera state
   CameraController? _cameraController;
@@ -68,12 +78,135 @@ class _AiChatScreenState extends State<AiChatScreen> {
     try {
       _aiService = AiService();
       _aiRouter = AiRouter(_aiService);
+      _grounding = FoodGroundingService(SearchRepository.withFatSecret());
       _serviceInitialized = true;
     } catch (e) {
       setState(() {
-        _error = 'Failed to initialize AI service: $e';
+        _error =
+            'The AI service is unavailable right now. Please try again later.';
       });
     }
+  }
+
+  /// Replace AI-estimated nutrition with verified database values where a
+  /// confident match exists, so numbers are traceable instead of guessed.
+  Future<AiRouterResult> _ground(AiRouterResult result) async {
+    final grounding = _grounding;
+    if (grounding == null || result.entries.isEmpty) {
+      _entryBase = const [];
+      return result;
+    }
+    try {
+      final entries = await grounding.groundEntries(result.entries);
+      _entryBase = List.of(entries);
+      return _withEntries(result, entries);
+    } catch (e) {
+      AppLogger.w('Food grounding failed, keeping AI estimate: $e');
+      _entryBase = const [];
+      return result;
+    }
+  }
+
+  AiRouterResult _withEntries(
+    AiRouterResult r,
+    List<AiStructuredFoodEntry> entries,
+  ) => AiRouterResult(
+    mode: r.mode,
+    headline: r.headline,
+    detail: r.detail,
+    confidence: r.confidence,
+    confidenceNote: r.confidenceNote,
+    entries: entries,
+    alternatives: r.alternatives,
+    bestAlternativeIndex: r.bestAlternativeIndex,
+  );
+
+  // Units offered on the portion keypad (matches the Food Plate).
+  static const _kKeypadUnits = [
+    'serving',
+    'g',
+    'oz',
+    'lb',
+    'ml',
+    'fl oz',
+    'cup',
+    'tbsp',
+    'tsp',
+  ];
+  static const _kKeypadDivider = 3;
+
+  void _updateEntry(int index, AiStructuredFoodEntry entry) {
+    final result = _routerResult;
+    if (result == null || index >= result.entries.length) return;
+    final entries = List.of(result.entries);
+    entries[index] = entry;
+    setState(() => _routerResult = _withEntries(result, entries));
+  }
+
+  /// Open the gram-mapped keypad to set an item's exact portion; the verified
+  /// nutrition rescales from its one-serving base.
+  void _editPortion(int index) {
+    final result = _routerResult;
+    if (result == null || index >= result.entries.length) return;
+    final base = index < _entryBase.length
+        ? _entryBase[index]
+        : result.entries[index];
+    final parsed = _parseServing(result.entries[index].serving);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ServingNumpad(
+        initialQty: parsed.$1,
+        initialUnit: parsed.$2,
+        units: _kKeypadUnits,
+        dividerIndex: _kKeypadDivider,
+        baseGrams: base.grams?.toDouble(),
+        baseCalories: base.calories.toDouble(),
+        colors: context.colors,
+        onConfirm: (qty, unit) =>
+            _updateEntry(index, _rescaleEntry(base, qty, unit)),
+      ),
+    );
+  }
+
+  (String, String) _parseServing(String serving) {
+    final m = RegExp(r'^(\d*\.?\d+)\s*(.*)$').firstMatch(serving.trim());
+    if (m != null) {
+      final unit = (m.group(2) ?? '').trim();
+      return (
+        m.group(1) ?? '1',
+        _kKeypadUnits.contains(unit) ? unit : 'serving',
+      );
+    }
+    return ('1', 'serving');
+  }
+
+  AiStructuredFoodEntry _rescaleEntry(
+    AiStructuredFoodEntry base,
+    String qtyStr,
+    String unit,
+  ) {
+    final qty = double.tryParse(qtyStr) ?? 1;
+    final unitG = FoodPlateItem.unitGrams[unit.toLowerCase()];
+    final baseGrams = base.grams;
+    final grams = unitG != null
+        ? qty * unitG
+        : (baseGrams != null ? qty * baseGrams : null);
+    final m = (grams != null && baseGrams != null && baseGrams > 0)
+        ? grams / baseGrams
+        : qty;
+    final label = qty == qty.truncateToDouble()
+        ? qty.truncate().toString()
+        : qty.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
+    return base.copyWith(
+      calories: (base.calories * m).round(),
+      protein: (base.protein * m).round(),
+      carbs: (base.carbs * m).round(),
+      fat: (base.fat * m).round(),
+      grams: grams?.round() ?? base.grams,
+      serving: '$label $unit',
+    );
   }
 
   Future<void> _initializeCamera() async {
@@ -94,9 +227,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Camera error: $e')));
+        _notice("Couldn't access the camera. Please try again.", isError: true);
       }
     }
   }
@@ -110,7 +241,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       setState(() => _torchOn = !_torchOn);
     } catch (e) {
       // Silently fail - torch may not be available on all devices
-      debugPrint('Error toggling torch: $e');
+      AppLogger.d('Error toggling torch: $e');
     }
   }
 
@@ -146,13 +277,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _showCamera = false;
       });
 
-      _cameraController?.dispose();
+      await _cameraController?.dispose();
       _cameraController = null;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to capture photo: $e')));
+        _notice("Couldn't capture the photo. Please try again.", isError: true);
       }
     }
   }
@@ -171,9 +300,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
+        _notice("Couldn't load that image. Please try again.", isError: true);
       }
     }
   }
@@ -199,9 +326,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
           imageFile: _capturedImage!,
           userDescription: description.isNotEmpty ? description : null,
         );
+        final grounded = await _ground(result);
         if (!mounted) return;
         setState(() {
-          _routerResult = result;
+          _routerResult = grounded;
           _selectedAlternative = 0;
           _isLoading = false;
         });
@@ -220,7 +348,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = _friendlyError(e);
         _isLoading = false;
       });
     }
@@ -235,13 +363,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   void _onSendMessage() async {
     _initializeService();
-
-    if (_error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Cannot send message: $_error')));
-      return;
-    }
 
     // If there's an image, analyze with image + text
     if (_capturedImage != null) {
@@ -270,10 +391,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
           userText: input,
           diaryContext: diaryCtx,
         );
+        final grounded = await _ground(result);
         if (!mounted) return;
         setState(() {
-          _routerResult = result;
-          _selectedAlternative = result.bestAlternativeIndex ?? 0;
+          _routerResult = grounded;
+          _selectedAlternative = grounded.bestAlternativeIndex ?? 0;
           _isLoading = false;
         });
         _controller.clear();
@@ -313,7 +435,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = _friendlyError(e);
         _isLoading = false;
       });
     }
@@ -381,22 +503,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
           source: entry.source,
           serving: entry.serving,
           confidence: _confidenceToDouble(entry.confidence),
-          assumptions: null,
           rawInput: _controller.text.trim(),
         );
         await widget.userState.db.addFoodEntry(diaryEntry);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            entries.length == 1
-                ? '✓ "${entries.first.name}" added to Diary'
-                : '✓ ${entries.length} items added to Diary',
-          ),
-          backgroundColor: context.colors.accent,
-          duration: const Duration(seconds: 2),
-        ),
+      _notice(
+        entries.length == 1
+            ? '"${entries.first.name}" added to your diary'
+            : '${entries.length} items added to your diary',
       );
       setState(() {
         _routerResult = null;
@@ -405,8 +520,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add: $e')),
+      _notice(
+        "Couldn't add that to your diary. Please try again.",
+        isError: true,
       );
     }
   }
@@ -551,13 +667,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     await widget.userState.db.addFoodEntry(entry);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('✓ Added to Diary'),
-        backgroundColor: context.colors.accent,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    _notice('Added to your diary');
   }
 
   void _onAddToDiary() async {
@@ -565,9 +675,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     final user = widget.userState.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No user logged in')));
+      _notice('Please sign in to add foods.', isError: true);
       return;
     }
 
@@ -592,13 +700,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('✓ Added to Diary'),
-          backgroundColor: context.colors.accent,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      _notice('Added to your diary');
 
       // Clear for next entry
       setState(() {
@@ -607,9 +709,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _capturedImage = null;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add to diary: $e')));
+      _notice("Couldn't add to your diary. Please try again.", isError: true);
     }
   }
 
@@ -622,21 +722,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
     if (est == null) return;
 
     context.read<FoodPlateProvider>().add(
-          FoodPlateItem(
-            id: '${DateTime.now().millisecondsSinceEpoch}_ai',
-            name: est.itemName,
-            calories: est.calories,
-            proteinG: est.proteinG,
-            carbsG: est.carbsG,
-            fatG: est.fatG,
-            source: _capturedImage != null ? 'ai_camera' : 'ai_chat',
-            serving: _resolveServingFromAssumptions(est.assumptions),
-            baseCalories: est.calories.toDouble(),
-            baseProtein: est.proteinG.toDouble(),
-            baseCarbs: est.carbsG.toDouble(),
-            baseFat: est.fatG.toDouble(),
-          ),
-        );
+      FoodPlateItem(
+        id: '${DateTime.now().millisecondsSinceEpoch}_ai',
+        name: est.itemName,
+        calories: est.calories,
+        proteinG: est.proteinG,
+        carbsG: est.carbsG,
+        fatG: est.fatG,
+        source: _capturedImage != null ? 'ai_camera' : 'ai_chat',
+        serving: _resolveServingFromAssumptions(est.assumptions),
+        baseCalories: est.calories.toDouble(),
+        baseProtein: est.proteinG.toDouble(),
+        baseCarbs: est.carbsG.toDouble(),
+        baseFat: est.fatG.toDouble(),
+      ),
+    );
 
     // No toast — the floating Food Tray button (with its count badge) is the
     // feedback that the item landed on the plate.
@@ -751,8 +851,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       if (_routerResult != null)
                         _buildRouterResultCard(_routerResult!),
 
-                      if (_routerResult == null &&
-                          _suggestionResponse != null)
+                      if (_routerResult == null && _suggestionResponse != null)
                         _buildSuggestionResponse(_suggestionResponse!),
 
                       // Legacy estimate card
@@ -812,7 +911,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         decoration: BoxDecoration(
                           color: context.colors.surfaceVariant,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: context.divider, width: 1),
+                          border: Border.all(color: context.divider),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1104,9 +1203,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? accent
-                          : surface,
+                      color: selected ? accent : surface,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: selected ? accent : context.colors.divider,
@@ -1148,13 +1245,19 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
         // Food entries (primary or selected alternative)
         () {
-          final entriesToShow = hasAlternatives
-              ? [result.alternatives[_selectedAlternative].entry]
-              : result.entries;
+          if (hasAlternatives) {
+            return _RouterEntryRow(
+              entry: result.alternatives[_selectedAlternative].entry,
+            );
+          }
           return Column(
-            children: entriesToShow
-                .map((e) => _RouterEntryRow(entry: e))
-                .toList(),
+            children: [
+              for (int i = 0; i < result.entries.length; i++)
+                _RouterEntryRow(
+                  entry: result.entries[i],
+                  onEditPortion: () => _editPortion(i),
+                ),
+            ],
           );
         }(),
 
@@ -1190,10 +1293,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             ),
             child: Text(
               result.detail!,
-              style: TextStyle(
-                fontSize: 12,
-                color: context.colors.textMuted,
-              ),
+              style: TextStyle(fontSize: 12, color: context.colors.textMuted),
             ),
           ),
         ],
@@ -1730,26 +1830,95 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  /// Map a raw exception to a friendly, on-brand message — users never see
+  /// "Exception: ..." text.
+  String _friendlyError(Object error) {
+    final s = error.toString().toLowerCase();
+    if (s.contains('socket') ||
+        s.contains('network') ||
+        s.contains('timeout') ||
+        s.contains('connection')) {
+      return 'Connection trouble — check your internet and try again.';
+    }
+    if (s.contains('unauthorized') ||
+        s.contains('api key') ||
+        s.contains('401')) {
+      return 'The AI service is unavailable right now. Please try again later.';
+    }
+    return "Couldn't analyze that — try again or rephrase.";
+  }
+
+  /// Show a single, on-brand floating notice (a premium replacement for the
+  /// default SnackBar).
+  void _notice(String message, {bool isError = false}) {
+    if (!mounted) return;
+    final colors = context.colors;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                isError
+                    ? Icons.error_outline_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: isError ? const Color(0xFFE5675E) : colors.accent,
+                size: 19,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: colors.surface,
+          behavior: SnackBarBehavior.floating,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
   Widget _buildErrorCard(String error) {
-    return Card(
-      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                error,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+    final colors = context.colors;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Color(0xFFE5675E),
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              error,
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 13,
+                height: 1.3,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1764,21 +1933,21 @@ class _RouterModeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, color) = switch (mode) {
       AiRouteMode.visionFoodEstimate => (
-          Icons.camera_alt_outlined,
-          const Color(0xFF4C7FA8)
-        ),
+        Icons.camera_alt_outlined,
+        const Color(0xFF4C7FA8),
+      ),
       AiRouteMode.restaurantOrderHelper => (
-          Icons.restaurant_outlined,
-          const Color(0xFFEF8C2E)
-        ),
+        Icons.restaurant_outlined,
+        const Color(0xFFEF8C2E),
+      ),
       AiRouteMode.mealStrategyHelper => (
-          Icons.tips_and_updates_outlined,
-          const Color(0xFF2E8B57)
-        ),
+        Icons.tips_and_updates_outlined,
+        const Color(0xFF2E8B57),
+      ),
       AiRouteMode.structuredFoodLogger => (
-          Icons.receipt_long_outlined,
-          const Color(0xFF2E8B57)
-        ),
+        Icons.receipt_long_outlined,
+        const Color(0xFF2E8B57),
+      ),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1846,7 +2015,8 @@ class _ConfidenceBadge extends StatelessWidget {
 
 class _RouterEntryRow extends StatelessWidget {
   final AiStructuredFoodEntry entry;
-  const _RouterEntryRow({required this.entry});
+  final VoidCallback? onEditPortion;
+  const _RouterEntryRow({required this.entry, this.onEditPortion});
 
   @override
   Widget build(BuildContext context) {
@@ -1882,11 +2052,34 @@ class _RouterEntryRow extends StatelessWidget {
                           color: context.colors.textMuted,
                         ),
                       ),
-                    Text(
-                      entry.serving,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: context.colors.textMuted,
+                    const SizedBox(height: 2),
+                    GestureDetector(
+                      onTap: onEditPortion,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            entry.serving,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: onEditPortion != null
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: onEditPortion != null
+                                  ? context.colors.accent
+                                  : context.colors.textMuted,
+                            ),
+                          ),
+                          if (onEditPortion != null) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.tune_rounded,
+                              size: 12,
+                              color: context.colors.accent,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
@@ -1930,16 +2123,44 @@ class _RouterEntryRow extends StatelessWidget {
                 color: Palette.macroCarbs,
               ),
               const SizedBox(width: 8),
-              _MacroChip(
-                label: 'F',
-                value: entry.fat,
-                color: Palette.macroFat,
-              ),
+              _MacroChip(label: 'F', value: entry.fat, color: Palette.macroFat),
               const Spacer(),
-              Text(
-                'Source: ${entry.source}',
-                style: TextStyle(fontSize: 10, color: context.colors.textMuted),
-              ),
+              () {
+                final source = entry.source.toLowerCase();
+                final isAi = source.contains('ai');
+                final isGeneric = source == 'generic';
+                final verified = !isAi && !isGeneric;
+                final color = verified
+                    ? context.colors.accent
+                    : context.colors.textMuted;
+                final icon = verified
+                    ? Icons.verified_rounded
+                    : isGeneric
+                    ? Icons.info_outline_rounded
+                    : Icons.auto_awesome;
+                final label = verified
+                    ? entry.source
+                    : isGeneric
+                    ? 'Generic estimate'
+                    : 'AI estimate';
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 11, color: color),
+                    const SizedBox(width: 3),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: verified
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
             ],
           ),
         ],
@@ -1967,24 +2188,26 @@ class _MacroChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: RichText(
-        text: TextSpan(children: [
-          TextSpan(
-            text: label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
-          ),
-          TextSpan(
-            text: ' ${value}g',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: context.colors.textPrimary,
+            TextSpan(
+              text: ' ${value}g',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: context.colors.textPrimary,
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -2029,15 +2252,20 @@ class _FoodTrayButton extends StatelessWidget {
                   clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
-                    Icon(Icons.dinner_dining_outlined,
-                        color: colors.onPrimary, size: 24),
+                    Icon(
+                      Icons.dinner_dining_outlined,
+                      color: colors.onPrimary,
+                      size: 24,
+                    ),
                     Positioned(
                       top: 2,
                       right: 2,
                       child: Container(
                         padding: const EdgeInsets.all(2),
-                        constraints:
-                            const BoxConstraints(minWidth: 17, minHeight: 17),
+                        constraints: const BoxConstraints(
+                          minWidth: 17,
+                          minHeight: 17,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,

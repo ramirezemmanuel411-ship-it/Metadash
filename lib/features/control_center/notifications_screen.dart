@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -41,99 +41,123 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _NotifSectionLabel(label: 'DAILY CHECK-IN'),
+          const _NotifSectionLabel(label: 'DAILY CHECK-IN'),
           const SizedBox(height: 8),
-          _NotifCard(children: [
-            _NotifSwitchRow(
-              icon: Icons.alarm_outlined,
-              title: 'Check-In Reminder',
-              subtitle: 'A daily nudge to review your dashboard and log data',
-              value: _dailyCheckIn,
-              onChanged: (v) => setState(() => _dailyCheckIn = v),
-            ),
-            if (_dailyCheckIn) ...[_NotifDivider(), _NotifTapRow(
-              icon: Icons.schedule_outlined,
-              title: 'Reminder Time',
-              value: _checkInTime,
-              onTap: () => _pickTime(context, (t) => _checkInTime = t),
-            )],
-          ]),
-          const SizedBox(height: 20),
-          _NotifSectionLabel(label: 'MEAL LOGGING'),
-          const SizedBox(height: 8),
-          _NotifCard(children: [
-            _NotifSwitchRow(
-              icon: Icons.restaurant_outlined,
-              title: 'Meal Logging Reminders',
-              subtitle: 'Prompted to log meals so your data stays accurate',
-              value: _mealReminders,
-              onChanged: (v) => setState(() => _mealReminders = v),
-            ),
-            if (_mealReminders) ...[_NotifDivider(), _NotifTapRow(
-              icon: Icons.repeat_outlined,
-              title: 'Reminder Frequency',
-              value: _mealFrequency,
-              onTap: () => _showPicker(
-                context,
-                title: 'Reminder Frequency',
-                options: ['Every 2 hrs', 'Every 3 hrs', 'Every 4 hrs', 'Every 5 hrs'],
-                selected: _mealFrequency,
-                onSelected: (v) => setState(() => _mealFrequency = v),
+          _NotifCard(
+            children: [
+              _NotifSwitchRow(
+                icon: Icons.alarm_outlined,
+                title: 'Check-In Reminder',
+                subtitle: 'A daily nudge to review your dashboard and log data',
+                value: _dailyCheckIn,
+                onChanged: (v) => setState(() => _dailyCheckIn = v),
               ),
-            )],
-          ]),
+              if (_dailyCheckIn) ...[
+                _NotifDivider(),
+                _NotifTapRow(
+                  icon: Icons.schedule_outlined,
+                  title: 'Reminder Time',
+                  value: _checkInTime,
+                  onTap: () => _pickTime(context, (t) => _checkInTime = t),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 20),
-          _NotifSectionLabel(label: 'PROGRESS & GOALS'),
+          const _NotifSectionLabel(label: 'MEAL LOGGING'),
           const SizedBox(height: 8),
-          _NotifCard(children: [
-            _NotifSwitchRow(
-              icon: Icons.emoji_events_outlined,
-              title: 'Milestone Alerts',
-              subtitle: 'Notified when you hit weight, streak, or goal targets',
-              value: _milestoneAlerts,
-              onChanged: (v) => setState(() => _milestoneAlerts = v),
-            ),
-            _NotifDivider(),
-            _NotifSwitchRow(
-              icon: Icons.flag_outlined,
-              title: 'Goal Pace Alerts',
-              subtitle: 'Warnings when your pace drifts off your target timeline',
-              value: _goalPaceAlerts,
-              onChanged: (v) => setState(() => _goalPaceAlerts = v),
-            ),
-            _NotifDivider(),
-            _NotifSwitchRow(
-              icon: Icons.local_fire_department_outlined,
-              title: 'Streak Warnings',
-              subtitle: 'Alerted before a logging streak is about to break',
-              value: _streakWarnings,
-              onChanged: (v) => setState(() => _streakWarnings = v),
-            ),
-          ]),
-          const SizedBox(height: 20),
-          _NotifSectionLabel(label: 'WEEKLY SUMMARY'),
-          const SizedBox(height: 8),
-          _NotifCard(children: [
-            _NotifSwitchRow(
-              icon: Icons.summarize_outlined,
-              title: 'Weekly Digest',
-              subtitle: 'A structured end-of-week performance report',
-              value: _weeklyDigest,
-              onChanged: (v) => setState(() => _weeklyDigest = v),
-            ),
-            if (_weeklyDigest) ...[_NotifDivider(), _NotifTapRow(
-              icon: Icons.calendar_today_outlined,
-              title: 'Delivery Day',
-              value: _digestDay,
-              onTap: () => _showPicker(
-                context,
-                title: 'Delivery Day',
-                options: ['Monday', 'Sunday', 'Saturday'],
-                selected: _digestDay,
-                onSelected: (v) => setState(() => _digestDay = v),
+          _NotifCard(
+            children: [
+              _NotifSwitchRow(
+                icon: Icons.restaurant_outlined,
+                title: 'Meal Logging Reminders',
+                subtitle: 'Prompted to log meals so your data stays accurate',
+                value: _mealReminders,
+                onChanged: (v) => setState(() => _mealReminders = v),
               ),
-            )],
-          ]),
+              if (_mealReminders) ...[
+                _NotifDivider(),
+                _NotifTapRow(
+                  icon: Icons.repeat_outlined,
+                  title: 'Reminder Frequency',
+                  value: _mealFrequency,
+                  onTap: () => _showPicker(
+                    context,
+                    title: 'Reminder Frequency',
+                    options: [
+                      'Every 2 hrs',
+                      'Every 3 hrs',
+                      'Every 4 hrs',
+                      'Every 5 hrs',
+                    ],
+                    selected: _mealFrequency,
+                    onSelected: (v) => setState(() => _mealFrequency = v),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 20),
+          const _NotifSectionLabel(label: 'PROGRESS & GOALS'),
+          const SizedBox(height: 8),
+          _NotifCard(
+            children: [
+              _NotifSwitchRow(
+                icon: Icons.emoji_events_outlined,
+                title: 'Milestone Alerts',
+                subtitle:
+                    'Notified when you hit weight, streak, or goal targets',
+                value: _milestoneAlerts,
+                onChanged: (v) => setState(() => _milestoneAlerts = v),
+              ),
+              _NotifDivider(),
+              _NotifSwitchRow(
+                icon: Icons.flag_outlined,
+                title: 'Goal Pace Alerts',
+                subtitle:
+                    'Warnings when your pace drifts off your target timeline',
+                value: _goalPaceAlerts,
+                onChanged: (v) => setState(() => _goalPaceAlerts = v),
+              ),
+              _NotifDivider(),
+              _NotifSwitchRow(
+                icon: Icons.local_fire_department_outlined,
+                title: 'Streak Warnings',
+                subtitle: 'Alerted before a logging streak is about to break',
+                value: _streakWarnings,
+                onChanged: (v) => setState(() => _streakWarnings = v),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const _NotifSectionLabel(label: 'WEEKLY SUMMARY'),
+          const SizedBox(height: 8),
+          _NotifCard(
+            children: [
+              _NotifSwitchRow(
+                icon: Icons.summarize_outlined,
+                title: 'Weekly Digest',
+                subtitle: 'A structured end-of-week performance report',
+                value: _weeklyDigest,
+                onChanged: (v) => setState(() => _weeklyDigest = v),
+              ),
+              if (_weeklyDigest) ...[
+                _NotifDivider(),
+                _NotifTapRow(
+                  icon: Icons.calendar_today_outlined,
+                  title: 'Delivery Day',
+                  value: _digestDay,
+                  onTap: () => _showPicker(
+                    context,
+                    title: 'Delivery Day',
+                    options: ['Monday', 'Sunday', 'Saturday'],
+                    selected: _digestDay,
+                    onSelected: (v) => setState(() => _digestDay = v),
+                  ),
+                ),
+              ],
+            ],
+          ),
           const SizedBox(height: 32),
         ],
       ),
@@ -217,14 +241,14 @@ class _NotifSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        label,
-        style: TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: context.colors.textMuted,
-        ),
-      );
+    label,
+    style: TextStyle(
+      fontSize: 11.5,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.8,
+      color: context.colors.textMuted,
+    ),
+  );
 }
 
 class _NotifCard extends StatelessWidget {
@@ -233,23 +257,22 @@ class _NotifCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border:
-              Border.all(color: context.colors.divider.withValues(alpha: 0.08)),
-        ),
-        child: Column(children: children),
-      );
+    decoration: BoxDecoration(
+      color: context.colors.surface,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: context.colors.divider.withValues(alpha: 0.08)),
+    ),
+    child: Column(children: children),
+  );
 }
 
 class _NotifDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Divider(
-        height: 1,
-        indent: 52,
-        color: context.colors.divider.withValues(alpha: 0.6),
-      );
+    height: 1,
+    indent: 52,
+    color: context.colors.divider.withValues(alpha: 0.6),
+  );
 }
 
 class _NotifSwitchRow extends StatelessWidget {
@@ -370,7 +393,11 @@ class _NotifTapRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 18, color: context.colors.textMuted),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: context.colors.textMuted,
+            ),
           ],
         ),
       ),

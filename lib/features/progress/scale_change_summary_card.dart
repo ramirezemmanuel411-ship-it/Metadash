@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import '../../shared/palette.dart';
-import 'scale_change_service.dart';
+
+import 'package:flutter/material.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/features/progress/scale_change_service.dart';
 
 typedef DateSelector<T> = DateTime Function(T);
 typedef ValueSelector<T> = double Function(T);
@@ -118,7 +119,6 @@ class _ScaleChangeSummaryCardState<T> extends State<ScaleChangeSummaryCard<T>> {
           const SizedBox(width: 12),
           Expanded(
             child: Align(
-              alignment: Alignment.center,
               child: Text(
                 deltaText,
                 textAlign: TextAlign.center,

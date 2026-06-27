@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
-import '../../models/reentry_mode_state.dart';
-import '../../services/reentry_mode_service.dart';
-import '../../services/fat_estimate_calculator.dart';
+import 'package:metadash/core/services/fat_estimate_calculator.dart';
+import 'package:metadash/core/services/reentry_mode_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/reentry_mode_state.dart';
 
 class ReentryReturnFlowScreen extends StatefulWidget {
   final int userId;
@@ -378,11 +378,11 @@ class _ReentryReturnFlowScreenState extends State<ReentryReturnFlowScreen> {
               ),
             ),
             ...options.asMap().entries.map((entry) {
-              int index = entry.key;
+              final int index = entry.key;
               final labelValue = entry.value;
               final label = labelValue.$1;
               final value = labelValue.$2;
-              bool isSelected = selectedValue == value;
+              final bool isSelected = selectedValue == value;
 
               return Column(
                 children: [

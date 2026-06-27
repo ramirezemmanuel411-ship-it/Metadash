@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
-import '../../models/reentry_mode_state.dart';
-import '../../services/reentry_mode_service.dart';
+import 'package:metadash/core/services/reentry_mode_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/reentry_mode_state.dart';
 
 class ReentryModeScreen extends StatefulWidget {
   const ReentryModeScreen({super.key});
@@ -146,7 +146,6 @@ class _ReentryModeScreenState extends State<ReentryModeScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: context.colors.divider.withValues(alpha: 0.05),
-                width: 1,
               ),
             ),
             child: Column(

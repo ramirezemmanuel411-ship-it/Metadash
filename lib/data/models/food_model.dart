@@ -1,8 +1,9 @@
 import 'dart:convert';
+
 import 'package:equatable/equatable.dart';
-import '../../services/food_text_normalizer.dart';
-import '../../services/food_dedup_normalizer.dart';
-import 'food_search_result_raw.dart';
+import 'package:metadash/core/services/food_dedup_normalizer.dart';
+import 'package:metadash/core/services/food_text_normalizer.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
 
 /// Enhanced Food model with caching metadata and serialization
 class FoodModel extends Equatable {
@@ -95,11 +96,29 @@ class FoodModel extends Equatable {
 
     // Strip corporate suffixes that leak through
     const corpSuffixes = [
-      ', Inc.', ', Inc', ' Inc.', ' Inc',
-      ', LLC', ' LLC', ', Corp.', ', Corp', ' Corp.', ' Corp',
-      ', Ltd.', ', Ltd', ' Ltd.', ' Ltd', ', Co.', ' Co.',
-      ' Corporation', ' Company', ' Brands', ' International', ' Enterprises',
-      ' S Corp', ' S. Corp',
+      ', Inc.',
+      ', Inc',
+      ' Inc.',
+      ' Inc',
+      ', LLC',
+      ' LLC',
+      ', Corp.',
+      ', Corp',
+      ' Corp.',
+      ' Corp',
+      ', Ltd.',
+      ', Ltd',
+      ' Ltd.',
+      ' Ltd',
+      ', Co.',
+      ' Co.',
+      ' Corporation',
+      ' Company',
+      ' Brands',
+      ' International',
+      ' Enterprises',
+      ' S Corp',
+      ' S. Corp',
     ];
     bool changed = true;
     while (changed) {
@@ -117,8 +136,10 @@ class FoodModel extends Equatable {
     title = FoodTextNormalizer.normalize(title);
 
     // Remove comma-separated duplicates ("Giant Eagle, Giant Eagle" → "Giant Eagle")
-    final commaMatch =
-        RegExp(r'^(.+),\s*\1$', caseSensitive: false).firstMatch(title);
+    final commaMatch = RegExp(
+      r'^(.+),\s*\1$',
+      caseSensitive: false,
+    ).firstMatch(title);
     if (commaMatch != null) title = commaMatch.group(1)!.trim();
 
     // Remove consecutive duplicate words ("Coke Coke" → "Coke")

@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
-import '../../shared/date_utils.dart';
-import '../../providers/user_state.dart';
-import '../../models/data_inputs_settings.dart';
-import '../../services/calorie_calculation_service.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/calorie_calculation_service.dart';
+import 'package:metadash/core/shared/date_utils.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
 
 class DashboardDayData {
   final int caloriesConsumed;
@@ -138,14 +139,14 @@ class DashboardState extends ChangeNotifier {
       }
 
       // Debugging: Log values for calories calculation
-      debugPrint('Log caloriesConsumed: \\${log?.caloriesConsumed ?? 0}');
-      debugPrint('Food calories: \\$foodCalories');
-      debugPrint('Daily caloric goal: \\$user.dailyCaloricGoal');
+      AppLogger.d('Log caloriesConsumed: \\${log?.caloriesConsumed ?? 0}');
+      AppLogger.d('Food calories: \\$foodCalories');
+      AppLogger.d('Daily caloric goal: \\$user.dailyCaloricGoal');
 
       // Additional debugging to verify data fetching
-      debugPrint('Log: \\$log');
-      debugPrint('Food Entry Maps: \\$foodEntryMaps');
-      debugPrint('Settings: \\$settings');
+      AppLogger.d('Log: \\$log');
+      AppLogger.d('Food Entry Maps: \\$foodEntryMaps');
+      AppLogger.d('Settings: \\$settings');
 
       // Compute TDEE from today's log data
       double? todayTDEE;
@@ -213,7 +214,7 @@ class DashboardState extends ChangeNotifier {
 
   DashboardDayData _defaultDataFor(DateTime date) {
     // Return zero values if not in cache
-    return DashboardDayData(
+    return const DashboardDayData(
       caloriesConsumed: 0,
       caloriesGoal: 2000,
       proteinConsumed: 0,

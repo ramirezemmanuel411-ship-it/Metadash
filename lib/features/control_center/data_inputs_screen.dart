@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
+import 'package:metadash/features/control_center/food_sources_screen.dart';
+import 'package:metadash/features/control_center/macro_calc_screen.dart';
+import 'package:metadash/features/control_center/reset_data_inputs_screen.dart';
+import 'package:metadash/features/control_center/wearables_connections_screen.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../models/data_inputs_settings.dart';
-import 'wearables_connections_screen.dart';
-import 'food_sources_screen.dart';
-import 'macro_calc_screen.dart';
-import 'reset_data_inputs_screen.dart';
 
 class DataInputsScreen extends StatefulWidget {
   const DataInputsScreen({super.key});
@@ -139,7 +139,6 @@ class _DataInputsScreenState extends State<DataInputsScreen> {
                     _DataInputRow(
                       icon: Icons.directions_walk_outlined,
                       title: 'Steps',
-                      subtitle: null,
                       trailing: _stepGoal.toString(),
                       onTap: _editStepGoal,
                     ),
@@ -287,11 +286,7 @@ class _DataInputRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: context.colors.textSecondary,
-            ),
+            Icon(icon, size: 22, color: context.colors.textSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 class PermissionsScreen extends StatelessWidget {
   const PermissionsScreen({super.key});
@@ -26,12 +26,12 @@ class PermissionsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _SectionCard(
+          const _SectionCard(
             children: [
               _StatusRow(title: 'Steps', subtitle: 'Allowed'),
-              const _SectionDivider(),
+              _SectionDivider(),
               _StatusRow(title: 'Workouts', subtitle: 'Allowed'),
-              const _SectionDivider(),
+              _SectionDivider(),
               _StatusRow(title: 'Nutrition', subtitle: 'Allowed'),
             ],
           ),
@@ -113,11 +113,7 @@ class _StatusRow extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            size: 20,
-            color: context.colors.textMuted,
-          ),
+          Icon(Icons.chevron_right, size: 20, color: context.colors.textMuted),
         ],
       ),
     );

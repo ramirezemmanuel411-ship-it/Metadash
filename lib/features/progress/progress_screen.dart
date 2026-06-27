@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/calorie_calculation_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/daily_log.dart';
+import 'package:metadash/features/progress/scale_change_summary_card.dart';
 import 'package:provider/provider.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../models/daily_log.dart';
-import '../../services/calorie_calculation_service.dart';
-import 'scale_change_summary_card.dart';
 
 void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
   const dash = 4.0;
@@ -120,8 +121,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
       final status = avgDeficit < -100
           ? 'On Track'
           : avgDeficit > 100
-              ? 'Surplus'
-              : 'Maintenance';
+          ? 'Surplus'
+          : 'Maintenance';
       setState(() {
         _totalFatChange = total;
         _bodyStatus = status;
@@ -184,7 +185,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       normalizedDate,
     );
     if (log != null) {
-      final updatedLog = log.copyWith(weight: null);
+      final updatedLog = log.copyWith();
       await userState.db.updateDailyLog(updatedLog);
       await _loadWeightData();
     }
@@ -192,24 +193,33 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentWeight =
-        _weightEntries.isNotEmpty ? _weightEntries.last.weight : null;
+    final currentWeight = _weightEntries.isNotEmpty
+        ? _weightEntries.last.weight
+        : null;
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppBar(
         backgroundColor: context.colors.background,
         elevation: 0,
-        title: const Text('Progress',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Progress',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.tune_rounded,
-                color: context.colors.textSecondary, size: 22),
+            icon: Icon(
+              Icons.tune_rounded,
+              color: context.colors.textSecondary,
+              size: 22,
+            ),
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.more_horiz_rounded,
-                color: context.colors.textSecondary, size: 22),
+            icon: Icon(
+              Icons.more_horiz_rounded,
+              color: context.colors.textSecondary,
+              size: 22,
+            ),
             onPressed: () {},
           ),
         ],
@@ -277,7 +287,12 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
     final userState = Provider.of<UserState>(context, listen: false);
     final user = userState.currentUser;
     if (user == null) {
-      if (mounted) setState(() { _allData = []; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
       return;
     }
     try {
@@ -304,43 +319,50 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
         sumIntake += metrics.caloriesConsumed;
         sumTdee += metrics.tdee;
         count++;
-        dataPoints.add(DataPoint(
-          id: 'fat_${log.date.millisecondsSinceEpoch}',
-          date: log.date,
-          value: cumulativeFatChange,
-        ));
+        dataPoints.add(
+          DataPoint(
+            id: 'fat_${log.date.millisecondsSinceEpoch}',
+            date: log.date,
+            value: cumulativeFatChange,
+          ),
+        );
       }
       dataPoints.sort((a, b) => a.date.compareTo(b.date));
 
       double fat7d = 0, fat30d = 0;
       if (dataPoints.isNotEmpty) {
-        final cutoff7  = now.subtract(const Duration(days: 7));
+        final cutoff7 = now.subtract(const Duration(days: 7));
         final cutoff30 = now.subtract(const Duration(days: 30));
-        final current  = dataPoints.last.value;
-        double val7ago  = dataPoints.first.value;
+        final current = dataPoints.last.value;
+        double val7ago = dataPoints.first.value;
         double val30ago = dataPoints.first.value;
         for (final p in dataPoints) {
-          if (!p.date.isAfter(cutoff7))  val7ago  = p.value;
+          if (!p.date.isAfter(cutoff7)) val7ago = p.value;
           if (!p.date.isAfter(cutoff30)) val30ago = p.value;
         }
-        fat7d  = current - val7ago;
+        fat7d = current - val7ago;
         fat30d = current - val30ago;
       }
 
       if (mounted) {
         setState(() {
-          _allData    = dataPoints;
-          _isLoading  = false;
-          _fat7d      = fat7d;
-          _fat30d     = fat30d;
+          _allData = dataPoints;
+          _isLoading = false;
+          _fat7d = fat7d;
+          _fat30d = fat30d;
           _avgDeficit = count > 0 ? sumDeficit / count : 0;
-          _avgIntake  = count > 0 ? sumIntake  / count : 0;
-          _avgTdee    = count > 0 ? sumTdee    / count : 0;
-          _sinceDate  = dataPoints.isNotEmpty ? dataPoints.first.date : null;
+          _avgIntake = count > 0 ? sumIntake / count : 0;
+          _avgTdee = count > 0 ? sumTdee / count : 0;
+          _sinceDate = dataPoints.isNotEmpty ? dataPoints.first.date : null;
         });
       }
     } catch (_) {
-      if (mounted) setState(() { _allData = []; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -364,7 +386,7 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
         cutoff = DateTime(now.year - 1, now.month, now.day);
         break;
       case 'YTD':
-        cutoff = DateTime(now.year, 1, 1);
+        cutoff = DateTime(now.year);
         break;
       default:
         return data;
@@ -374,20 +396,37 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
 
   int _tickCount(String f) {
     switch (f) {
-      case '1D':  return 2;
-      case '1W':  return 4;
-      case '1M':  return 5;
-      case '3M':  return 6;
-      case '1Y':  return 6;
-      case 'YTD': return 6;
-      default:    return 5;
+      case '1D':
+        return 2;
+      case '1W':
+        return 4;
+      case '1M':
+        return 5;
+      case '3M':
+        return 6;
+      case '1Y':
+        return 6;
+      case 'YTD':
+        return 6;
+      default:
+        return 5;
     }
   }
 
   String _fmtShortDate(DateTime d) {
     const months = [
-      'Jan','Feb','Mar','Apr','May','Jun',
-      'Jul','Aug','Sep','Oct','Nov','Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}';
   }
@@ -396,14 +435,14 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     if (_isLoading) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.hourglass_empty_rounded,
         message: 'MetaDash is building your metabolic profile.',
       );
     }
     final filteredData = _filterData(_allData, _filterType);
     if (filteredData.isEmpty) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.trending_down_rounded,
         message:
             'Track food and activity for 3 days to begin estimating fat change.',
@@ -424,7 +463,6 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
         children: [
           // ── Header with icon ──────────────────────────────────────────────
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 40,
@@ -433,22 +471,32 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
                   color: colors.accent.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.show_chart_rounded,
-                    color: colors.accent, size: 20),
+                child: Icon(
+                  Icons.show_chart_rounded,
+                  color: colors.accent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Estimated Fat Change',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: colors.textPrimary)),
-                    Text('Your body composition trend',
-                        style: TextStyle(
-                            fontSize: 11, color: colors.textSecondary)),
+                    Text(
+                      'Estimated Fat Change',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Your body composition trend',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -484,8 +532,7 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
                       const SizedBox(height: 4),
                       Text(
                         'Since ${_fmtShortDate(_sinceDate!)}',
-                        style:
-                            TextStyle(fontSize: 11, color: colors.textMuted),
+                        style: TextStyle(fontSize: 11, color: colors.textMuted),
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -493,16 +540,14 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
                       value:
                           '${_fat7d > 0 ? '+' : ''}${_fat7d.toStringAsFixed(1)} lb',
                       label: 'Last 7 days',
-                      valueColor:
-                          _fat7d <= 0 ? colors.accent : colors.cta,
+                      valueColor: _fat7d <= 0 ? colors.accent : colors.cta,
                     ),
                     const SizedBox(height: 6),
                     _MiniStatCard(
                       value:
                           '${_fat30d > 0 ? '+' : ''}${_fat30d.toStringAsFixed(1)} lb',
                       label: 'Last 30 days',
-                      valueColor:
-                          _fat30d <= 0 ? colors.accent : colors.cta,
+                      valueColor: _fat30d <= 0 ? colors.accent : colors.cta,
                     ),
                   ],
                 ),
@@ -515,8 +560,7 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
                     data: filteredData,
                     color: colors.accent.withValues(alpha: 0.85),
                     selectedIndex: _selectedIndex,
-                    onIndexChanged: (i) =>
-                        setState(() => _selectedIndex = i),
+                    onIndexChanged: (i) => setState(() => _selectedIndex = i),
                     showDecimals: true,
                     yAxisInterval: 0.25,
                     rightPadding: 8.0,
@@ -532,8 +576,11 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
           // ── What's driving this ───────────────────────────────────────────
           Row(
             children: [
-              Icon(Icons.lightbulb_outline_rounded,
-                  size: 14, color: colors.accent),
+              Icon(
+                Icons.lightbulb_outline_rounded,
+                size: 14,
+                color: colors.accent,
+              ),
               const SizedBox(width: 6),
               Text(
                 "What's driving this",
@@ -549,17 +596,23 @@ class _FatChangeSectionState extends State<_FatChangeSection> {
           Row(
             children: [
               Expanded(
-                  child: _DriverMetric(
-                      label: 'Avg Deficit',
-                      value: '${_avgDeficit.round()} kcal/day')),
+                child: _DriverMetric(
+                  label: 'Avg Deficit',
+                  value: '${_avgDeficit.round()} kcal/day',
+                ),
+              ),
               Expanded(
-                  child: _DriverMetric(
-                      label: 'Avg Intake',
-                      value: '${_avgIntake.round()} kcal/day')),
+                child: _DriverMetric(
+                  label: 'Avg Intake',
+                  value: '${_avgIntake.round()} kcal/day',
+                ),
+              ),
               Expanded(
-                  child: _DriverMetric(
-                      label: 'Avg TDEE',
-                      value: '${_avgTdee.round()} kcal/day')),
+                child: _DriverMetric(
+                  label: 'Avg TDEE',
+                  value: '${_avgTdee.round()} kcal/day',
+                ),
+              ),
             ],
           ),
         ],
@@ -591,7 +644,12 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
     final userState = Provider.of<UserState>(context, listen: false);
     final user = userState.currentUser;
     if (user == null) {
-      if (mounted) setState(() { _allData = []; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
       return;
     }
     try {
@@ -610,16 +668,28 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
           settings: settings,
           inputs: userState.dataInputsSettings,
         );
-        dataPoints.add(DataPoint(
-          id: 'tdee_${log.date.millisecondsSinceEpoch}',
-          date: log.date,
-          value: metrics.tdee,
-        ));
+        dataPoints.add(
+          DataPoint(
+            id: 'tdee_${log.date.millisecondsSinceEpoch}',
+            date: log.date,
+            value: metrics.tdee,
+          ),
+        );
       }
       dataPoints.sort((a, b) => a.date.compareTo(b.date));
-      if (mounted) setState(() { _allData = dataPoints; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _allData = dataPoints;
+          _isLoading = false;
+        });
+      }
     } catch (_) {
-      if (mounted) setState(() { _allData = []; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _allData = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -643,7 +713,7 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
         cutoff = DateTime(now.year - 1, now.month, now.day);
         break;
       case 'YTD':
-        cutoff = DateTime(now.year, 1, 1);
+        cutoff = DateTime(now.year);
         break;
       default:
         return data;
@@ -653,13 +723,20 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
 
   int _tickCount(String f) {
     switch (f) {
-      case '1D':  return 2;
-      case '1W':  return 4;
-      case '1M':  return 5;
-      case '3M':  return 6;
-      case '1Y':  return 6;
-      case 'YTD': return 6;
-      default:    return 5;
+      case '1D':
+        return 2;
+      case '1W':
+        return 4;
+      case '1M':
+        return 5;
+      case '3M':
+        return 6;
+      case '1Y':
+        return 6;
+      case 'YTD':
+        return 6;
+      default:
+        return 5;
     }
   }
 
@@ -667,14 +744,14 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     if (_isLoading) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.hourglass_empty_rounded,
         message: 'MetaDash is building your metabolic profile.',
       );
     }
     final filteredData = _filterData(_allData, _filterType);
     if (filteredData.isEmpty) {
-      return _ProgressEmptyCard(
+      return const _ProgressEmptyCard(
         icon: Icons.bolt_rounded,
         message: 'MetaDash is building your metabolic profile.',
       );
@@ -682,20 +759,22 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
 
     final currentTDEE = _allData.isNotEmpty ? _allData.last.value : 0.0;
     final first = filteredData.isNotEmpty ? filteredData.first.value : 0.0;
-    final last  = filteredData.isNotEmpty ? filteredData.last.value  : 0.0;
-    final diff  = last - first;
-    final trendLabel =
-        diff > 50 ? 'Rising ↗' : diff < -50 ? 'Falling ↘' : 'Stable →';
+    final last = filteredData.isNotEmpty ? filteredData.last.value : 0.0;
+    final diff = last - first;
+    final trendLabel = diff > 50
+        ? 'Rising ↗'
+        : diff < -50
+        ? 'Falling ↘'
+        : 'Stable →';
     final trendColor = diff > 50
         ? colors.accent
         : diff < -50
-            ? colors.cta
-            : colors.textSecondary;
+        ? colors.cta
+        : colors.textSecondary;
 
-    final now    = DateTime.now();
+    final now = DateTime.now();
     final last30 = _allData
-        .where((p) => p.date
-            .isAfter(now.subtract(const Duration(days: 30))))
+        .where((p) => p.date.isAfter(now.subtract(const Duration(days: 30))))
         .toList();
     final avg30 = last30.isNotEmpty
         ? last30.fold(0.0, (s, p) => s + p.value) / last30.length
@@ -712,7 +791,6 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
         children: [
           // ── Header with icon ──────────────────────────────────────────────
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 40,
@@ -721,22 +799,32 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
                   color: colors.accent.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.local_fire_department_rounded,
-                    color: colors.accent, size: 20),
+                child: Icon(
+                  Icons.local_fire_department_rounded,
+                  color: colors.accent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Metabolism (TDEE)',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: colors.textPrimary)),
-                    Text('Your daily energy expenditure trend',
-                        style: TextStyle(
-                            fontSize: 11, color: colors.textSecondary)),
+                    Text(
+                      'Metabolism (TDEE)',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Your daily energy expenditure trend',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -769,9 +857,13 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Text('Current TDEE',
-                        style: TextStyle(
-                            fontSize: 11, color: colors.textSecondary)),
+                    Text(
+                      'Current TDEE',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     Text(
                       '${avg30.round()} kcal',
@@ -782,9 +874,13 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Text('30-Day Average',
-                        style: TextStyle(
-                            fontSize: 11, color: colors.textSecondary)),
+                    Text(
+                      '30-Day Average',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     Text(
                       trendLabel,
@@ -794,9 +890,13 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
                         color: trendColor,
                       ),
                     ),
-                    Text('Trend',
-                        style: TextStyle(
-                            fontSize: 11, color: colors.textSecondary)),
+                    Text(
+                      'Trend',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -808,9 +908,7 @@ class _TDEETrendSectionState extends State<_TDEETrendSection> {
                     data: filteredData,
                     color: colors.accent.withValues(alpha: 0.8),
                     selectedIndex: _selectedIndex,
-                    onIndexChanged: (i) =>
-                        setState(() => _selectedIndex = i),
-                    showDecimals: false,
+                    onIndexChanged: (i) => setState(() => _selectedIndex = i),
                     yAxisInterval: 200.0,
                     rightPadding: 8.0,
                     abbreviateLabels: true,
@@ -869,7 +967,7 @@ class _WeightSectionState extends State<_WeightSection> {
         cutoff = DateTime(now.year - 1, now.month, now.day);
         break;
       case 'YTD':
-        cutoff = DateTime(now.year, 1, 1);
+        cutoff = DateTime(now.year);
         break;
       default:
         return entries;
@@ -943,7 +1041,6 @@ class _WeightSectionState extends State<_WeightSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 40,
@@ -952,8 +1049,11 @@ class _WeightSectionState extends State<_WeightSection> {
                   color: Colors.deepPurple.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.monitor_weight_outlined,
-                    color: Colors.deepPurple.shade200, size: 20),
+                child: Icon(
+                  Icons.monitor_weight_outlined,
+                  color: Colors.deepPurple.shade200,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1004,12 +1104,14 @@ class _WeightSectionState extends State<_WeightSection> {
             children: [
               _LegendItem(
                 color: context.colors.textPrimary.withValues(alpha: 0.85),
-                label: 'Scale Weight${scaleData.isNotEmpty ? '  ${scaleData.last.value.toStringAsFixed(1)} lb' : ''}',
+                label:
+                    'Scale Weight${scaleData.isNotEmpty ? '  ${scaleData.last.value.toStringAsFixed(1)} lb' : ''}',
               ),
               const SizedBox(height: 6),
               _LegendItem(
                 color: context.colors.accent,
-                label: 'Trend Weight${trendData.isNotEmpty ? '  ${trendData.last.value.toStringAsFixed(1)} lb' : ''}',
+                label:
+                    'Trend Weight${trendData.isNotEmpty ? '  ${trendData.last.value.toStringAsFixed(1)} lb' : ''}',
                 isDot: true,
               ),
             ],
@@ -1026,8 +1128,7 @@ class _WeightSectionState extends State<_WeightSection> {
           ),
           const SizedBox(height: 12),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.deepPurple.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
@@ -1041,8 +1142,11 @@ class _WeightSectionState extends State<_WeightSection> {
                     color: Colors.deepPurple.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.shield_outlined,
-                      size: 16, color: Colors.deepPurple.shade200),
+                  child: Icon(
+                    Icons.shield_outlined,
+                    size: 16,
+                    color: Colors.deepPurple.shade200,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1052,15 +1156,17 @@ class _WeightSectionState extends State<_WeightSection> {
                       Text(
                         'Weight fluctuates daily.',
                         style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: context.colors.textPrimary),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: context.colors.textPrimary,
+                        ),
                       ),
                       Text(
                         'Focus on the trend and estimated fat change.',
                         style: TextStyle(
-                            fontSize: 11,
-                            color: context.colors.textSecondary),
+                          fontSize: 11,
+                          color: context.colors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -1068,13 +1174,19 @@ class _WeightSectionState extends State<_WeightSection> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Learn More',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.deepPurple.shade200)),
-                    Icon(Icons.chevron_right_rounded,
-                        size: 16, color: Colors.deepPurple.shade200),
+                    Text(
+                      'Learn More',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.deepPurple.shade200,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: Colors.deepPurple.shade200,
+                    ),
                   ],
                 ),
               ],
@@ -1180,13 +1292,15 @@ class _BodyStatusCard extends StatelessWidget {
       return Container(
         height: 68,
         decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(14)),
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: const Center(
           child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2)),
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
         ),
       );
     }
@@ -1194,22 +1308,25 @@ class _BodyStatusCard extends StatelessWidget {
     final statusColor = status == 'On Track'
         ? colors.accent
         : status == 'Surplus'
-            ? colors.cta
-            : colors.textSecondary;
+        ? colors.cta
+        : colors.textSecondary;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       decoration: BoxDecoration(
-          color: colors.surface, borderRadius: BorderRadius.circular(14)),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'BODY STATUS',
             style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: colors.textMuted),
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: colors.textMuted,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -1224,15 +1341,20 @@ class _BodyStatusCard extends StatelessWidget {
                           ? '${currentWeight!.toStringAsFixed(1)} lb'
                           : '—',
                       style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: colors.primary,
-                          height: 1.1),
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: colors.primary,
+                        height: 1.1,
+                      ),
                     ),
                     const SizedBox(height: 3),
-                    Text('Current Weight',
-                        style: TextStyle(
-                            fontSize: 10, color: colors.textSecondary)),
+                    Text(
+                      'Current Weight',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1246,24 +1368,31 @@ class _BodyStatusCard extends StatelessWidget {
                       Text(
                         '${fatChange > 0 ? '+' : ''}${fatChange.toStringAsFixed(1)} lb',
                         style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: fatColor,
-                            height: 1.1),
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: fatColor,
+                          height: 1.1,
+                        ),
                       ),
                       const SizedBox(height: 3),
                       Row(
                         children: [
                           Flexible(
-                            child: Text('Estimated Fat Change',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    color: colors.textSecondary),
-                                overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              'Estimated Fat Change',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: colors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 3),
-                          Icon(Icons.info_outline_rounded,
-                              size: 10, color: colors.textMuted),
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 10,
+                            color: colors.textMuted,
+                          ),
                         ],
                       ),
                     ],
@@ -1279,7 +1408,9 @@ class _BodyStatusCard extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 3),
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: statusColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
@@ -1291,8 +1422,8 @@ class _BodyStatusCard extends StatelessWidget {
                               status == 'On Track'
                                   ? Icons.check_circle_rounded
                                   : status == 'Surplus'
-                                      ? Icons.arrow_upward_rounded
-                                      : Icons.remove_rounded,
+                                  ? Icons.arrow_upward_rounded
+                                  : Icons.remove_rounded,
                               size: 11,
                               color: statusColor,
                             ),
@@ -1301,9 +1432,10 @@ class _BodyStatusCard extends StatelessWidget {
                               child: Text(
                                 status.isEmpty ? '—' : status,
                                 style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: statusColor),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: statusColor,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1315,10 +1447,9 @@ class _BodyStatusCard extends StatelessWidget {
                         status == 'On Track'
                             ? "You're within\nplan range"
                             : status == 'Surplus'
-                                ? 'Above maintenance\nrange'
-                                : 'Near maintenance\nrange',
-                        style: TextStyle(
-                            fontSize: 10, color: colors.textMuted),
+                            ? 'Above maintenance\nrange'
+                            : 'Near maintenance\nrange',
+                        style: TextStyle(fontSize: 10, color: colors.textMuted),
                       ),
                     ],
                   ),
@@ -1337,8 +1468,11 @@ class _BodyStatusCard extends StatelessWidget {
 class _MiniStatCard extends StatelessWidget {
   final String label, value;
   final Color valueColor;
-  const _MiniStatCard(
-      {required this.label, required this.value, required this.valueColor});
+  const _MiniStatCard({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1353,14 +1487,16 @@ class _MiniStatCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(value,
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: valueColor)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: TextStyle(fontSize: 10, color: colors.textMuted)),
+          Text(label, style: TextStyle(fontSize: 10, color: colors.textMuted)),
         ],
       ),
     );
@@ -1379,11 +1515,14 @@ class _DriverMetric extends StatelessWidget {
       children: [
         Text(label, style: TextStyle(fontSize: 10, color: colors.textMuted)),
         const SizedBox(height: 2),
-        Text(value,
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: colors.primary)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: colors.primary,
+          ),
+        ),
       ],
     );
   }
@@ -1411,28 +1550,39 @@ class _FilterPill extends StatelessWidget {
     return PopupMenuButton<String>(
       onSelected: onChanged,
       itemBuilder: (_) => ['ALL', '1Y', 'YTD', '3M', '1M', '1W']
-          .map((k) => PopupMenuItem(
+          .map(
+            (k) => PopupMenuItem(
               value: k,
-              child: Text(_labelMap[k] ?? k,
-                  style: const TextStyle(fontSize: 13))))
+              child: Text(
+                _labelMap[k] ?? k,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          )
           .toList(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          border: Border.all(color: colors.divider, width: 1),
+          border: Border.all(color: colors.divider),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(displayLabel,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: colors.textSecondary)),
+            Text(
+              displayLabel,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: colors.textSecondary,
+              ),
+            ),
             const SizedBox(width: 3),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                size: 14, color: colors.textMuted),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 14,
+              color: colors.textMuted,
+            ),
           ],
         ),
       ),
@@ -1451,7 +1601,9 @@ class _ProgressEmptyCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
       decoration: BoxDecoration(
-          color: colors.surface, borderRadius: BorderRadius.circular(14)),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         children: [
           Icon(icon, size: 32, color: colors.textMuted),
@@ -1460,7 +1612,10 @@ class _ProgressEmptyCard extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 14, color: colors.textSecondary, height: 1.5),
+              fontSize: 14,
+              color: colors.textSecondary,
+              height: 1.5,
+            ),
           ),
         ],
       ),

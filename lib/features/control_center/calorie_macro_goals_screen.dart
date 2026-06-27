@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
 import 'package:provider/provider.dart';
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
 
 class CalorieMacroGoalsScreen extends StatefulWidget {
   const CalorieMacroGoalsScreen({super.key});
@@ -235,12 +235,9 @@ class _CalorieMacroGoalsScreenState extends State<CalorieMacroGoalsScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Save Goals',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),

@@ -1,10 +1,9 @@
-// ignore_for_file: avoid_print
-
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/food_model.dart';
-import '../models/food_search_result_raw.dart';
-import '../../services/raw_search_debug_store.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/core/services/raw_search_debug_store.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/models/food_search_result_raw.dart';
 
 /// Remote datasource for API calls with cancellation support
 /// Implements smart retry, timeout, and request cancellation
@@ -35,12 +34,10 @@ class FoodRemoteDatasource {
     // Add interceptors for logging (optional, can be removed in production)
     _dio.interceptors.add(
       LogInterceptor(
-        requestBody: false,
-        responseBody: false,
         logPrint: (obj) {
           // Only log errors in production
           if (obj.toString().contains('ERROR')) {
-            print(obj);
+            AppLogger.d(obj);
           }
         },
       ),
@@ -135,13 +132,13 @@ class FoodRemoteDatasource {
       return [];
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
-        print('USDA search cancelled');
+        AppLogger.d('USDA search cancelled');
         return [];
       }
-      print('USDA search error: ${e.message}');
+      AppLogger.d('USDA search error: ${e.message}');
       return [];
     } catch (e) {
-      print('USDA search error: $e');
+      AppLogger.d('USDA search error: $e');
       return [];
     }
   }
@@ -164,7 +161,7 @@ class FoodRemoteDatasource {
             pageSize: pageSize ~/ 2,
             cancelToken: cancelToken,
           ).then((results) => offResults = results).catchError((e) {
-            print('OFF search failed: $e');
+            AppLogger.d('OFF search failed: $e');
             return <FoodModel>[];
           });
 
@@ -174,7 +171,7 @@ class FoodRemoteDatasource {
             pageSize: pageSize ~/ 2,
             cancelToken: cancelToken,
           ).then((results) => usdaResults = results).catchError((e) {
-            print('USDA search failed: $e');
+            AppLogger.d('USDA search failed: $e');
             return <FoodModel>[];
           });
 
@@ -194,7 +191,7 @@ class FoodRemoteDatasource {
       final combined = [...offResults, ...usdaResults];
       return _deduplicateResults(combined);
     } catch (e) {
-      print('Parallel search error: $e');
+      AppLogger.d('Parallel search error: $e');
       return [];
     }
   }
@@ -224,11 +221,11 @@ class FoodRemoteDatasource {
       return null;
     } on DioException catch (e) {
       if (e.type != DioExceptionType.cancel) {
-        print('Barcode search error: ${e.message}');
+        AppLogger.d('Barcode search error: ${e.message}');
       }
       return null;
     } catch (e) {
-      print('Barcode search error: $e');
+      AppLogger.d('Barcode search error: $e');
       return null;
     }
   }
@@ -287,12 +284,10 @@ class FoodRemoteDatasource {
         sourceId: product['code']?.toString(),
         barcode: product['code']?.toString(),
         verified: _isOffVerified(product),
-        providerScore: null,
         foodNameRaw: name,
         foodName: product['product_name_en']?.toString() ?? name,
         brandName: brand?.toString(),
         brandOwner: product['brand_owner']?.toString(),
-        restaurantName: null,
         category: _firstCommaPart(product['categories']?.toString()),
         subcategory: _secondCommaPart(product['categories']?.toString()),
         languageCode: product['lang']?.toString() ?? product['lc']?.toString(),
@@ -304,16 +299,13 @@ class FoodRemoteDatasource {
         servingVolumeMl: (servingUnit ?? '').toLowerCase().contains('ml')
             ? (servingQty > 0 ? servingQty : 100)
             : null,
-        servingOptions: const [],
         calories: calories,
         proteinG: protein,
         carbsG: carbs,
         fatG: fat,
         nutritionBasis: nutritionBasis,
         rawJson: product,
-        lastUpdated: null,
         dataType: 'branded',
-        popularity: null,
         isGeneric: (brand?.toString().toLowerCase() ?? '') == 'generic',
         isBranded:
             (brand?.toString().isNotEmpty ?? false) &&
@@ -322,7 +314,7 @@ class FoodRemoteDatasource {
 
       return FoodModel.fromRaw(raw);
     } catch (e) {
-      print('Error parsing OFF product: $e');
+      AppLogger.d('Error parsing OFF product: $e');
       return null;
     }
   }
@@ -381,7 +373,6 @@ class FoodRemoteDatasource {
               quantity: _safeToDouble(portion['amount'] ?? 0),
               unit: portionUnit,
               weightGrams: _safeToDouble(portion['gramWeight'] ?? 0),
-              volumeMl: null,
               rawJson: portion,
             );
           })
@@ -392,16 +383,11 @@ class FoodRemoteDatasource {
         source: 'usda',
         sourceId: food['fdcId']?.toString(),
         barcode: food['gtinUpc']?.toString(),
-        verified: null,
-        providerScore: null,
         foodNameRaw: rawDescription?.toString(),
         foodName: productName,
         brandName: brandName,
         brandOwner: food['brandOwner']?.toString(),
-        restaurantName: null,
         category: food['foodCategory']?.toString(),
-        subcategory: null,
-        languageCode: null,
         servingQty: servingSize > 0 ? servingSize : 100,
         servingUnit: servingUnit ?? 'g',
         servingWeightGrams: (servingUnit ?? '').toLowerCase().contains('g')
@@ -417,9 +403,7 @@ class FoodRemoteDatasource {
         fatG: fat,
         nutritionBasis: 'per_100g',
         rawJson: food,
-        lastUpdated: null,
         dataType: dataType,
-        popularity: null,
         isGeneric:
             (dataType ?? '').toLowerCase().contains('survey') ||
             (brandName ?? '').isEmpty,
@@ -430,7 +414,7 @@ class FoodRemoteDatasource {
 
       return FoodModel.fromRaw(raw);
     } catch (e) {
-      print('Error parsing USDA food: $e');
+      AppLogger.d('Error parsing USDA food: $e');
       return null;
     }
   }
@@ -455,7 +439,7 @@ class FoodRemoteDatasource {
 
         // Parse brand and name (extract first part before comma if present)
         String? brandName;
-        String? displayName = foodNameRaw;
+        final String? displayName = foodNameRaw;
 
         if (brandRaw != null && brandRaw.isNotEmpty) {
           brandName = _firstCommaPart(brandRaw);
@@ -499,12 +483,9 @@ class FoodRemoteDatasource {
             sourceId: code,
             barcode: code,
             verified: verified,
-            providerScore: null,
             foodNameRaw: foodNameRaw,
             foodName: displayName,
             brandName: brandName,
-            brandOwner: null,
-            restaurantName: null,
             category: _firstCommaPart(product['categories']?.toString()),
             subcategory: _secondCommaPart(product['categories']?.toString()),
             languageCode: product['lang']?.toString(),
@@ -523,16 +504,14 @@ class FoodRemoteDatasource {
             fatG: fatG > 0 ? fatG : null,
             nutritionBasis: 'per_100g',
             rawJson: product,
-            lastUpdated: null,
             dataType: 'branded',
-            popularity: null,
             isGeneric: isGeneric,
             isBranded: isBranded,
           ),
         );
       } catch (e) {
         // Skip items that fail to parse
-        print('Error building OFF raw result: $e');
+        AppLogger.d('Error building OFF raw result: $e');
         continue;
       }
     }
@@ -623,16 +602,10 @@ class FoodRemoteDatasource {
             source: 'usda',
             sourceId: fdcId,
             barcode: gtinUpc,
-            verified: null,
-            providerScore: null,
             foodNameRaw: rawDescription,
             foodName: displayName,
             brandName: brandName,
-            brandOwner: null,
-            restaurantName: null,
             category: food['foodCategory']?.toString(),
-            subcategory: null,
-            languageCode: null,
             servingQty: servingQty,
             servingUnit: servingUnit,
             servingWeightGrams: servingUnit.toLowerCase() == 'g'
@@ -648,16 +621,14 @@ class FoodRemoteDatasource {
             fatG: fatG != null && fatG > 0 ? fatG : null,
             nutritionBasis: 'per_100g',
             rawJson: food,
-            lastUpdated: null,
             dataType: dataType,
-            popularity: null,
             isGeneric: isGeneric,
             isBranded: isBranded,
           ),
         );
       } catch (e) {
         // Skip items that fail to parse
-        print('Error building USDA raw result: $e');
+        AppLogger.d('Error building USDA raw result: $e');
         continue;
       }
     }
@@ -727,10 +698,24 @@ class FoodRemoteDatasource {
   /// Store / private-label brands that show up as the *first* comma-part of a
   /// USDA branded description, ahead of the real food name.
   static const _usdaStoreBrands = {
-    'kirkland', 'kirkland signature', 'great value', "sam's choice", 'equate',
-    'good & gather', 'market pantry', 'simple truth', 'signature select',
-    '365', '365 everyday value', "member's mark", 'private selection',
-    "trader joe's", 'up & up', 'kroger', 'open nature', 'lucerne',
+    'kirkland',
+    'kirkland signature',
+    'great value',
+    "sam's choice",
+    'equate',
+    'good & gather',
+    'market pantry',
+    'simple truth',
+    'signature select',
+    '365',
+    '365 everyday value',
+    "member's mark",
+    'private selection',
+    "trader joe's",
+    'up & up',
+    'kroger',
+    'open nature',
+    'lucerne',
   };
 
   Map<String, String?> _parseUSDABrandAndName(
@@ -784,10 +769,10 @@ class FoodRemoteDatasource {
               .trim();
           final resolvedBrand =
               (brandName != null && brandName.trim().isNotEmpty)
-                  ? brandName.trim()
-                  : (brandOwner != null && brandOwner.trim().isNotEmpty)
-                      ? brandOwner.trim()
-                      : (brandParts.isNotEmpty ? brandParts.first : null);
+              ? brandName.trim()
+              : (brandOwner != null && brandOwner.trim().isNotEmpty)
+              ? brandOwner.trim()
+              : (brandParts.isNotEmpty ? brandParts.first : null);
           return {
             'name': food.isEmpty ? foodName : food,
             'brand': resolvedBrand,

@@ -1,18 +1,20 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'dart:async';
 import 'dart:math' as math;
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
-import '../../models/diary_entry_food.dart';
-import '../../models/user_profile.dart';
-import '../../models/daily_log.dart';
-import '../../models/metabolic_settings.dart';
-import '../../models/data_inputs_settings.dart';
-import '../../services/calorie_calculation_service.dart';
-import '../food_search/food_search_screen.dart';
-import '../food_search/food_detail_screen.dart';
-import '../../data/models/food_model.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/calorie_calculation_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/data/models/daily_log.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
+import 'package:metadash/data/models/diary_entry_food.dart';
+import 'package:metadash/data/models/food_model.dart';
+import 'package:metadash/data/models/metabolic_settings.dart';
+import 'package:metadash/data/models/user_profile.dart';
+import 'package:metadash/features/food_search/food_detail_screen.dart';
+import 'package:metadash/features/food_search/food_search_screen.dart';
 
 class DiaryScreen extends StatefulWidget {
   final DateTime selectedDay;
@@ -62,14 +64,14 @@ class _DiaryScreenState extends State<DiaryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFoodEntries();
+    unawaited(_loadFoodEntries());
   }
 
   @override
   void didUpdateWidget(DiaryScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedDay != widget.selectedDay) {
-      _loadFoodEntries();
+      unawaited(_loadFoodEntries());
     }
   }
 
@@ -95,8 +97,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
       widget.selectedDay.month,
       widget.selectedDay.day,
       hour,
-      0,
-      0,
     );
   }
 
@@ -104,7 +104,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FoodSearchScreen(
-          returnOnSelect: false,
           autofocusSearch: true,
           userState: widget.userState,
           targetTimestamp: targetHour == null
@@ -114,14 +113,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
       ),
     );
     // Reload entries when returning from search
-    _loadFoodEntries();
+    unawaited(_loadFoodEntries());
   }
 
   void _openBarcodeScanner() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FoodSearchScreen(
-          returnOnSelect: false,
           userState: widget.userState,
           initialTab: FoodSearchTab.barcode,
         ),
@@ -143,7 +141,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     );
 
     await widget.userState!.db.addFoodEntry(newEntry);
-    _loadFoodEntries();
+    unawaited(_loadFoodEntries());
   }
 
   Future<void> _editEntry(DiaryEntryFood entry) async {
@@ -157,7 +155,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
       carbs: entry.carbsG.toDouble(),
       fat: entry.fatG.toDouble(),
       source: entry.source,
-      servingWeightGrams: null,
     );
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -172,7 +169,10 @@ class _DiaryScreenState extends State<DiaryScreen> {
     );
   }
 
-  Future<void> _showEntryMoveMenu(BuildContext ctx, DiaryEntryFood entry) async {
+  Future<void> _showEntryMoveMenu(
+    BuildContext ctx,
+    DiaryEntryFood entry,
+  ) async {
     await showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
@@ -189,7 +189,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
           );
           await widget.userState!.db.deleteFoodEntry(entry.id);
           await widget.userState!.db.addFoodEntry(moved);
-          _loadFoodEntries();
+          unawaited(_loadFoodEntries());
         },
         onCopy: (newTimestamp) async {
           await _addEntryFromTemplate(entry, timestamp: newTimestamp);
@@ -256,296 +256,325 @@ class _DiaryScreenState extends State<DiaryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                GestureDetector(
-                                  onTap: () => _showDatePicker(context),
-                                  child: Text(
-                                    _formattedHeaderDate,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                    ),
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () => _showDatePicker(context),
+                                        child: Text(
+                                          _formattedHeaderDate,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      _WeekdayRow(
+                                        selectedWeekday:
+                                            widget.selectedDay.weekday,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 6),
-                                _WeekdayRow(
-                                  selectedWeekday: widget.selectedDay.weekday,
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  width: 185,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Show workout as a simple calories readout (no per-workout calorie goal)
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.fitness_center,
+                                            color: context.colors.accent,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              'Workout',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              '${widget.workoutCalories} cal',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _ProgressBar(
+                                        label: 'Steps',
+                                        value: widget.stepsGoal > 0
+                                            ? (widget.stepsTaken /
+                                                      widget.stepsGoal)
+                                                  .clamp(0.0, 1.0)
+                                            : 0,
+                                        icon: Icons.directions_walk,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 185,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Show workout as a simple calories readout (no per-workout calorie goal)
-                                Row(
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              height: 100,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(
+                                    () => _currentMacroPage =
+                                        _currentMacroPage == 0 ? 1 : 0,
+                                  );
+                                },
+                                child: IndexedStack(
+                                  index: _currentMacroPage,
+                                  children: [
+                                    // Page 1: Consumed macros
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Flexible(
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              _Ring(
+                                                value: widget.proteinGoal > 0
+                                                    ? widget.proteinConsumed /
+                                                          widget.proteinGoal
+                                                    : 0,
+                                                label: 'Protein',
+                                                number: widget.proteinConsumed,
+                                                color: Palette.macroProtein,
+                                              ),
+                                              const SizedBox(width: 0),
+                                              _Ring(
+                                                value: widget.fatGoal > 0
+                                                    ? widget.fatConsumed /
+                                                          widget.fatGoal
+                                                    : 0,
+                                                label: 'Fats',
+                                                number: widget.fatConsumed,
+                                                color: Palette.macroFat,
+                                              ),
+                                              const SizedBox(width: 0),
+                                              _Ring(
+                                                value: widget.carbsGoal > 0
+                                                    ? widget.carbsConsumed /
+                                                          widget.carbsGoal
+                                                    : 0,
+                                                label: 'Carbs',
+                                                number: widget.carbsConsumed,
+                                                color: Palette.macroCarbs,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        _Ring(
+                                          value: widget.caloriesGoal > 0
+                                              ? widget.caloriesConsumed /
+                                                    widget.caloriesGoal
+                                              : 0,
+                                          label: 'Calories',
+                                          number: widget.caloriesConsumed,
+                                          color: context.colors.accent,
+                                        ),
+                                      ],
+                                    ),
+                                    // Page 2: Remaining macros
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Flexible(
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              _Ring(
+                                                value: widget.proteinGoal > 0
+                                                    ? ((widget.proteinGoal -
+                                                                  widget
+                                                                      .proteinConsumed) /
+                                                              widget
+                                                                  .proteinGoal)
+                                                          .clamp(0.0, 1.0)
+                                                    : 0,
+                                                startFraction:
+                                                    widget.proteinGoal > 0
+                                                    ? (widget.proteinConsumed /
+                                                              widget
+                                                                  .proteinGoal)
+                                                          .clamp(0.0, 1.0)
+                                                    : 0,
+                                                label: 'Protein',
+                                                number:
+                                                    (widget.proteinGoal -
+                                                            widget
+                                                                .proteinConsumed)
+                                                        .clamp(
+                                                          0,
+                                                          widget.proteinGoal,
+                                                        ),
+                                                color: Palette.macroProtein,
+                                              ),
+                                              const SizedBox(width: 0),
+                                              _Ring(
+                                                value: widget.fatGoal > 0
+                                                    ? ((widget.fatGoal -
+                                                                  widget
+                                                                      .fatConsumed) /
+                                                              widget.fatGoal)
+                                                          .clamp(0.0, 1.0)
+                                                    : 0,
+                                                startFraction:
+                                                    widget.fatGoal > 0
+                                                    ? (widget.fatConsumed /
+                                                              widget.fatGoal)
+                                                          .clamp(0.0, 1.0)
+                                                    : 0,
+                                                label: 'Fats',
+                                                number:
+                                                    (widget.fatGoal -
+                                                            widget.fatConsumed)
+                                                        .clamp(
+                                                          0,
+                                                          widget.fatGoal,
+                                                        ),
+                                                color: Palette.macroFat,
+                                              ),
+                                              const SizedBox(width: 0),
+                                              _Ring(
+                                                value: widget.carbsGoal > 0
+                                                    ? ((widget.carbsGoal -
+                                                                  widget
+                                                                      .carbsConsumed) /
+                                                              widget.carbsGoal)
+                                                          .clamp(0.0, 1.0)
+                                                    : 0,
+                                                startFraction:
+                                                    widget.carbsGoal > 0
+                                                    ? (widget.carbsConsumed /
+                                                              widget.carbsGoal)
+                                                          .clamp(0.0, 1.0)
+                                                    : 0,
+                                                label: 'Carbs',
+                                                number:
+                                                    (widget.carbsGoal -
+                                                            widget
+                                                                .carbsConsumed)
+                                                        .clamp(
+                                                          0,
+                                                          widget.carbsGoal,
+                                                        ),
+                                                color: Palette.macroCarbs,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        _Ring(
+                                          value: widget.caloriesGoal > 0
+                                              ? ((widget.caloriesGoal -
+                                                            widget
+                                                                .caloriesConsumed) /
+                                                        widget.caloriesGoal)
+                                                    .clamp(0.0, 1.0)
+                                              : 0,
+                                          startFraction: widget.caloriesGoal > 0
+                                              ? (widget.caloriesConsumed /
+                                                        widget.caloriesGoal)
+                                                    .clamp(0.0, 1.0)
+                                              : 0,
+                                          label: 'Calories',
+                                          number:
+                                              (widget.caloriesGoal -
+                                                      widget.caloriesConsumed)
+                                                  .clamp(
+                                                    0,
+                                                    widget.caloriesGoal,
+                                                  ),
+                                          color: context.colors.accent,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () => setState(() => _showResults = true),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 13,
+                                  horizontal: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.colors.accent.withValues(
+                                    alpha: 0.10,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: context.colors.accent.withValues(
+                                      alpha: 0.22,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
                                   children: [
                                     Icon(
-                                      Icons.fitness_center,
+                                      Icons.show_chart_rounded,
+                                      size: 16,
                                       color: context.colors.accent,
-                                      size: 18,
                                     ),
                                     const SizedBox(width: 8),
-                                    Flexible(
+                                    Expanded(
                                       child: Text(
-                                        'Workout',
+                                        'Current Metabolic Estimate',
                                         style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: context.colors.accent,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        '${widget.workoutCalories} cal',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 16,
+                                      color: context.colors.accent.withValues(
+                                        alpha: 0.6,
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
-                                _ProgressBar(
-                                  label: 'Steps',
-                                  value: widget.stepsGoal > 0
-                                      ? (widget.stepsTaken / widget.stepsGoal)
-                                            .clamp(0.0, 1.0)
-                                      : 0,
-                                  icon: Icons.directions_walk,
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 100,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(
-                              () => _currentMacroPage = _currentMacroPage == 0
-                                  ? 1
-                                  : 0,
-                            );
-                          },
-                          child: IndexedStack(
-                            index: _currentMacroPage,
-                            children: [
-                              // Page 1: Consumed macros
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Flexible(
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _Ring(
-                                          value: widget.proteinGoal > 0
-                                              ? widget.proteinConsumed /
-                                                    widget.proteinGoal
-                                              : 0,
-                                          label: 'Protein',
-                                          number: widget.proteinConsumed,
-                                          color: Palette.macroProtein,
-                                        ),
-                                        const SizedBox(width: 0),
-                                        _Ring(
-                                          value: widget.fatGoal > 0
-                                              ? widget.fatConsumed /
-                                                    widget.fatGoal
-                                              : 0,
-                                          label: 'Fats',
-                                          number: widget.fatConsumed,
-                                          color: Palette.macroFat,
-                                        ),
-                                        const SizedBox(width: 0),
-                                        _Ring(
-                                          value: widget.carbsGoal > 0
-                                              ? widget.carbsConsumed /
-                                                    widget.carbsGoal
-                                              : 0,
-                                          label: 'Carbs',
-                                          number: widget.carbsConsumed,
-                                          color: Palette.macroCarbs,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  _Ring(
-                                    value: widget.caloriesGoal > 0
-                                        ? widget.caloriesConsumed /
-                                              widget.caloriesGoal
-                                        : 0,
-                                    label: 'Calories',
-                                    number: widget.caloriesConsumed,
-                                    color: context.colors.accent,
-                                  ),
-                                ],
-                              ),
-                              // Page 2: Remaining macros
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Flexible(
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _Ring(
-                                          value: widget.proteinGoal > 0
-                                              ? ((widget.proteinGoal -
-                                                            widget
-                                                                .proteinConsumed) /
-                                                        widget.proteinGoal)
-                                                    .clamp(0.0, 1.0)
-                                              : 0,
-                                          startFraction: widget.proteinGoal > 0
-                                              ? (widget.proteinConsumed /
-                                                    widget.proteinGoal)
-                                                  .clamp(0.0, 1.0)
-                                              : 0,
-                                          label: 'Protein',
-                                          number:
-                                              (widget.proteinGoal -
-                                                      widget.proteinConsumed)
-                                                  .clamp(0, widget.proteinGoal),
-                                          color: Palette.macroProtein,
-                                        ),
-                                        const SizedBox(width: 0),
-                                        _Ring(
-                                          value: widget.fatGoal > 0
-                                              ? ((widget.fatGoal -
-                                                            widget
-                                                                .fatConsumed) /
-                                                        widget.fatGoal)
-                                                    .clamp(0.0, 1.0)
-                                              : 0,
-                                          startFraction: widget.fatGoal > 0
-                                              ? (widget.fatConsumed /
-                                                    widget.fatGoal)
-                                                  .clamp(0.0, 1.0)
-                                              : 0,
-                                          label: 'Fats',
-                                          number:
-                                              (widget.fatGoal -
-                                                      widget.fatConsumed)
-                                                  .clamp(0, widget.fatGoal),
-                                          color: Palette.macroFat,
-                                        ),
-                                        const SizedBox(width: 0),
-                                        _Ring(
-                                          value: widget.carbsGoal > 0
-                                              ? ((widget.carbsGoal -
-                                                            widget
-                                                                .carbsConsumed) /
-                                                        widget.carbsGoal)
-                                                    .clamp(0.0, 1.0)
-                                              : 0,
-                                          startFraction: widget.carbsGoal > 0
-                                              ? (widget.carbsConsumed /
-                                                    widget.carbsGoal)
-                                                  .clamp(0.0, 1.0)
-                                              : 0,
-                                          label: 'Carbs',
-                                          number:
-                                              (widget.carbsGoal -
-                                                      widget.carbsConsumed)
-                                                  .clamp(0, widget.carbsGoal),
-                                          color: Palette.macroCarbs,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  _Ring(
-                                    value: widget.caloriesGoal > 0
-                                        ? ((widget.caloriesGoal -
-                                                      widget.caloriesConsumed) /
-                                                  widget.caloriesGoal)
-                                              .clamp(0.0, 1.0)
-                                        : 0,
-                                    startFraction: widget.caloriesGoal > 0
-                                        ? (widget.caloriesConsumed /
-                                              widget.caloriesGoal)
-                                            .clamp(0.0, 1.0)
-                                        : 0,
-                                    label: 'Calories',
-                                    number:
-                                        (widget.caloriesGoal -
-                                                widget.caloriesConsumed)
-                                            .clamp(0, widget.caloriesGoal),
-                                    color: context.colors.accent,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      GestureDetector(
-                        onTap: () => setState(() => _showResults = true),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 13, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: context.colors.accent
-                                .withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: context.colors.accent
-                                  .withValues(alpha: 0.22),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.show_chart_rounded,
-                                size: 16,
-                                color: context.colors.accent,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Current Metabolic Estimate',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: context.colors.accent,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                size: 16,
-                                color: context.colors.accent
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                           ],
                         ),
                       ),
@@ -555,24 +584,33 @@ class _DiaryScreenState extends State<DiaryScreen> {
                         child: Container(
                           color: context.colors.inputFill,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12,
+                            horizontal: 14,
+                            vertical: 12,
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.search, color: context.colors.textMuted, size: 18),
+                              Icon(
+                                Icons.search,
+                                color: context.colors.textMuted,
+                                size: 18,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   'Search foods...',
                                   style: TextStyle(
-                                    color: context.colors.textMuted, fontSize: 14,
+                                    color: context.colors.textMuted,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
                               GestureDetector(
                                 onTap: _openBarcodeScanner,
-                                child: Icon(Icons.qr_code_scanner,
-                                    color: context.colors.accent, size: 22),
+                                child: Icon(
+                                  Icons.qr_code_scanner,
+                                  color: context.colors.accent,
+                                  size: 22,
+                                ),
                               ),
                             ],
                           ),
@@ -588,7 +626,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
                     onAdd: _openAddFoodSearch,
                     onDelete: (entry) async {
                       await widget.userState!.db.deleteFoodEntry(entry.id);
-                      _loadFoodEntries();
+                      unawaited(_loadFoodEntries());
                     },
                     onEdit: _editEntry,
                     onLongPress: (entry) => _showEntryMoveMenu(context, entry),
@@ -610,20 +648,24 @@ class _DiaryScreenState extends State<DiaryScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox.shrink();
                 }
-                final log = snapshot.data ?? DailyLog(
-                  userId: widget.userState!.currentUser!.id!,
-                  date: widget.selectedDay,
-                  caloriesConsumed: widget.caloriesConsumed,
-                  stepsCount: widget.stepsTaken,
-                  workoutCalories: widget.workoutCalories > 0 ? widget.workoutCalories : null,
-                  waterIntake: 0,
-                  workoutActivities: const [],
-                  protein: widget.proteinConsumed,
-                  carbs: widget.carbsConsumed,
-                  fat: widget.fatConsumed,
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
+                final log =
+                    snapshot.data ??
+                    DailyLog(
+                      userId: widget.userState!.currentUser!.id!,
+                      date: widget.selectedDay,
+                      caloriesConsumed: widget.caloriesConsumed,
+                      stepsCount: widget.stepsTaken,
+                      workoutCalories: widget.workoutCalories > 0
+                          ? widget.workoutCalories
+                          : null,
+                      waterIntake: 0,
+                      workoutActivities: const [],
+                      protein: widget.proteinConsumed,
+                      carbs: widget.carbsConsumed,
+                      fat: widget.fatConsumed,
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
                 return _ResultsModal(
                   onDismiss: () => setState(() => _showResults = false),
                   user: widget.userState!.currentUser!,
@@ -635,7 +677,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
             ),
         ],
       ),
-      floatingActionButton: null,
     );
   }
 }
@@ -688,6 +729,7 @@ class _Ring extends StatelessWidget {
   final String label;
   final int number;
   final Color color;
+
   /// Fraction (0..1) where the arc should start on the circle.
   /// 0 = 12 o'clock. Pass the consumed fraction here for remaining rings so
   /// the arc begins exactly where the consumed arc ends.
@@ -776,7 +818,8 @@ class _RingArcPainter extends CustomPainter {
 
     if (value <= 0) return;
 
-    final startAngle = -math.pi / 2 + 2 * math.pi * startFraction.clamp(0.0, 1.0);
+    final startAngle =
+        -math.pi / 2 + 2 * math.pi * startFraction.clamp(0.0, 1.0);
     final sweepAngle = 2 * math.pi * value.clamp(0.0, 1.0);
 
     canvas.drawArc(
@@ -953,7 +996,7 @@ class _ResultsModalState extends State<_ResultsModal>
         ),
         // Raised card
         Align(
-          alignment: Alignment(0, -0.75),
+          alignment: const Alignment(0, -0.75),
           child: FadeTransition(
             opacity: _fadeAnimation,
             child: ScaleTransition(
@@ -986,9 +1029,7 @@ class _ResultsModalState extends State<_ResultsModal>
                         const SizedBox(width: 8),
                         Text(
                           'Current Metabolic Estimate',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: context.colors.textPrimary,
@@ -1141,29 +1182,32 @@ class _NetCaloriesRow extends StatelessWidget {
 
 typedef _EntryCallback = void Function(DiaryEntryFood entry);
 
-enum _Meal {
-  breakfast,
-  lunch,
-  dinner,
-  snack,
-}
+enum _Meal { breakfast, lunch, dinner, snack }
 
 extension _MealInfo on _Meal {
   String get label {
     switch (this) {
-      case _Meal.breakfast: return 'Breakfast';
-      case _Meal.lunch:     return 'Lunch';
-      case _Meal.dinner:    return 'Dinner';
-      case _Meal.snack:     return 'Snack';
+      case _Meal.breakfast:
+        return 'Breakfast';
+      case _Meal.lunch:
+        return 'Lunch';
+      case _Meal.dinner:
+        return 'Dinner';
+      case _Meal.snack:
+        return 'Snack';
     }
   }
 
   bool containsHour(int h) {
     switch (this) {
-      case _Meal.breakfast: return h >= 5  && h <= 10;
-      case _Meal.lunch:     return h >= 11 && h <= 15;
-      case _Meal.dinner:    return h >= 16 && h <= 20;
-      case _Meal.snack:     return true;
+      case _Meal.breakfast:
+        return h >= 5 && h <= 10;
+      case _Meal.lunch:
+        return h >= 11 && h <= 15;
+      case _Meal.dinner:
+        return h >= 16 && h <= 20;
+      case _Meal.snack:
+        return true;
     }
   }
 
@@ -1201,14 +1245,18 @@ class _MealSections extends StatelessWidget {
     }
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 48),
-      children: _Meal.values.map((meal) => _MealSection(
-        meal: meal,
-        entries: buckets[meal]!,
-        onAdd: () => onAdd(),
-        onDelete: onDelete,
-        onEdit: onEdit,
-        onLongPress: onLongPress,
-      )).toList(),
+      children: _Meal.values
+          .map(
+            (meal) => _MealSection(
+              meal: meal,
+              entries: buckets[meal]!,
+              onAdd: () => onAdd(),
+              onDelete: onDelete,
+              onEdit: onEdit,
+              onLongPress: onLongPress,
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -1232,11 +1280,11 @@ class _MealSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalCal  = entries.fold(0, (s, e) => s + e.calories);
-    final totalP    = entries.fold(0, (s, e) => s + e.proteinG);
-    final totalC    = entries.fold(0, (s, e) => s + e.carbsG);
-    final totalF    = entries.fold(0, (s, e) => s + e.fatG);
-    final hasFood   = entries.isNotEmpty;
+    final totalCal = entries.fold(0, (s, e) => s + e.calories);
+    final totalP = entries.fold(0, (s, e) => s + e.proteinG);
+    final totalC = entries.fold(0, (s, e) => s + e.carbsG);
+    final totalF = entries.fold(0, (s, e) => s + e.fatG);
+    final hasFood = entries.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -1309,12 +1357,16 @@ class _MealSection extends StatelessWidget {
               )
             else
               Column(
-                children: entries.map((entry) => _FoodEntryCard(
-                  entry: entry,
-                  onDelete: () => onDelete(entry),
-                  onEdit: () => onEdit(entry),
-                  onLongPress: () => onLongPress(entry),
-                )).toList(),
+                children: entries
+                    .map(
+                      (entry) => _FoodEntryCard(
+                        entry: entry,
+                        onDelete: () => onDelete(entry),
+                        onEdit: () => onEdit(entry),
+                        onLongPress: () => onLongPress(entry),
+                      ),
+                    )
+                    .toList(),
               ),
             // Divider + Add Food
             Divider(
@@ -1326,10 +1378,13 @@ class _MealSection extends StatelessWidget {
             InkWell(
               onTap: onAdd,
               borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(14)),
+                bottom: Radius.circular(14),
+              ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.add, size: 16, color: context.colors.accent),
@@ -1413,7 +1468,6 @@ class _FoodEntryCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Left accent dot
               Container(
@@ -1441,27 +1495,29 @@ class _FoodEntryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    Builder(builder: (context) {
-                      // Serving: strip quantity prefix like "2.0 × "
-                      final serving = (entry.serving ?? '')
-                          .trim()
-                          .replaceFirst(RegExp(r'^[\d.]+ × '), '');
-                      final macros =
-                          'P ${entry.proteinG}g · C ${entry.carbsG}g · F ${entry.fatG}g';
-                      // serving first, macros second — mirrors search tile order
-                      final subtitle = serving.isNotEmpty
-                          ? '$serving  ·  $macros'
-                          : macros;
-                      return Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: context.colors.textMuted,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    }),
+                    Builder(
+                      builder: (context) {
+                        // Serving: strip quantity prefix like "2.0 × "
+                        final serving = (entry.serving ?? '')
+                            .trim()
+                            .replaceFirst(RegExp(r'^[\d.]+ × '), '');
+                        final macros =
+                            'P ${entry.proteinG}g · C ${entry.carbsG}g · F ${entry.fatG}g';
+                        // serving first, macros second — mirrors search tile order
+                        final subtitle = serving.isNotEmpty
+                            ? '$serving  ·  $macros'
+                            : macros;
+                        return Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.colors.textMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -1588,15 +1644,27 @@ class _EntryMoveSheetState extends State<_EntryMoveSheet> {
     if (i == 1) return 'Tomorrow';
     final d = widget.currentDay.add(Duration(days: i));
     const wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const mn = ['Jan','Feb','Mar','Apr','May','Jun',
-                 'Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mn = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${wd[d.weekday - 1]}, ${mn[d.month - 1]} ${d.day}';
   }
 
   DateTime _buildTimestamp() {
     final base = widget.currentDay.add(Duration(days: _dateIndex));
     final date = DateUtils.dateOnly(base);
-    return DateTime(date.year, date.month, date.day, _mealHours[_mealIndex], 0);
+    return DateTime(date.year, date.month, date.day, _mealHours[_mealIndex]);
   }
 
   Widget _col({
@@ -1661,7 +1729,8 @@ class _EntryMoveSheetState extends State<_EntryMoveSheet> {
           children: [
             // Handle
             Container(
-              width: 36, height: 4,
+              width: 36,
+              height: 4,
               decoration: BoxDecoration(
                 color: colors.textPrimary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
@@ -1672,7 +1741,8 @@ class _EntryMoveSheetState extends State<_EntryMoveSheet> {
             Text(
               widget.entry.name,
               style: TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w700,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
                 color: colors.textPrimary,
               ),
               maxLines: 1,
@@ -1693,7 +1763,8 @@ class _EntryMoveSheetState extends State<_EntryMoveSheet> {
               children: [
                 // Subtle selection highlight — very light pill
                 Positioned(
-                  left: 0, right: 0,
+                  left: 0,
+                  right: 0,
                   child: Container(
                     height: 46,
                     decoration: BoxDecoration(

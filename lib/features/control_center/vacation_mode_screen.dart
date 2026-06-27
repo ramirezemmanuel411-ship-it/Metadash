@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 class VacationModeScreen extends StatefulWidget {
   const VacationModeScreen({super.key});
@@ -87,7 +87,6 @@ class _VacationModeScreenState extends State<VacationModeScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: context.colors.divider.withValues(alpha: 0.05),
-                width: 1,
               ),
             ),
             child: Column(

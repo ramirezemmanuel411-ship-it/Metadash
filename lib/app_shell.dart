@@ -1,17 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'shared/palette.dart';
-import 'shared/widgets/floating_action_hub.dart';
-import 'features/dashboard/dashboard_screen.dart';
-import 'features/diary/diary_screen.dart';
-import 'features/food/ai_chat_screen.dart';
-import 'features/food_search/food_search_screen.dart';
-import 'features/control_center/control_center_screen.dart';
-import 'features/progress/progress_screen.dart';
-import 'presentation/screens/exercise_logging/exercise_main_screen.dart';
-import 'providers/user_state.dart';
-import 'models/data_inputs_settings.dart';
-import 'services/health_service.dart';
-import 'services/calorie_calculation_service.dart';
+import 'package:metadash/core/logging/app_logger.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/calorie_calculation_service.dart';
+import 'package:metadash/core/services/health_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/core/shared/widgets/floating_action_hub.dart';
+import 'package:metadash/data/models/data_inputs_settings.dart';
+import 'package:metadash/features/control_center/control_center_screen.dart';
+import 'package:metadash/features/dashboard/dashboard_screen.dart';
+import 'package:metadash/features/diary/diary_screen.dart';
+import 'package:metadash/features/exercise_logging/exercise_main_screen.dart';
+import 'package:metadash/features/food/ai_chat_screen.dart';
+import 'package:metadash/features/food_search/food_search_screen.dart';
+import 'package:metadash/features/progress/progress_screen.dart';
 
 class AppShell extends StatefulWidget {
   final UserState userState;
@@ -22,7 +25,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
-  final _pageController = PageController(initialPage: 0);
+  final _pageController = PageController();
   int _index = 0;
   DateTime _selectedDay = DateTime.now();
 
@@ -52,7 +55,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _carbsGoal = user.macroTargets?['carbs'] ?? 250;
       _fatGoal = user.macroTargets?['fat'] ?? 73;
     }
-    _loadDailyData();
+    unawaited(_loadDailyData());
     widget.userState.addListener(_handleUserStateChange);
 
     // Start automatic sync on app open (async, non-blocking)
@@ -81,7 +84,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void _handleUserStateChange() {
     if (!mounted) return;
     if (widget.userState.currentUser == null) return;
-    _loadDailyData();
+    unawaited(_loadDailyData());
   }
 
   /// Automatically sync health data from HealthKit/Google Fit
@@ -97,7 +100,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         if (!hasPermissions) return;
       } catch (e) {
         // If health service fails to check permissions, skip sync
-        debugPrint('Could not check health permissions: $e');
+        AppLogger.d('Could not check health permissions: $e');
         return;
       }
 
@@ -115,15 +118,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
         // Reload UI with new data
         if (mounted) {
-          _loadDailyData();
+          unawaited(_loadDailyData());
         }
       } catch (e) {
         // If sync fails, still let app continue
-        debugPrint('Health data sync failed: $e');
+        AppLogger.d('Health data sync failed: $e');
       }
     } catch (e) {
       // Catch all - don't let anything crash the app
-      debugPrint('Background health sync error (non-blocking): $e');
+      AppLogger.d('Background health sync error (non-blocking): $e');
     }
   }
 
@@ -197,7 +200,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     setState(() {
       _selectedDay = _selectedDay.add(Duration(days: delta));
     });
-    _loadDailyData();
+    unawaited(_loadDailyData());
   }
 
   void _onTapNav(int i) {

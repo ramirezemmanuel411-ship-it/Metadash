@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../providers/user_state.dart';
-import '../../shared/palette.dart';
-import 'create_user_flow.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/features/user_selection/create_user_flow.dart';
 
 class UserSelectionScreen extends StatelessWidget {
   final UserState userState;
@@ -17,7 +17,6 @@ class UserSelectionScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 36),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Spacer(flex: 3),
 

@@ -1,12 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-import '../../app_shell.dart';
-import '../../providers/user_state.dart';
-import '../../services/auth_service.dart';
-import '../../shared/palette.dart';
-import '../user_selection/create_user_flow.dart';
-import 'sign_in_screen.dart';
+import 'package:metadash/app_shell.dart';
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/services/auth_service.dart';
+import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/features/auth/sign_in_screen.dart';
+import 'package:metadash/features/user_selection/create_user_flow.dart';
 
 /// Top-level gate that decides what the signed-in (or signed-out) user sees.
 ///
@@ -129,8 +128,7 @@ class _AuthLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor:
-          isDark ? Palette.nightBackground : Palette.dayBackground,
+      backgroundColor: isDark ? Palette.nightBackground : Palette.dayBackground,
       body: const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(Palette.forestGreen),

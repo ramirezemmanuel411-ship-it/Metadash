@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../shared/palette.dart';
-import '../../providers/user_state.dart';
+
+import 'package:metadash/core/providers/user_state.dart';
+import 'package:metadash/core/shared/palette.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserState userState;
@@ -207,7 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              _SectionTitle('Account'),
+              const _SectionTitle('Account'),
               const SizedBox(height: 12),
               _SettingsTile(
                 icon: Icons.email,
@@ -235,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {},
               ),
               const SizedBox(height: 24),
-              _SectionTitle('Goals'),
+              const _SectionTitle('Goals'),
               const SizedBox(height: 12),
               _SettingsTile(
                 icon: Icons.flag,
@@ -260,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.of(context).pop(null),
+                          onPressed: () => Navigator.of(context).pop(),
                           child: const Text('Cancel'),
                         ),
                         ElevatedButton(
@@ -301,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.of(context).pop(null),
+                          onPressed: () => Navigator.of(context).pop(),
                           child: const Text('Cancel'),
                         ),
                         ElevatedButton(
@@ -361,7 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              _SectionTitle('Preferences'),
+              const _SectionTitle('Preferences'),
               const SizedBox(height: 12),
               _SettingsTile(
                 icon: Icons.track_changes,
@@ -384,7 +385,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.of(context).pop(null),
+                          onPressed: () => Navigator.of(context).pop(),
                           child: const Text('Cancel'),
                         ),
                         ElevatedButton(

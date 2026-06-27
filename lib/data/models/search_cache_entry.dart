@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:equatable/equatable.dart';
-import 'food_model.dart';
+import 'package:metadash/data/models/food_model.dart';
 
 /// Cached search result entry with TTL
 class SearchCacheEntry extends Equatable {

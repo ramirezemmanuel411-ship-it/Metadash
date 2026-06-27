@@ -37,7 +37,7 @@ DateTime? _cutoffForFilter(String filter, DateTime now) {
     case '1Y':
       return DateTime(now.year - 1, now.month, now.day);
     case 'YTD':
-      return DateTime(now.year, 1, 1);
+      return DateTime(now.year);
     case 'ALL':
       return null;
     // support numeric days like '7D', '14D', '30D', '90D'
