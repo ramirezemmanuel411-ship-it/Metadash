@@ -51,7 +51,7 @@ class FoodGroundingService {
     // gram weight; alternative sizes are shown at their own serving.
     final grounded = _toEntry(best, e, scaleToPortion: true);
     final variants = candidates
-        .where((c) => c.id != best.id && _relevant(c, e))
+        .where((c) => c.id != best.id && _relevant(c, best, e))
         .take(4)
         .map((c) => _toEntry(c, e, scaleToPortion: false))
         .toList();
@@ -86,11 +86,63 @@ class FoodGroundingService {
     return _nameOverlaps(e.name, top.displayTitle) ? top : null;
   }
 
-  bool _relevant(FoodModel c, AiStructuredFoodEntry e) {
+  /// A variant is only an "other size" if it is the *same dish* as [best] —
+  /// a 12 oz vs 16 oz ribeye, not the pork chop that happens to share the
+  /// restaurant. Branded items must also match the brand.
+  bool _relevant(FoodModel c, FoodModel best, AiStructuredFoodEntry e) {
     final brand = e.brand?.toLowerCase().trim();
-    if (brand != null && brand.isNotEmpty) return _brandMatches(c, brand);
-    return _nameOverlaps(e.name, c.displayTitle);
+    if (brand != null && brand.isNotEmpty && !_brandMatches(c, brand)) {
+      return false;
+    }
+    return _sameDish(best, c);
   }
+
+  /// Two foods are the same dish when their core food words overlap. Generic
+  /// descriptors (bone-in, grilled, sizes, the restaurant name) are stripped
+  /// first so "Bone-in Ribeye" and "Ft. Worth Ribeye" match on "ribeye" while
+  /// "Bone-in Pork Chop" does not.
+  bool _sameDish(FoodModel best, FoodModel candidate) {
+    final a = _coreTokens(best.displayTitle);
+    final b = _coreTokens(candidate.displayTitle);
+    if (a.isEmpty || b.isEmpty) return false;
+    return a.intersection(b).isNotEmpty;
+  }
+
+  Set<String> _coreTokens(String title) =>
+      _tokens(title).where((t) => !_dishModifiers.contains(t)).toSet();
+
+  static const _dishModifiers = {
+    'bone',
+    'boneless',
+    'and',
+    'the',
+    'cut',
+    'cuts',
+    'with',
+    'without',
+    'grilled',
+    'fried',
+    'baked',
+    'roasted',
+    'broiled',
+    'seared',
+    'fresh',
+    'lean',
+    'large',
+    'small',
+    'regular',
+    'half',
+    'full',
+    'side',
+    'order',
+    'plate',
+    'fort',
+    'worth',
+    'new',
+    'style',
+    'house',
+    'special',
+  };
 
   bool _brandMatches(FoodModel c, String brand) {
     final cb = c.displayBrand.toLowerCase();
@@ -116,7 +168,7 @@ class FoodGroundingService {
         ? aiGrams / dbGrams
         : 1.0;
     return base.copyWith(
-      name: f.displayTitle,
+      name: _cleanTitle(f.displayTitle),
       brand: f.displayBrand.isNotEmpty ? f.displayBrand : base.brand,
       serving: _servingLabel(f, mult),
       calories: (f.calories * mult).round(),
@@ -128,6 +180,13 @@ class FoodGroundingService {
       confidence: 'high',
     );
   }
+
+  /// Database titles occasionally carry leading/trailing punctuation noise
+  /// (e.g. ". Ft. Worth Ribeye & Ribs"); trim it so the name reads cleanly.
+  String _cleanTitle(String title) => title
+      .replaceAll(RegExp(r'^[\s.,;:\-]+'), '')
+      .replaceAll(RegExp(r'[\s.,;:]+$'), '')
+      .trim();
 
   String _servingLabel(FoodModel f, double mult) {
     final unit = f.servingUnit.trim();
