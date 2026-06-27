@@ -12,6 +12,7 @@ import 'package:metadash/core/services/ai_suggestion_engine.dart';
 import 'package:metadash/core/services/food_grounding_service.dart';
 import 'package:metadash/core/services/food_text_normalizer.dart';
 import 'package:metadash/core/shared/palette.dart';
+import 'package:metadash/core/shared/widgets/serving_numpad.dart';
 import 'package:metadash/data/models/ai_food_estimate.dart';
 import 'package:metadash/data/models/ai_router_result.dart';
 import 'package:metadash/data/models/ai_suggestion.dart';
@@ -53,6 +54,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
   AiRouter? _aiRouter;
   FoodGroundingService? _grounding;
 
+  // Per-entry database variants + the per-serving base used to rescale a
+  // portion (parallel to the current router result's entries).
+  List<List<AiStructuredFoodEntry>> _entryVariants = const [];
+  List<AiStructuredFoodEntry> _entryBase = const [];
+
   // Camera state
   CameraController? _cameraController;
   Future<void>? _initializeControllerFuture;
@@ -87,23 +93,131 @@ class _AiChatScreenState extends State<AiChatScreen> {
   /// confident match exists, so numbers are traceable instead of guessed.
   Future<AiRouterResult> _ground(AiRouterResult result) async {
     final grounding = _grounding;
-    if (grounding == null || result.entries.isEmpty) return result;
-    try {
-      final entries = await grounding.groundEntries(result.entries);
-      return AiRouterResult(
-        mode: result.mode,
-        headline: result.headline,
-        detail: result.detail,
-        confidence: result.confidence,
-        confidenceNote: result.confidenceNote,
-        entries: entries,
-        alternatives: result.alternatives,
-        bestAlternativeIndex: result.bestAlternativeIndex,
-      );
-    } catch (e) {
-      AppLogger.w('Food grounding failed, keeping AI estimate: $e');
+    if (grounding == null || result.entries.isEmpty) {
+      _entryVariants = const [];
+      _entryBase = const [];
       return result;
     }
+    try {
+      final items = await grounding.groundEntries(result.entries);
+      final entries = items.map((g) => g.entry).toList();
+      _entryVariants = items.map((g) => g.variants).toList();
+      _entryBase = List.of(entries);
+      return _withEntries(result, entries);
+    } catch (e) {
+      AppLogger.w('Food grounding failed, keeping AI estimate: $e');
+      _entryVariants = const [];
+      _entryBase = const [];
+      return result;
+    }
+  }
+
+  AiRouterResult _withEntries(
+    AiRouterResult r,
+    List<AiStructuredFoodEntry> entries,
+  ) => AiRouterResult(
+    mode: r.mode,
+    headline: r.headline,
+    detail: r.detail,
+    confidence: r.confidence,
+    confidenceNote: r.confidenceNote,
+    entries: entries,
+    alternatives: r.alternatives,
+    bestAlternativeIndex: r.bestAlternativeIndex,
+  );
+
+  // Units offered on the portion keypad (matches the Food Plate).
+  static const _kKeypadUnits = [
+    'serving',
+    'g',
+    'oz',
+    'lb',
+    'ml',
+    'fl oz',
+    'cup',
+    'tbsp',
+    'tsp',
+  ];
+  static const _kKeypadDivider = 3;
+
+  void _updateEntry(int index, AiStructuredFoodEntry entry) {
+    final result = _routerResult;
+    if (result == null || index >= result.entries.length) return;
+    final entries = List.of(result.entries);
+    entries[index] = entry;
+    setState(() => _routerResult = _withEntries(result, entries));
+  }
+
+  /// Swap an item for one of its database serving-size variants.
+  void _pickVariant(int index, AiStructuredFoodEntry variant) {
+    if (index < _entryBase.length) _entryBase[index] = variant;
+    _updateEntry(index, variant);
+  }
+
+  /// Open the gram-mapped keypad to set an item's exact portion; the verified
+  /// nutrition rescales from its one-serving base.
+  void _editPortion(int index) {
+    final result = _routerResult;
+    if (result == null || index >= result.entries.length) return;
+    final base = index < _entryBase.length
+        ? _entryBase[index]
+        : result.entries[index];
+    final parsed = _parseServing(result.entries[index].serving);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ServingNumpad(
+        initialQty: parsed.$1,
+        initialUnit: parsed.$2,
+        units: _kKeypadUnits,
+        dividerIndex: _kKeypadDivider,
+        baseGrams: base.grams?.toDouble(),
+        baseCalories: base.calories.toDouble(),
+        colors: context.colors,
+        onConfirm: (qty, unit) =>
+            _updateEntry(index, _rescaleEntry(base, qty, unit)),
+      ),
+    );
+  }
+
+  (String, String) _parseServing(String serving) {
+    final m = RegExp(r'^(\d*\.?\d+)\s*(.*)$').firstMatch(serving.trim());
+    if (m != null) {
+      final unit = (m.group(2) ?? '').trim();
+      return (
+        m.group(1) ?? '1',
+        _kKeypadUnits.contains(unit) ? unit : 'serving',
+      );
+    }
+    return ('1', 'serving');
+  }
+
+  AiStructuredFoodEntry _rescaleEntry(
+    AiStructuredFoodEntry base,
+    String qtyStr,
+    String unit,
+  ) {
+    final qty = double.tryParse(qtyStr) ?? 1;
+    final unitG = FoodPlateItem.unitGrams[unit.toLowerCase()];
+    final baseGrams = base.grams;
+    final grams = unitG != null
+        ? qty * unitG
+        : (baseGrams != null ? qty * baseGrams : null);
+    final m = (grams != null && baseGrams != null && baseGrams > 0)
+        ? grams / baseGrams
+        : qty;
+    final label = qty == qty.truncateToDouble()
+        ? qty.truncate().toString()
+        : qty.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
+    return base.copyWith(
+      calories: (base.calories * m).round(),
+      protein: (base.protein * m).round(),
+      carbs: (base.carbs * m).round(),
+      fat: (base.fat * m).round(),
+      grams: grams?.round() ?? base.grams,
+      serving: '$label $unit',
+    );
   }
 
   Future<void> _initializeCamera() async {
@@ -1142,13 +1256,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
         // Food entries (primary or selected alternative)
         () {
-          final entriesToShow = hasAlternatives
-              ? [result.alternatives[_selectedAlternative].entry]
-              : result.entries;
+          if (hasAlternatives) {
+            return _RouterEntryRow(
+              entry: result.alternatives[_selectedAlternative].entry,
+            );
+          }
           return Column(
-            children: entriesToShow
-                .map((e) => _RouterEntryRow(entry: e))
-                .toList(),
+            children: [
+              for (int i = 0; i < result.entries.length; i++)
+                _RouterEntryRow(
+                  entry: result.entries[i],
+                  variants: i < _entryVariants.length
+                      ? _entryVariants[i]
+                      : const [],
+                  onEditPortion: () => _editPortion(i),
+                  onPickVariant: (v) => _pickVariant(i, v),
+                ),
+            ],
           );
         }(),
 
@@ -1906,7 +2030,15 @@ class _ConfidenceBadge extends StatelessWidget {
 
 class _RouterEntryRow extends StatelessWidget {
   final AiStructuredFoodEntry entry;
-  const _RouterEntryRow({required this.entry});
+  final List<AiStructuredFoodEntry> variants;
+  final VoidCallback? onEditPortion;
+  final void Function(AiStructuredFoodEntry)? onPickVariant;
+  const _RouterEntryRow({
+    required this.entry,
+    this.variants = const [],
+    this.onEditPortion,
+    this.onPickVariant,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1942,11 +2074,34 @@ class _RouterEntryRow extends StatelessWidget {
                           color: context.colors.textMuted,
                         ),
                       ),
-                    Text(
-                      entry.serving,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: context.colors.textMuted,
+                    const SizedBox(height: 2),
+                    GestureDetector(
+                      onTap: onEditPortion,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            entry.serving,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: onEditPortion != null
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: onEditPortion != null
+                                  ? context.colors.accent
+                                  : context.colors.textMuted,
+                            ),
+                          ),
+                          if (onEditPortion != null) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.tune_rounded,
+                              size: 12,
+                              color: context.colors.accent,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
@@ -2021,7 +2176,72 @@ class _RouterEntryRow extends StatelessWidget {
               }(),
             ],
           ),
+          if (variants.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Other sizes',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                color: context.colors.textMuted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final v in variants)
+                  _VariantChip(variant: v, onTap: () => onPickVariant?.call(v)),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _VariantChip extends StatelessWidget {
+  final AiStructuredFoodEntry variant;
+  final VoidCallback onTap;
+  const _VariantChip({required this.variant, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: context.colors.surfaceVariant,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: context.colors.divider),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              variant.serving,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: context.colors.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '${variant.calories} kcal',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: context.colors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

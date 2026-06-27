@@ -3,6 +3,16 @@ import 'package:metadash/data/models/ai_router_result.dart';
 import 'package:metadash/data/models/food_model.dart';
 import 'package:metadash/data/repositories/search_repository.dart';
 
+/// One AI food item after grounding: the best (verified) [entry], plus
+/// alternative database servings/sizes the user can switch to (e.g. the 12 oz
+/// vs 14 oz vs bone-in ribeye at a restaurant).
+class GroundedItem {
+  const GroundedItem(this.entry, this.variants);
+
+  final AiStructuredFoodEntry entry;
+  final List<AiStructuredFoodEntry> variants;
+}
+
 /// Replaces AI-*estimated* nutrition with *verified* values from the food
 /// database (FatSecret → USDA → Open Food Facts) whenever a confident match is
 /// found, so calorie numbers are traceable to a real source instead of being a
@@ -12,83 +22,125 @@ class FoodGroundingService {
 
   final SearchRepository _repository;
 
-  /// Ground every entry that has a confident database match (in parallel).
-  Future<List<AiStructuredFoodEntry>> groundEntries(
+  /// Ground every entry (in parallel), returning the verified best match plus
+  /// any alternative servings/sizes.
+  Future<List<GroundedItem>> groundEntries(
     List<AiStructuredFoodEntry> entries,
   ) {
     return Future.wait(entries.map(_groundOne));
   }
 
-  Future<AiStructuredFoodEntry> _groundOne(AiStructuredFoodEntry e) async {
+  Future<GroundedItem> _groundOne(AiStructuredFoodEntry e) async {
     final query = [
       e.brand,
       e.name,
     ].where((s) => s != null && s.trim().isNotEmpty).join(' ').trim();
-    if (query.isEmpty) return e;
+    if (query.isEmpty) return GroundedItem(e, const []);
 
-    final match = await _bestMatch(query, e);
-    if (match == null) return e;
+    final candidates = await _search(query);
+    if (candidates.isEmpty) return GroundedItem(e, const []);
 
-    // Scale the database serving to the AI-estimated portion when both have a
-    // gram weight; otherwise use the database serving as-is (1 serving).
-    final aiGrams = e.grams;
-    final dbGrams = match.servingWeightGrams;
-    final mult =
-        (aiGrams != null && aiGrams > 0 && dbGrams != null && dbGrams > 0)
-        ? aiGrams / dbGrams
-        : 1.0;
+    final best = _pickBest(candidates, e);
+    if (best == null) return GroundedItem(e, const []);
 
     AppLogger.i(
-      '[Grounding] "${e.name}" -> ${match.displayTitle} '
-      '(${match.source}, x${mult.toStringAsFixed(2)})',
+      '[Grounding] "${e.name}" -> ${best.displayTitle} (${best.source})',
     );
 
-    return e.copyWith(
-      name: match.displayTitle,
-      brand: match.displayBrand.isNotEmpty ? match.displayBrand : e.brand,
-      calories: (match.calories * mult).round(),
-      protein: (match.protein * mult).round(),
-      carbs: (match.carbs * mult).round(),
-      fat: (match.fat * mult).round(),
-      grams: dbGrams != null ? (dbGrams * mult).round() : e.grams,
-      source: _sourceLabel(match.source),
-      confidence: 'high',
-    );
+    // The best match is scaled to the AI-estimated portion when both have a
+    // gram weight; alternative sizes are shown at their own serving.
+    final grounded = _toEntry(best, e, scaleToPortion: true);
+    final variants = candidates
+        .where((c) => c.id != best.id && _relevant(c, e))
+        .take(4)
+        .map((c) => _toEntry(c, e, scaleToPortion: false))
+        .toList();
+
+    return GroundedItem(grounded, variants);
   }
 
-  /// Pick the best database match for [query], or null if none is confident
-  /// enough — a wrong match is worse than the AI estimate.
-  Future<FoodModel?> _bestMatch(String query, AiStructuredFoodEntry e) async {
-    List<FoodModel> candidates;
+  Future<List<FoodModel>> _search(String query) async {
     try {
       final result = await _repository
           .searchFoods(query)
           .firstWhere((r) => r.results.isNotEmpty)
           .timeout(const Duration(seconds: 8));
-      candidates = result.results;
+      return result.results;
     } catch (_) {
-      return null;
+      return const [];
     }
-    if (candidates.isEmpty) return null;
+  }
 
+  /// Best confident match, or null — a wrong match is worse than the estimate.
+  FoodModel? _pickBest(List<FoodModel> candidates, AiStructuredFoodEntry e) {
     final brand = e.brand?.toLowerCase().trim();
     if (brand != null && brand.isNotEmpty) {
-      // Brand named (e.g. a restaurant): require the brand to match so we don't
-      // attach the wrong company's product.
+      // Brand named (e.g. a restaurant): require the brand to match.
       for (final c in candidates) {
-        final cb = c.displayBrand.toLowerCase();
-        if (cb.isNotEmpty && (cb.contains(brand) || brand.contains(cb))) {
-          return c;
-        }
+        if (_brandMatches(c, brand)) return c;
       }
       return null;
     }
-
-    // No brand: take the top result only if its name overlaps the query enough
-    // to be the same food (avoids grounding "soup" with a random product).
+    // No brand: top result only if its name overlaps the query.
     final top = candidates.first;
     return _nameOverlaps(e.name, top.displayTitle) ? top : null;
   }
+
+  bool _relevant(FoodModel c, AiStructuredFoodEntry e) {
+    final brand = e.brand?.toLowerCase().trim();
+    if (brand != null && brand.isNotEmpty) return _brandMatches(c, brand);
+    return _nameOverlaps(e.name, c.displayTitle);
+  }
+
+  bool _brandMatches(FoodModel c, String brand) {
+    final cb = c.displayBrand.toLowerCase();
+    return cb.isNotEmpty && (cb.contains(brand) || brand.contains(cb));
+  }
+
+  /// Convert a database food into an entry. When [scaleToPortion] and both the
+  /// AI and database have a gram weight, scale to the AI-estimated amount;
+  /// otherwise use the database serving as-is.
+  AiStructuredFoodEntry _toEntry(
+    FoodModel f,
+    AiStructuredFoodEntry base, {
+    required bool scaleToPortion,
+  }) {
+    final aiGrams = base.grams;
+    final dbGrams = f.servingWeightGrams;
+    final mult =
+        (scaleToPortion &&
+            aiGrams != null &&
+            aiGrams > 0 &&
+            dbGrams != null &&
+            dbGrams > 0)
+        ? aiGrams / dbGrams
+        : 1.0;
+    return base.copyWith(
+      name: f.displayTitle,
+      brand: f.displayBrand.isNotEmpty ? f.displayBrand : base.brand,
+      serving: _servingLabel(f, mult),
+      calories: (f.calories * mult).round(),
+      protein: (f.protein * mult).round(),
+      carbs: (f.carbs * mult).round(),
+      fat: (f.fat * mult).round(),
+      grams: dbGrams != null ? (dbGrams * mult).round() : base.grams,
+      source: _sourceLabel(f.source),
+      confidence: 'high',
+    );
+  }
+
+  String _servingLabel(FoodModel f, double mult) {
+    final unit = f.servingUnit.trim();
+    final qty = f.servingSize * mult;
+    if (unit.isEmpty || unit.toLowerCase() == 'serving') {
+      return mult == 1.0 ? '1 serving' : '${_fmt(mult)} servings';
+    }
+    return '${_fmt(qty)} $unit';
+  }
+
+  String _fmt(double v) => v == v.truncateToDouble()
+      ? v.truncate().toString()
+      : v.toStringAsFixed(1);
 
   bool _nameOverlaps(String aiName, String dbName) {
     final a = _tokens(aiName);
