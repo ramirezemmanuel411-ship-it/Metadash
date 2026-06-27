@@ -9,6 +9,7 @@ import 'package:metadash/core/providers/user_state.dart';
 import 'package:metadash/core/services/ai_router.dart';
 import 'package:metadash/core/services/ai_service.dart';
 import 'package:metadash/core/services/ai_suggestion_engine.dart';
+import 'package:metadash/core/services/food_grounding_service.dart';
 import 'package:metadash/core/services/food_text_normalizer.dart';
 import 'package:metadash/core/shared/palette.dart';
 import 'package:metadash/data/models/ai_food_estimate.dart';
@@ -17,6 +18,7 @@ import 'package:metadash/data/models/ai_suggestion.dart';
 import 'package:metadash/data/models/diary_entry_food.dart';
 import 'package:metadash/data/models/food_model.dart';
 import 'package:metadash/data/repositories/ai_suggestion_repository.dart';
+import 'package:metadash/data/repositories/search_repository.dart';
 import 'package:metadash/features/food_search/food_plate_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -49,6 +51,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   bool _isLoading = false;
   String? _error;
   AiRouter? _aiRouter;
+  FoodGroundingService? _grounding;
 
   // Camera state
   CameraController? _cameraController;
@@ -70,12 +73,36 @@ class _AiChatScreenState extends State<AiChatScreen> {
     try {
       _aiService = AiService();
       _aiRouter = AiRouter(_aiService);
+      _grounding = FoodGroundingService(SearchRepository.withFatSecret());
       _serviceInitialized = true;
     } catch (e) {
       setState(() {
         _error =
             'The AI service is unavailable right now. Please try again later.';
       });
+    }
+  }
+
+  /// Replace AI-estimated nutrition with verified database values where a
+  /// confident match exists, so numbers are traceable instead of guessed.
+  Future<AiRouterResult> _ground(AiRouterResult result) async {
+    final grounding = _grounding;
+    if (grounding == null || result.entries.isEmpty) return result;
+    try {
+      final entries = await grounding.groundEntries(result.entries);
+      return AiRouterResult(
+        mode: result.mode,
+        headline: result.headline,
+        detail: result.detail,
+        confidence: result.confidence,
+        confidenceNote: result.confidenceNote,
+        entries: entries,
+        alternatives: result.alternatives,
+        bestAlternativeIndex: result.bestAlternativeIndex,
+      );
+    } catch (e) {
+      AppLogger.w('Food grounding failed, keeping AI estimate: $e');
+      return result;
     }
   }
 
@@ -196,9 +223,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
           imageFile: _capturedImage!,
           userDescription: description.isNotEmpty ? description : null,
         );
+        final grounded = await _ground(result);
         if (!mounted) return;
         setState(() {
-          _routerResult = result;
+          _routerResult = grounded;
           _selectedAlternative = 0;
           _isLoading = false;
         });
@@ -260,10 +288,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
           userText: input,
           diaryContext: diaryCtx,
         );
+        final grounded = await _ground(result);
         if (!mounted) return;
         setState(() {
-          _routerResult = result;
-          _selectedAlternative = result.bestAlternativeIndex ?? 0;
+          _routerResult = grounded;
+          _selectedAlternative = grounded.bestAlternativeIndex ?? 0;
           _isLoading = false;
         });
         _controller.clear();
@@ -1963,10 +1992,33 @@ class _RouterEntryRow extends StatelessWidget {
               const SizedBox(width: 8),
               _MacroChip(label: 'F', value: entry.fat, color: Palette.macroFat),
               const Spacer(),
-              Text(
-                'Source: ${entry.source}',
-                style: TextStyle(fontSize: 10, color: context.colors.textMuted),
-              ),
+              () {
+                final verified = !entry.source.toLowerCase().contains('ai');
+                final color = verified
+                    ? context.colors.accent
+                    : context.colors.textMuted;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      verified ? Icons.verified_rounded : Icons.auto_awesome,
+                      size: 11,
+                      color: color,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      verified ? entry.source : 'AI estimate',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: verified
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                );
+              }(),
             ],
           ),
         ],
