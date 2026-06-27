@@ -2208,6 +2208,18 @@ class _VariantChip extends StatelessWidget {
   final VoidCallback onTap;
   const _VariantChip({required this.variant, required this.onTap});
 
+  /// A bare "1 serving"/"2 servings" tells the user nothing when several
+  /// variants share it — fall back to the variant's own name (e.g. the cut or
+  /// menu size) so each chip is distinguishable at a glance.
+  String get _label {
+    final serving = variant.serving.trim();
+    final generic = RegExp(
+      r'^\d*\.?\d*\s*servings?$',
+      caseSensitive: false,
+    ).hasMatch(serving);
+    return generic && variant.name.trim().isNotEmpty ? variant.name : serving;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -2223,12 +2235,17 @@ class _VariantChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              variant.serving,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: context.colors.textSecondary,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: Text(
+                _label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.textSecondary,
+                ),
               ),
             ),
             const SizedBox(width: 6),
